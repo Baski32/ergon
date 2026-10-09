@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ergon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <svg class="simbolos" aria-hidden="true">
+        <symbol id="rama" viewBox="0 0 100 100">
+            <path d="M44 83A34 34 0 0 1 38 18" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(32 79) rotate(264)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(32 79) rotate(340)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(24 71) rotate(283)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(24 71) rotate(359)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(18 62) rotate(302)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(18 62) rotate(18)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(16 51) rotate(321)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(16 51) rotate(37)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(18 39) rotate(340)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(18 39) rotate(56)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(23 30) rotate(359)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(23 30) rotate(75)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(31 22) rotate(18)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(31 22) rotate(94)"/>
+            <path d="M0 0C4-4 4-11 0-15C-4-11-4-4 0 0Z" transform="translate(38 18) rotate(70)"/>
+        </symbol>
+
+        <symbol id="laurel" viewBox="0 0 100 100">
+            <use href="#rama"/>
+            <use href="#rama" transform="translate(100 0) scale(-1 1)"/>
+            <path d="M44 86l6-4 6 4-3 9-3-5-3 5z"/>
+        </symbol>
+
+        <symbol id="llama" viewBox="0 0 24 32">
+            <path d="M12 1C14 7 21 11 21 20a9 9 0 0 1-18 0c0-5 3-7 4-11 2 2 3 4 3 7 2-3 3-8 2-15z"/>
+            <path style="fill: var(--oro)" d="M12 15c1 3 5 5 5 9a5 5 0 0 1-10 0c0-3 2-4 3-6 1 1 1 2 1 3 1-2 1-4 1-6z"/>
+        </symbol>
+    </svg>
+
+    <main class="contenedor"> 
+        <header class="cabecera">
+            <h1>Ergon</h1>
+            <p class="subtitulo">Disciplinas diarias</p>
+        </header>
+
+        <blockquote class="cita">
+            <p id="cita-texto"></p>
+            <span id="cita-autor" class="autor"></span>
+        </blockquote>
+
+        <ul id="lista-habitos" class="lista-habitos"></ul>
+
+        <form id="form-habito" class="form-habito">
+            <input type="text" id="habito-nombre" placeholder="Nuevo hábito" required>
+            <button type="submit">Añadir hábito</button>
+        </form>
+
+        <section class="historial">
+            <h2>Semana</h2>
+            <div id="semana" class="semana"></div>
+        </section>
+
+        <section class="mosaico-seccion">
+            <h2>Mosaico</h2>
+            <div class="mosaico-cabecera">
+                <button id="mes-anterior" type="button" aria-label="Mes anterior">‹</button>
+                <span id="mosaico-titulo"></span>
+                <button id="mes-siguiente" type="button" aria-label="Mes siguiente">›</button>
+            </div>
+            <div class="mosaico-dias">
+                <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+            </div>
+            <div id="mosaico" class="mosaico"></div>
+            <p id="mosaico-resumen" class="mosaico-resumen"></p>
+        </section>
+
+        <section class="metas">
+            <h2>Metas</h2>
+            <div id="lista-metas"></div>
+            <form id="form-meta" class="form-meta">
+                <h3>Agregar meta</h3>
+
+                <input type="text" id="meta-titulo" placeholder="¿Qué quieres conseguir?" required>
+
+                <select id="meta-area">
+                    <option>Hábitos</option>
+                    <option>Salud</option>
+                    <option>Carrera</option>
+                    <option>Finanzas</option>
+                    <option>Hobbies</option>
+                    <option>Social</option>
+                </select>
+
+                <select id="meta-habito">
+                    <option value="">Sin hábito vinculado</option>
+                </select>
+
+                <textarea id="meta-pasos" placeholder="Escribe los pasos para conseguir tu meta (un paso por cada línea)" required></textarea>
+
+                <button type="submit">Agregar meta</button>
+            </form>
+
+            <section id="seccion-cumplidas" class="cumplidas">
+                <h2>Laureles</h2>
+                <p class="cumplidas-intro">Metas cumplidas</p>
+                <div id="lista-cumplidas"></div>
+            </section>
+        </section>
+
+        <footer class="pie">
+            <h2>Copia de seguridad</h2>
+            <p class="pie-texto">Guarda tus datos en un archivo para no perderlos nunca.</p>
+            <div class="pie-botones">
+                <button id="boton-exportar" type="button">Descargar copia</button>
+                <label class="boton-importar">
+                    Restaurar copia
+                    <input type="file" id="archivo-importar" accept=".json" hidden>
+                </label>
+            </div>
+        </footer>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

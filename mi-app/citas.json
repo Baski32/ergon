@@ -1,0 +1,362 @@
+[
+    {
+        "texto": "No es que tengamos poco tiempo, sino que perdemos mucho.",
+        "autor": "Séneca",
+        "obra": "Sobre la brevedad de la vida, 1",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "La muerte no es nada para nosotros: mientras existimos, la muerte no está; y cuando la muerte está, nosotros ya no existimos.",
+        "autor": "Epicuro",
+        "obra": "Carta a Meneceo",
+        "corriente": "Epicureísmo"
+    },
+    {
+        "texto": "No pierdas más tiempo discutiendo cómo debe ser un hombre bueno. Sé uno.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, X 16",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "No es posible bañarse dos veces en el mismo río.",
+        "autor": "Heráclito",
+        "obra": "Fragmento 91",
+        "corriente": "Presocráticos"
+    },
+    {
+        "texto": "Llega a ser el que eres, una vez que lo hayas aprendido.",
+        "autor": "Píndaro",
+        "obra": "Píticas, II 72",
+        "corriente": "Poesía griega"
+    },
+    {
+        "texto": "Nada en exceso.",
+        "autor": "Inscripción de Delfos",
+        "obra": "Templo de Apolo en Delfos",
+        "corriente": "Sabiduría délfica"
+    },
+    {
+        "texto": "Una vida sin examen no merece ser vivida.",
+        "autor": "Sócrates",
+        "obra": "Platón, Apología, 38a",
+        "corriente": "Filosofía clásica"
+    },
+    {
+        "texto": "No es pobre quien tiene poco, sino quien desea más.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 2",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Muy poco se necesita para hacer una vida feliz; todo está dentro de ti, en tu manera de pensar.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, VII 67",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "No hay viento favorable para quien no sabe a qué puerto se dirige.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 71",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "No pretendas que las cosas sucedan como tú quieres; quiere que sucedan como suceden, y vivirás sereno.",
+        "autor": "Epicteto",
+        "obra": "Enquiridión, 8",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Haz cada acción de tu vida como si fuera la última.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, II 5",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "A quien no le basta poco, nada le basta.",
+        "autor": "Epicuro",
+        "obra": "Sentencias vaticanas, 68",
+        "corriente": "Epicureísmo"
+    },
+    {
+        "texto": "Es imposible que alguien aprenda lo que cree que ya sabe.",
+        "autor": "Epicteto",
+        "obra": "Disertaciones, II 17",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Es un mal plan el que no se puede cambiar.",
+        "autor": "Publilio Siro",
+        "obra": "Sentencias",
+        "corriente": "Pensamiento romano"
+    },
+    {
+        "texto": "No actúes como si fueras a vivir diez mil años. La muerte pende sobre ti. Mientras vives, mientras puedes, hazte bueno.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, IV 17",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "No es porque las cosas sean difíciles que no nos atrevemos; es porque no nos atrevemos que son difíciles.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 104",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Todos los seres humanos desean por naturaleza saber.",
+        "autor": "Aristóteles",
+        "obra": "Metafísica, I 1",
+        "corriente": "Aristotelismo"
+    },
+    {
+        "texto": "No nos perturban las cosas, sino las opiniones que tenemos sobre ellas.",
+        "autor": "Epicteto",
+        "obra": "Enquiridión, 5",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "El carácter del hombre es su destino.",
+        "autor": "Heráclito",
+        "obra": "Fragmento 119",
+        "corriente": "Presocráticos"
+    },
+    {
+        "texto": "Sufrimos más a menudo en la imaginación que en la realidad.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 13",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Yo, que no sé, tampoco creo saber.",
+        "autor": "Sócrates",
+        "obra": "Platón, Apología, 21d",
+        "corriente": "Filosofía clásica"
+    },
+    {
+        "texto": "Primero dite a ti mismo quién quieres ser; después haz lo que tengas que hacer.",
+        "autor": "Epicteto",
+        "obra": "Disertaciones, III 23",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "El obstáculo a la acción hace avanzar la acción. Lo que se interpone en el camino se convierte en el camino.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, V 20",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Quien con monstruos lucha, cuide de no convertirse a su vez en monstruo.",
+        "autor": "Friedrich Nietzsche",
+        "obra": "Más allá del bien y del mal, 146",
+        "corriente": "Existencialismo / vitalismo"
+    },
+    {
+        "texto": "La historia es maestra de la vida.",
+        "autor": "Cicerón",
+        "obra": "Sobre el orador, II 36",
+        "corriente": "Pensamiento romano"
+    },
+    {
+        "texto": "La gota horada la piedra.",
+        "autor": "Ovidio",
+        "obra": "Pónticas, IV 10",
+        "corriente": "Pensamiento romano"
+    },
+    {
+        "texto": "Debes llegar a ser el que eres.",
+        "autor": "Friedrich Nietzsche",
+        "obra": "La gaya ciencia, 270",
+        "corriente": "Existencialismo / vitalismo"
+    },
+    {
+        "texto": "Mientras enseñamos, aprendemos.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 7",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "La mejor manera de defenderte de alguien es no parecerte a él.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, VI 6",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "El ser humano es por naturaleza un animal social.",
+        "autor": "Aristóteles",
+        "obra": "Política, I 2",
+        "corriente": "Aristotelismo"
+    },
+    {
+        "texto": "La primera y mejor de las victorias es vencerse a uno mismo.",
+        "autor": "Platón",
+        "obra": "Leyes, I 626e",
+        "corriente": "Filosofía clásica"
+    },
+    {
+        "texto": "La gratitud no es solo la mayor de las virtudes, sino la madre de todas las demás.",
+        "autor": "Cicerón",
+        "obra": "En defensa de Plancio, 80",
+        "corriente": "Pensamiento romano"
+    },
+    {
+        "texto": "Una golondrina no hace verano, ni tampoco un solo día; así, un solo día o un breve tiempo no hacen a nadie feliz.",
+        "autor": "Aristóteles",
+        "obra": "Ética a Nicómaco, I 7",
+        "corriente": "Aristotelismo"
+    },
+    {
+        "texto": "Mientras se aplaza, la vida pasa.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 1",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "El alma se tiñe del color de sus pensamientos.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, V 16",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Lo que no me mata me hace más fuerte.",
+        "autor": "Friedrich Nietzsche",
+        "obra": "Crepúsculo de los ídolos, Sentencias 8",
+        "corriente": "Existencialismo / vitalismo"
+    },
+    {
+        "texto": "En ninguna parte puede el hombre retirarse con más tranquilidad que en su propia alma.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, IV 3",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "El asombro es el comienzo de la filosofía.",
+        "autor": "Platón",
+        "obra": "Teeteto, 155d",
+        "corriente": "Filosofía clásica"
+    },
+    {
+        "texto": "No estropees lo que tienes deseando lo que no tienes.",
+        "autor": "Epicuro",
+        "obra": "Sentencias vaticanas, 35",
+        "corriente": "Epicureísmo"
+    },
+    {
+        "texto": "La pérdida más vergonzosa es la que se debe a la negligencia.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 1",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Aprovecha el día y confía lo menos posible en el mañana.",
+        "autor": "Horacio",
+        "obra": "Odas, I 11",
+        "corriente": "Pensamiento romano"
+    },
+    {
+        "texto": "No hables de tus principios entre quienes no los comparten: actúa conforme a ellos.",
+        "autor": "Epicteto",
+        "obra": "Enquiridión, 46",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Considera cada día como una vida entera.",
+        "autor": "Séneca",
+        "obra": "Cartas a Lucilio, 101",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Aquello que no es bueno para la colmena, no es bueno para la abeja.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, VI 54",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Delante de la virtud, los dioses inmortales pusieron el sudor.",
+        "autor": "Hesíodo",
+        "obra": "Trabajos y días, 289",
+        "corriente": "Poesía griega"
+    },
+    {
+        "texto": "La vida, si sabes usarla, es larga.",
+        "autor": "Séneca",
+        "obra": "Sobre la brevedad de la vida, 2",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Es peor cometer una injusticia que padecerla.",
+        "autor": "Sócrates",
+        "obra": "Platón, Gorgias, 469b",
+        "corriente": "Filosofía clásica"
+    },
+    {
+        "texto": "Quien ha empezado tiene hecha la mitad de la obra: atrévete a saber.",
+        "autor": "Horacio",
+        "obra": "Epístolas, I 2",
+        "corriente": "Pensamiento romano"
+    },
+    {
+        "texto": "Nos hacemos justos practicando la justicia, moderados practicando la moderación y valientes practicando la valentía.",
+        "autor": "Aristóteles",
+        "obra": "Ética a Nicómaco, II 1",
+        "corriente": "Aristotelismo"
+    },
+    {
+        "texto": "De las cosas que existen, unas dependen de nosotros y otras no.",
+        "autor": "Epicteto",
+        "obra": "Enquiridión, 1",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Si no es correcto, no lo hagas; si no es verdad, no lo digas.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, XII 17",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "El principio es la parte más importante de toda obra.",
+        "autor": "Platón",
+        "obra": "República, II 377a",
+        "corriente": "Filosofía clásica"
+    },
+    {
+        "texto": "Conócete a ti mismo.",
+        "autor": "Inscripción de Delfos",
+        "obra": "Templo de Apolo en Delfos",
+        "corriente": "Sabiduría délfica"
+    },
+    {
+        "texto": "Al amanecer, cuando te cueste levantarte, ten presente este pensamiento: me levanto para hacer la obra de un ser humano.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, V 1",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "A la naturaleza le gusta ocultarse.",
+        "autor": "Heráclito",
+        "obra": "Fragmento 123",
+        "corriente": "Presocráticos"
+    },
+    {
+        "texto": "Quien tiene un porqué para vivir soporta casi cualquier cómo.",
+        "autor": "Friedrich Nietzsche",
+        "obra": "Crepúsculo de los ídolos, Sentencias 12",
+        "corriente": "Existencialismo / vitalismo"
+    },
+    {
+        "texto": "Si quieres progresar, acepta parecer necio e ignorante en las cosas exteriores.",
+        "autor": "Epicteto",
+        "obra": "Enquiridión, 13",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Pronto lo habrás olvidado todo; pronto todos te habrán olvidado a ti.",
+        "autor": "Marco Aurelio",
+        "obra": "Meditaciones, VII 21",
+        "corriente": "Estoicismo"
+    },
+    {
+        "texto": "Ninguna gran cosa se produce de repente, ni siquiera la uva o el higo.",
+        "autor": "Epicteto",
+        "obra": "Disertaciones, I 15",
+        "corriente": "Estoicismo"
+    }
+]
