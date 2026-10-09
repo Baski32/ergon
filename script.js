@@ -557,6 +557,30 @@ document.getElementById("archivo-importar").addEventListener("change", async fun
     }
 });
 
+// ---------- NAVEGACIÓN ----------
+
+const pantallas = document.querySelectorAll(".pantalla");
+const botonesNavegacion = document.querySelectorAll(".navegacion button");
+
+function mostrarPantalla(nombre) {
+    pantallas.forEach(function (pantalla) {
+        pantalla.hidden = pantalla.dataset.pantalla !== nombre;
+    });
+
+    botonesNavegacion.forEach(function (boton) {
+        boton.classList.toggle("activa", boton.dataset.destino === nombre);
+    });
+
+    localStorage.setItem("ergon-pantalla", nombre);
+    window.scrollTo(0, 0);  
+}
+
+botonesNavegacion.forEach(function (boton) {
+    boton.addEventListener("click", function () {
+        mostrarPantalla(boton.dataset.destino);
+    });
+});
+
 // ---------- INICIO ----------
 
 
@@ -570,3 +594,4 @@ function actualizarTodo() {
 
 actualizarTodo();
 mostrarCitaDelDia();
+mostrarPantalla(localStorage.getItem("ergon-pantalla") || "hoy");

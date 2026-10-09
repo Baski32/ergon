@@ -19,7 +19,7 @@ body {
 .contenedor {
     max-width: 500px;
     margin: 0 auto;
-    padding: 32px 16px;
+    padding: 32px 16px 96px;
 }
 
 .cabecera {
@@ -605,4 +605,43 @@ h1 {
     .llama svg {
         animation: none;
     }
+}
+
+/* ---------- Navegación inferior ---------- */
+
+.navegacion {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 500px;
+    margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+    background-color: var(--marmol);
+    border-top: 1px solid var(--bronce);
+    box-shadow: 0 -4px 12px rgba(43, 37, 34, 0.08);
+}
+
+.navegacion button {
+    padding: 16px 0 14px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--bronce);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.navegacion button.activa {
+    color: var(--terracota);
+    font-weight: 600;
+    background-color: rgba(164, 69, 44, 0.06);
+}
+
+.pantalla[data-pantalla="mosaico"] .mosaico-seccion,
+.pie {
+    margin-top: 0;
 }
