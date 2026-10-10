@@ -581,6 +581,14 @@ botonesNavegacion.forEach(function (boton) {
     });
 });
 
+// ---------- APP INSTALABLE ----------
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
+}
+
+
+
 // ---------- INICIO ----------
 
 
