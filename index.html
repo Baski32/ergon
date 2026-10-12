@@ -174,6 +174,9 @@
           <select id="habito-medida">
             <option value="casilla">Se marca como hecho</option>
             <option value="cantidad">Se cumple con una cantidad</option>
+            <option value="abstencion">
+              Es algo que quiero dejar (templanza)
+            </option>
           </select>
           <!-- Cantidad: objetivo de cada día y unidad -->
           <fieldset id="habito-cantidad" class="habito-cantidad" hidden>
@@ -190,6 +193,11 @@
               id="habito-unidad"
               placeholder="pasos, páginas, minutos…"
             />
+          </fieldset>
+          <!-- Templanza: desde qué día se cuenta -->
+          <fieldset id="habito-templanza" class="habito-templanza" hidden>
+            <legend>¿Desde cuándo lo cuento?</legend>
+            <input type="date" id="habito-inicio" />
           </fieldset>
           <button type="submit">Añadir hábito</button>
         </form>

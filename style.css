@@ -171,6 +171,12 @@ h1 {
   order: 1;
 }
 
+/* Ficha de templanza con recaída hoy: en terracota */
+.lista-habitos li.recaida {
+  border-color: var(--terracota);
+  background-color: #f6e9e4;
+}
+
 /* Contenido de la ficha en fila. flex: 1 hace que ocupe todo menos el botón × */
 .lista-habitos label {
   display: flex;
@@ -235,6 +241,18 @@ h1 {
 .habito-campo::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* Botón «Recaída» (o «Deshacer») de los hábitos de templanza */
+.habito-recaida {
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--terracota);
+  background: none;
+  border: 1px solid var(--terracota);
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 /* Botón × para borrar un hábito: discreto hasta pasar por encima */
@@ -325,7 +343,8 @@ h1 {
 /* Campos: nombre, desplegables, objetivo y unidad */
 .form-habito input[type="text"],
 .form-habito input[type="number"],
-.form-habito select {
+.form-habito select,
+.form-habito input[type="date"] {
   padding: 10px;
   font-family: inherit;
   font-size: 1rem;
@@ -337,7 +356,8 @@ h1 {
 
 .form-habito input[type="text"]:focus,
 .form-habito input[type="number"]:focus,
-.form-habito select:focus {
+.form-habito select:focus,
+.form-habito input[type="date"]:focus {
   outline: none;
   border-color: var(--bronce);
 }
@@ -370,13 +390,15 @@ h1 {
 /* Las cajas de días y de cantidad, ocultas hasta elegir su opción.
    Hace falta porque display: flex ganaría al atributo hidden */
 .habito-dias[hidden],
-.habito-cantidad[hidden] {
+.habito-cantidad[hidden],
+.habito-templanza[hidden] {
   display: none;
 }
 
 /* «¿Qué días?» y «Objetivo de cada día» */
 .habito-dias legend,
-.habito-cantidad legend {
+.habito-cantidad legend,
+.habito-templanza legend {
   margin-bottom: 6px;
   font-size: 0.9rem;
   color: var(--bronce);
@@ -426,6 +448,16 @@ h1 {
 .habito-cantidad input {
   flex: 1;
   min-width: 0;
+}
+
+/* Caja de templanza: la fecha de inicio ocupa todo el ancho */
+.habito-templanza {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 /* ==========================================================================

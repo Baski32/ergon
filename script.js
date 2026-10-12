@@ -126,15 +126,22 @@ function tocaEn(habito, fecha) {
   return true;
 }
 
-// ¿Está cumplido ese día? Los de cantidad, si llegan al objetivo;
-// los de casilla, si están marcados.
+// ¿Está cumplido ese día? Los de cantidad, si llegan al objetivo; los de
+// templanza, si no hubo recaída; los de casilla, si están marcados.
 function estaCumplido(habito, habitosDia) {
   const valor = habitosDia[habito.id];
 
   if (habito.medida === "cantidad") {
     return valor >= habito.objetivo;
   }
+
+  if (habito.medida === "abstencion") {
+    return valor !== "recaida";
+  }
+
   return valor === true;
+
+  
 }
 
 // Días seguidos cumpliendo un hábito, contando hacia atrás desde hoy.
@@ -151,7 +158,9 @@ function calcularRacha(id) {
   const fecha = new Date();
   const inicio = inicioDe(habito);
 
-  if (!estaCumplido(habito, habitosHoy)) {
+  // Si hoy aún no está cumplido, se cuenta desde ayer: todavía hay tiempo.
+  // En templanza no: una recaída hoy deja la racha a 0.
+  if (habito.medida !== "abstencion" && !estaCumplido(habito, habitosHoy)) {
     fecha.setDate(fecha.getDate() - 1);
   }
 
@@ -173,6 +182,43 @@ function calcularRacha(id) {
   }
 
   return racha;
+}
+
+// Mejor racha y total de días cumplidos, desde el inicio del hábito hasta hoy.
+// Lo usan los hábitos de templanza: una recaída no borra lo conseguido.
+function mejorRachaYTotal(habito) {
+  let mejor = 0;
+  let seguidos = 0;
+  let total = 0;
+  const fecha = new Date(inicioDe(habito) + "T00:00");
+
+  while (fecha.toLocaleDateString("en-CA") <= hoy) {
+    const habitosDia = registro[fecha.toLocaleDateString("en-CA")] || {};
+
+    if (tocaEn(habito, fecha)) {
+      if (estaCumplido(habito, habitosDia)) {
+        seguidos++;
+        total++;
+        if (seguidos > mejor) {
+          mejor = seguidos;
+        }
+      } else {
+        seguidos = 0;
+      }
+    }
+
+    fecha.setDate(fecha.getDate() + 1);
+  }
+
+  return { mejor: mejor, total: total };
+}
+
+// Número de días en texto: "1 día", "5 días".
+function textoDias(numero) {
+  if (numero === 1) {
+    return "1 día";
+  }
+  return numero + " días";
 }
 
 // Convierte la racha en texto: "", "1 día de racha", "5 días de racha".
@@ -205,10 +251,11 @@ function resumenDelDia(fecha) {
   let tocan = 0;
   let cumplidos = 0;
 
-  habitos.forEach(function (habito) {
+   habitos.forEach(function (habito) {
     if (tocaEn(habito, fecha)) {
       tocan++;
-      if (estaCumplido(habito, habitosDia)) {
+      // Los días que aún no han llegado no cuentan como cumplidos
+      if (clave <= hoy && estaCumplido(habito, habitosDia)) {
         cumplidos++;
       }
     }
@@ -238,7 +285,8 @@ function mostrarHabitos() {
     const item = document.createElement("li");
     const etiqueta = document.createElement("label");
 
-    // Casilla (se marca como hecho) o campo de número (cantidad)
+    // Casilla (se marca como hecho), campo de número (cantidad)
+    // o botón de recaída (templanza)
     let control;
 
     if (habito.medida === "cantidad") {
@@ -252,6 +300,27 @@ function mostrarHabitos() {
 
       control.addEventListener("change", function () {
         habitosHoy[habito.id] = Number(control.value);
+        guardarRegistro();
+        actualizarTodo();
+      });
+    } else if (habito.medida === "abstencion") {
+      control = document.createElement("button");
+      control.type = "button";
+      control.classList.add("habito-recaida");
+
+      if (habitosHoy[habito.id] === "recaida") {
+        control.textContent = "Deshacer";
+        item.classList.add("recaida");
+      } else {
+        control.textContent = "Recaída";
+      }
+
+      control.addEventListener("click", function () {
+        if (habitosHoy[habito.id] === "recaida") {
+          delete habitosHoy[habito.id];
+        } else {
+          habitosHoy[habito.id] = "recaida";
+        }
         guardarRegistro();
         actualizarTodo();
       });
@@ -292,6 +361,16 @@ function mostrarHabitos() {
           habito.objetivo.toLocaleString("es-ES") +
           " " +
           habito.unidad,
+      );
+    }
+
+    if (habito.medida === "abstencion") {
+      const historial = mejorRachaYTotal(habito);
+      detalles.push(
+        "Mejor: " +
+          textoDias(historial.mejor) +
+          " · Total: " +
+          textoDias(historial.total),
       );
     }
 
@@ -344,13 +423,19 @@ function mostrarHabitos() {
       }
     });
 
-    // Montar la ficha: el campo de cantidad va a la derecha; la casilla, a la izquierda
+    // Montar la ficha: el campo de cantidad va a la derecha; la casilla, a la
+    // izquierda. El botón de recaída va fuera de la etiqueta: dentro, tocar el
+    // nombre lo pulsaría sin querer.
     if (habito.medida === "cantidad") {
       etiqueta.append(nombre, racha, control);
+      item.append(etiqueta, botonEliminar);
+    } else if (habito.medida === "abstencion") {
+      etiqueta.append(nombre, racha);
+      item.append(etiqueta, control, botonEliminar);
     } else {
       etiqueta.append(control, nombre, racha);
+      item.append(etiqueta, botonEliminar);
     }
-    item.append(etiqueta, botonEliminar);
     lista.append(item);
   });
 }
@@ -366,15 +451,23 @@ const selectFrecuencia = document.getElementById("habito-frecuencia");
 const cajaDias = document.getElementById("habito-dias");
 const selectMedida = document.getElementById("habito-medida");
 const cajaCantidad = document.getElementById("habito-cantidad");
+const cajaTemplanza = document.getElementById("habito-templanza");
+const campoInicio = document.getElementById("habito-inicio");
+
+// La fecha de inicio empieza en hoy y no puede ser futura.
+campoInicio.value = hoy;
+campoInicio.max = hoy;
 
 // Muestra los días solo si se elige «Días concretos».
 selectFrecuencia.addEventListener("change", function () {
   cajaDias.hidden = selectFrecuencia.value !== "dias";
 });
 
-// Muestra el objetivo solo si se elige «Se cumple con una cantidad».
+// Muestra el objetivo solo con «Se cumple con una cantidad» y la fecha de
+// inicio solo con «Es algo que quiero dejar».
 selectMedida.addEventListener("change", function () {
   cajaCantidad.hidden = selectMedida.value !== "cantidad";
+  cajaTemplanza.hidden = selectMedida.value !== "abstencion";
 });
 
 // Al pulsar «Añadir hábito»: lee el formulario, comprueba que esté
@@ -410,6 +503,14 @@ formHabito.addEventListener("submit", function (evento) {
     return;
   }
 
+  // Templanza: desde qué día se cuenta
+  const inicio = campoInicio.value || hoy;
+
+  if (medida === "abstencion" && inicio > hoy) {
+    alert("La fecha de inicio no puede ser futura.");
+    return;
+  }
+
   // Crear el hábito solo con las propiedades que necesita
   const nuevo = {
     id: "h" + Date.now(),
@@ -428,6 +529,10 @@ formHabito.addEventListener("submit", function (evento) {
     nuevo.unidad = unidad;
   }
 
+  if (medida === "abstencion") {
+    nuevo.inicio = inicio;
+  }
+
   // Guardar, volver a dibujar y dejar el formulario limpio
   habitos.push(nuevo);
 
@@ -436,6 +541,8 @@ formHabito.addEventListener("submit", function (evento) {
   formHabito.reset();
   cajaDias.hidden = true;
   cajaCantidad.hidden = true;
+  cajaTemplanza.hidden = true;
+  campoInicio.value = hoy;
 });
 
 // ==========================================================================
