@@ -41,6 +41,11 @@ function guardarHabitos() {
   localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
 }
 
+function guardarRegistro() {
+  registro[hoy] = habitosHoy;
+  localStorage.setItem("ergon-registro", JSON.stringify(registro));
+}
+
 function mostrarHabitos() {
   const lista = document.getElementById("lista-habitos");
   lista.innerHTML = "";
@@ -54,9 +59,37 @@ function mostrarHabitos() {
     const item = document.createElement("li");
     const etiqueta = document.createElement("label");
 
-    const casilla = document.createElement("input");
-    casilla.type = "checkbox";
-    casilla.checked = habitosHoy[habito.id] === true;
+    let control;
+
+    if (habito.medida === "cantidad") {
+      control = document.createElement("input");
+      control.type = "number";
+      control.min = "0";
+      control.inputMode = "numeric";
+      control.placeholder = habito.objetivo.toLocaleString("es-ES");
+      control.classList.add("habito-campo");
+      control.value = habitosHoy[habito.id] || "";
+
+      control.addEventListener("change", function () {
+        habitosHoy[habito.id] = Number(control.value);
+        guardarRegistro();
+        actualizarTodo();
+      });
+    } else {
+      control = document.createElement("input");
+      control.type = "checkbox";
+      control.checked = habitosHoy[habito.id] === true;
+
+      control.addEventListener("change", function () {
+        habitosHoy[habito.id] = control.checked;
+        guardarRegistro();
+        actualizarTodo();
+      });
+    }
+
+    if (estaCumplido(habito, habitosHoy)) {
+      item.classList.add("hecho");
+    }
 
     const nombre = document.createElement("span");
     nombre.textContent = habito.nombre;
@@ -71,8 +104,17 @@ function mostrarHabitos() {
       detalles.push(letras.join(" · "));
     }
 
+    if (habito.medida === "cantidad") {
+      detalles.push(
+        "Objetivo: " +
+          habito.objetivo.toLocaleString("es-ES") +
+          " " +
+          habito.unidad,
+      );
+    }
+
     if (!tocaHoy) {
-      detalles.push("Hoy toca descanso");
+      detalles.push("hoy toca descanso");
     }
 
     if (detalles.length > 0) {
@@ -84,7 +126,7 @@ function mostrarHabitos() {
 
     if (!tocaHoy) {
       item.classList.add("descanso");
-      casilla.disabled = true;
+      control.disabled = true;
     }
 
     const dias = calcularRacha(habito.id);
@@ -104,13 +146,6 @@ function mostrarHabitos() {
       racha.prepend(llama);
     }
 
-    casilla.addEventListener("change", function () {
-      habitosHoy[habito.id] = casilla.checked;
-      registro[hoy] = habitosHoy;
-      localStorage.setItem("ergon-registro", JSON.stringify(registro));
-      actualizarTodo();
-    });
-
     const botonEliminar = document.createElement("button");
     botonEliminar.classList.add("habito-eliminar");
     botonEliminar.textContent = "×";
@@ -124,7 +159,11 @@ function mostrarHabitos() {
       }
     });
 
-    etiqueta.append(casilla, nombre, racha);
+    if (habito.medida === "cantidad") {
+      etiqueta.append(nombre, racha, control);
+    } else {
+      etiqueta.append(control, nombre, racha);
+    }
     item.append(etiqueta, botonEliminar);
     lista.append(item);
   });
@@ -136,6 +175,13 @@ const cajaDias = document.getElementById("habito-dias");
 
 selectFrecuencia.addEventListener("change", function () {
   cajaDias.hidden = selectFrecuencia.value !== "dias";
+});
+
+const selectMedida = document.getElementById("habito-medida");
+const cajaCantidad = document.getElementById("habito-cantidad");
+
+selectMedida.addEventListener("change", function () {
+  cajaCantidad.hidden = selectMedida.value !== "cantidad";
 });
 
 formHabito.addEventListener("submit", function (evento) {
@@ -157,14 +203,29 @@ formHabito.addEventListener("submit", function (evento) {
     return;
   }
 
+  const medida = selectMedida.value;
+  const objetivo = Number(document.getElementById("habito-objetivo").value);
+  const unidad = document.getElementById("habito-unidad").value.trim();
+
+  if (medida === "cantidad" && objetivo <= 0) {
+    alert("Escribe el objetivo de cada día.");
+    return;
+  }
+
   const nuevo = {
     id: "h" + Date.now(),
     nombre: nombre,
     frecuencia: frecuencia,
+    medida: medida,
   };
 
   if (frecuencia === "dias") {
     nuevo.dias = dias;
+  }
+
+  if (medida === "cantidad") {
+    nuevo.objetivo = objetivo;
+    nuevo.unidad = unidad;
   }
 
   habitos.push(nuevo);
@@ -173,6 +234,7 @@ formHabito.addEventListener("submit", function (evento) {
   actualizarTodo();
   formHabito.reset();
   cajaDias.hidden = true;
+  cajaCantidad.hidden = true;
 });
 
 const letrasDias = ["D", "L", "M", "X", "J", "V", "S"];
@@ -185,38 +247,43 @@ function tocaEn(habito, fecha) {
 }
 
 function estaCumplido(habito, habitosDia) {
-  return habitosDia[habito.id] === true;
+  const valor = habitosDia[habito.id];
+
+  if (habito.medida === "cantidad") {
+    return valor >= habito.objetivo;
+  }
+  return valor === true;
 }
 
 function calcularRacha(id) {
-    const habito = habitos.find(function (h) {
-        return h.id === id;
-    });
-    if (!habito) {
-        return 0;
+  const habito = habitos.find(function (h) {
+    return h.id === id;
+  });
+  if (!habito) {
+    return 0;
+  }
+
+  let racha = 0;
+  const fecha = new Date();
+
+  if (!estaCumplido(habito, habitosHoy)) {
+    fecha.setDate(fecha.getDate() - 1);
+  }
+
+  for (let vueltas = 0; vueltas < 3650; vueltas++) {
+    const clave = fecha.toLocaleDateString("en-CA");
+    const habitosDia = registro[clave] || {};
+
+    if (estaCumplido(habito, habitosDia)) {
+      racha++;
+    } else if (tocaEn(habito, fecha)) {
+      break;
     }
 
-    let racha = 0;
-    const fecha = new Date();
+    fecha.setDate(fecha.getDate() - 1);
+  }
 
-    if (!estaCumplido(habito, habitosHoy)) {
-        fecha.setDate(fecha.getDate() - 1);
-    }
-
-    for (let vueltas = 0; vueltas < 3650; vueltas++) {
-        const clave = fecha.toLocaleDateString("en-CA");
-        const habitosDia = registro[clave] || {};
-
-        if (estaCumplido(habito, habitosDia)) {
-            racha++;
-        } else if (tocaEn(habito, fecha)) {
-            break;
-        }
-
-        fecha.setDate(fecha.getDate() - 1);
-    }
-
-    return racha;
+  return racha;
 }
 
 function textoRacha(racha) {
@@ -262,7 +329,6 @@ function mostrarHistorial() {
     const clave = fecha.toLocaleDateString("en-CA");
     const resumen = resumenDelDia(fecha);
 
-
     const dia = document.createElement("div");
     dia.classList.add("dia");
 
@@ -289,7 +355,7 @@ function mostrarHistorial() {
     dia.title = "Día de " + diosesSemana[i].dios;
 
     const marcador = document.createElement("span");
-    
+
     if (resumen.tocan === 0) {
       marcador.textContent = "—";
     } else {
@@ -309,40 +375,38 @@ const mesVisible = new Date();
 mesVisible.setDate(1);
 
 function resumenDelDia(fecha) {
-    const clave = fecha.toLocaleDateString("en-CA");
-    const habitosDia = registro[clave] || {};
-    let tocan = 0;
-    let cumplidos = 0;
+  const clave = fecha.toLocaleDateString("en-CA");
+  const habitosDia = registro[clave] || {};
+  let tocan = 0;
+  let cumplidos = 0;
 
-    habitos.forEach(function (habito) {
-        if (tocaEn(habito, fecha)) {
-            tocan++;
-            if (estaCumplido(habito, habitosDia)) {
-                cumplidos++;
-            }
-        }
-    });
+  habitos.forEach(function (habito) {
+    if (tocaEn(habito, fecha)) {
+      tocan++;
+      if (estaCumplido(habito, habitosDia)) {
+        cumplidos++;
+      }
+    }
+  });
 
-    return { tocan: tocan, cumplidos: cumplidos };
+  return { tocan: tocan, cumplidos: cumplidos };
 }
 
-
-
 function nivelDelDia(fecha) {
-    const resumen = resumenDelDia(fecha);
-    if (resumen.tocan === 0) {
-        return 0;
-    }
-
-    const proporcion = resumen.cumplidos / resumen.tocan;
-    if (proporcion === 1) {
-        return 3;
-    } else if (proporcion >= 0.5) {
-        return 2;
-    } else if (proporcion > 0) {
-        return 1;
-    }
+  const resumen = resumenDelDia(fecha);
+  if (resumen.tocan === 0) {
     return 0;
+  }
+
+  const proporcion = resumen.cumplidos / resumen.tocan;
+  if (proporcion === 1) {
+    return 3;
+  } else if (proporcion >= 0.5) {
+    return 2;
+  } else if (proporcion > 0) {
+    return 1;
+  }
+  return 0;
 }
 
 function mostrarMosaico() {

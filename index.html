@@ -145,6 +145,25 @@
             <label><input type="checkbox" value="6" />S</label>
             <label><input type="checkbox" value="0" />D</label>
           </fieldset>
+          <select id="habito-medida">
+            <option value="casilla">Se marca como hecho</option>
+            <option value="cantidad">Se cumple con una cantidad</option>
+          </select>
+          <fieldset id="habito-cantidad" class="habito-cantidad" hidden>
+            <legend>Objetivo de cada día</legend>
+            <input
+              type="number"
+              id="habito-objetivo"
+              min="1"
+              inputmode="numeric"
+              placeholder="10000"
+            />
+            <input
+              type="text"
+              id="habito-unidad"
+              placeholder="pasos, páginas, minutos…"
+            />
+          </fieldset>
           <button type="submit">Añadir hábito</button>
         </form>
 
