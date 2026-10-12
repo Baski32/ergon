@@ -1,5 +1,65 @@
-// ---------- CITAS ----------
+// ==========================================================================
+// ERGON — script.js
+// Toda la lógica de la app. Los datos se guardan solo en este dispositivo.
+//
+// ÍNDICE
+//  1. Datos guardados
+//  2. Cita del día
+//  3. Hábitos · Reglas, rachas y resumen del día
+//  4. Hábitos · Lista de hoy
+//  5. Hábitos · Formulario de hábito nuevo
+//  6. Semana
+//  7. Mosaico del mes
+//  8. Metas
+//  9. Copia de seguridad
+// 10. Navegación entre pantallas
+// 11. App instalable (service worker)
+// 12. Inicio
+// ==========================================================================
 
+// ==========================================================================
+// 1. DATOS GUARDADOS
+// Lo que Ergon guarda en el navegador (localStorage) y las funciones que lo
+// guardan. Cada dispositivo (PC, iPhone) tiene sus propios datos.
+// ==========================================================================
+
+// Fecha de hoy como texto, p. ej. "2026-10-12". Es la clave de cada día.
+const hoy = new Date().toLocaleDateString("en-CA");
+
+// Registro de todos los días: { "2026-10-12": { idDelHábito: true o cantidad } }
+const registro = JSON.parse(localStorage.getItem("ergon-registro")) || {};
+
+// Lo apuntado hoy (el trozo del registro que corresponde a hoy).
+const habitosHoy = registro[hoy] || {};
+
+// Lista de hábitos: { id, nombre, frecuencia, dias, medida, objetivo, unidad }
+const habitos = JSON.parse(localStorage.getItem("ergon-habitos")) || [];
+
+// Lista de metas: { titulo, area, habito, pasos: [{ texto, completado }] }
+const metas = JSON.parse(localStorage.getItem("ergon-metas")) || [];
+
+// Guarda la lista de hábitos.
+function guardarHabitos() {
+  localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
+}
+
+// Guarda lo apuntado hoy dentro del registro.
+function guardarRegistro() {
+  registro[hoy] = habitosHoy;
+  localStorage.setItem("ergon-registro", JSON.stringify(registro));
+}
+
+// Guarda la lista de metas.
+function guardarMetas() {
+  localStorage.setItem("ergon-metas", JSON.stringify(metas));
+}
+
+// ==========================================================================
+// 2. CITA DEL DÍA
+// Una cita clásica distinta cada día, sacada de citas.json.
+// ==========================================================================
+
+// Días que han pasado desde el 1 de enero de 2026. Sirve para elegir la cita.
 function numeroDelDia() {
   const inicio = new Date(2026, 0, 1);
   const ahora = new Date();
@@ -11,6 +71,7 @@ function numeroDelDia() {
   return Math.round((hoyMedianoche - inicio) / 86400000);
 }
 
+// Lee citas.json y muestra la cita de hoy. Si falla, muestra una de reserva.
 async function mostrarCitaDelDia() {
   const texto = document.getElementById("cita-texto");
   const autor = document.getElementById("cita-autor");
@@ -28,28 +89,122 @@ async function mostrarCitaDelDia() {
   }
 }
 
-// ---------- HÁBITOS ----------
+// ==========================================================================
+// 3. HÁBITOS · REGLAS, RACHAS Y RESUMEN DEL DÍA
+// Las preguntas que el resto de la app hace sobre los hábitos.
+// Cada hábito tiene una frecuencia (cuándo toca) y una medida (cómo se cumple).
+// ==========================================================================
 
-const hoy = new Date().toLocaleDateString("en-CA");
+// Letra de cada día en el orden de getDay(): 0 = domingo, 1 = lunes…
+const letrasDias = ["D", "L", "M", "X", "J", "V", "S"];
 
-const registro = JSON.parse(localStorage.getItem("ergon-registro")) || {};
-const habitosHoy = registro[hoy] || {};
-
-const habitos = JSON.parse(localStorage.getItem("ergon-habitos")) || [];
-
-function guardarHabitos() {
-  localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
+// ¿Toca este hábito en esta fecha? Los diarios (y los antiguos, sin
+// frecuencia) tocan siempre; los de días concretos, solo sus días.
+function tocaEn(habito, fecha) {
+  if (habito.frecuencia === "dias") {
+    return habito.dias.includes(fecha.getDay());
+  }
+  return true;
 }
 
-function guardarRegistro() {
-  registro[hoy] = habitosHoy;
-  localStorage.setItem("ergon-registro", JSON.stringify(registro));
+// ¿Está cumplido ese día? Los de cantidad, si llegan al objetivo;
+// los de casilla, si están marcados.
+function estaCumplido(habito, habitosDia) {
+  const valor = habitosDia[habito.id];
+
+  if (habito.medida === "cantidad") {
+    return valor >= habito.objetivo;
+  }
+  return valor === true;
 }
 
+// Días seguidos cumpliendo un hábito, contando hacia atrás desde hoy.
+// Los días de descanso ni suman ni rompen la racha.
+function calcularRacha(id) {
+  const habito = habitos.find(function (h) {
+    return h.id === id;
+  });
+  if (!habito) {
+    return 0;
+  }
+
+  let racha = 0;
+  const fecha = new Date();
+
+  if (!estaCumplido(habito, habitosHoy)) {
+    fecha.setDate(fecha.getDate() - 1);
+  }
+
+  for (let vueltas = 0; vueltas < 3650; vueltas++) {
+    const clave = fecha.toLocaleDateString("en-CA");
+    const habitosDia = registro[clave] || {};
+
+    if (estaCumplido(habito, habitosDia)) {
+      racha++;
+    } else if (tocaEn(habito, fecha)) {
+      break;
+    }
+
+    fecha.setDate(fecha.getDate() - 1);
+  }
+
+  return racha;
+}
+
+// Convierte la racha en texto: "", "1 día de racha", "5 días de racha".
+function textoRacha(racha) {
+  if (racha === 0) {
+    return "";
+  } else if (racha === 1) {
+    return "1 día de racha";
+  } else {
+    return racha + " días de racha";
+  }
+}
+
+// Nombre de un hábito a partir de su id (lo usan las metas).
+function nombreHabito(id) {
+  const habito = habitos.find(function (h) {
+    return h.id === id;
+  });
+  if (habito) {
+    return habito.nombre;
+  }
+  return "un hábito eliminado";
+}
+
+// Cuántos hábitos tocan un día y cuántos se cumplieron.
+// Lo usan la semana y el mosaico.
+function resumenDelDia(fecha) {
+  const clave = fecha.toLocaleDateString("en-CA");
+  const habitosDia = registro[clave] || {};
+  let tocan = 0;
+  let cumplidos = 0;
+
+  habitos.forEach(function (habito) {
+    if (tocaEn(habito, fecha)) {
+      tocan++;
+      if (estaCumplido(habito, habitosDia)) {
+        cumplidos++;
+      }
+    }
+  });
+
+  return { tocan: tocan, cumplidos: cumplidos };
+}
+
+// ==========================================================================
+// 4. HÁBITOS · LISTA DE HOY
+// Las fichas de la pantalla Hoy.
+// ==========================================================================
+
+// Dibuja una ficha por hábito: casilla o campo de cantidad, nombre,
+// detalles, racha y botón de borrar.
 function mostrarHabitos() {
   const lista = document.getElementById("lista-habitos");
   lista.innerHTML = "";
 
+  // Mensaje si aún no hay hábitos
   if (habitos.length === 0) {
     lista.innerHTML =
       "<li class='sin-habitos'>Aún no tienes ningún hábito. Empieza añadiendo uno.</li>";
@@ -59,6 +214,7 @@ function mostrarHabitos() {
     const item = document.createElement("li");
     const etiqueta = document.createElement("label");
 
+    // Casilla (se marca como hecho) o campo de número (cantidad)
     let control;
 
     if (habito.medida === "cantidad") {
@@ -87,10 +243,12 @@ function mostrarHabitos() {
       });
     }
 
+    // Ficha en verde si hoy está cumplido
     if (estaCumplido(habito, habitosHoy)) {
       item.classList.add("hecho");
     }
 
+    // Nombre y detalles debajo (días, objetivo y «hoy toca descanso»)
     const nombre = document.createElement("span");
     nombre.textContent = habito.nombre;
 
@@ -124,11 +282,13 @@ function mostrarHabitos() {
       nombre.append(textoDetalles);
     }
 
+    // Si hoy descansa: ficha apagada y sin poder marcarla
     if (!tocaHoy) {
       item.classList.add("descanso");
       control.disabled = true;
     }
 
+    // Racha, con la llama de Prometeo a partir de 7 días
     const dias = calcularRacha(habito.id);
     const racha = document.createElement("span");
     racha.classList.add("racha");
@@ -146,6 +306,7 @@ function mostrarHabitos() {
       racha.prepend(llama);
     }
 
+    // Botón × para borrar el hábito
     const botonEliminar = document.createElement("button");
     botonEliminar.classList.add("habito-eliminar");
     botonEliminar.textContent = "×";
@@ -159,6 +320,7 @@ function mostrarHabitos() {
       }
     });
 
+    // Montar la ficha: el campo de cantidad va a la derecha; la casilla, a la izquierda
     if (habito.medida === "cantidad") {
       etiqueta.append(nombre, racha, control);
     } else {
@@ -169,29 +331,40 @@ function mostrarHabitos() {
   });
 }
 
+// ==========================================================================
+// 5. HÁBITOS · FORMULARIO DE HÁBITO NUEVO
+// Nombre, cuándo toca (frecuencia) y cómo se cumple (medida).
+// ==========================================================================
+
+// Piezas del formulario.
 const formHabito = document.getElementById("form-habito");
 const selectFrecuencia = document.getElementById("habito-frecuencia");
 const cajaDias = document.getElementById("habito-dias");
+const selectMedida = document.getElementById("habito-medida");
+const cajaCantidad = document.getElementById("habito-cantidad");
 
+// Muestra los días solo si se elige «Días concretos».
 selectFrecuencia.addEventListener("change", function () {
   cajaDias.hidden = selectFrecuencia.value !== "dias";
 });
 
-const selectMedida = document.getElementById("habito-medida");
-const cajaCantidad = document.getElementById("habito-cantidad");
-
+// Muestra el objetivo solo si se elige «Se cumple con una cantidad».
 selectMedida.addEventListener("change", function () {
   cajaCantidad.hidden = selectMedida.value !== "cantidad";
 });
 
+// Al pulsar «Añadir hábito»: lee el formulario, comprueba que esté
+// completo, crea el hábito y lo guarda.
 formHabito.addEventListener("submit", function (evento) {
   evento.preventDefault();
 
+  // Nombre (obligatorio)
   const nombre = document.getElementById("habito-nombre").value.trim();
   if (nombre === "") {
     return;
   }
 
+  // Frecuencia: los días marcados, como números de getDay()
   const frecuencia = selectFrecuencia.value;
   const dias = [];
   cajaDias.querySelectorAll("input:checked").forEach(function (casilla) {
@@ -203,6 +376,7 @@ formHabito.addEventListener("submit", function (evento) {
     return;
   }
 
+  // Medida: objetivo y unidad, si es por cantidad
   const medida = selectMedida.value;
   const objetivo = Number(document.getElementById("habito-objetivo").value);
   const unidad = document.getElementById("habito-unidad").value.trim();
@@ -212,6 +386,7 @@ formHabito.addEventListener("submit", function (evento) {
     return;
   }
 
+  // Crear el hábito solo con las propiedades que necesita
   const nuevo = {
     id: "h" + Date.now(),
     nombre: nombre,
@@ -228,6 +403,7 @@ formHabito.addEventListener("submit", function (evento) {
     nuevo.unidad = unidad;
   }
 
+  // Guardar, volver a dibujar y dejar el formulario limpio
   habitos.push(nuevo);
 
   guardarHabitos();
@@ -237,75 +413,12 @@ formHabito.addEventListener("submit", function (evento) {
   cajaCantidad.hidden = true;
 });
 
-const letrasDias = ["D", "L", "M", "X", "J", "V", "S"];
+// ==========================================================================
+// 6. SEMANA
+// Los siete días de esta semana, con el dios de cada día y lo cumplido.
+// ==========================================================================
 
-function tocaEn(habito, fecha) {
-  if (habito.frecuencia === "dias") {
-    return habito.dias.includes(fecha.getDay());
-  }
-  return true;
-}
-
-function estaCumplido(habito, habitosDia) {
-  const valor = habitosDia[habito.id];
-
-  if (habito.medida === "cantidad") {
-    return valor >= habito.objetivo;
-  }
-  return valor === true;
-}
-
-function calcularRacha(id) {
-  const habito = habitos.find(function (h) {
-    return h.id === id;
-  });
-  if (!habito) {
-    return 0;
-  }
-
-  let racha = 0;
-  const fecha = new Date();
-
-  if (!estaCumplido(habito, habitosHoy)) {
-    fecha.setDate(fecha.getDate() - 1);
-  }
-
-  for (let vueltas = 0; vueltas < 3650; vueltas++) {
-    const clave = fecha.toLocaleDateString("en-CA");
-    const habitosDia = registro[clave] || {};
-
-    if (estaCumplido(habito, habitosDia)) {
-      racha++;
-    } else if (tocaEn(habito, fecha)) {
-      break;
-    }
-
-    fecha.setDate(fecha.getDate() - 1);
-  }
-
-  return racha;
-}
-
-function textoRacha(racha) {
-  if (racha === 0) {
-    return "";
-  } else if (racha === 1) {
-    return "1 día de racha";
-  } else {
-    return racha + " días de racha";
-  }
-}
-
-function nombreHabito(id) {
-  const habito = habitos.find(function (h) {
-    return h.id === id;
-  });
-  if (habito) {
-    return habito.nombre;
-  }
-  return "un hábito eliminado";
-}
-
+// Símbolo, dios y color (su metal en la alquimia) de cada día, de lunes a domingo.
 const diosesSemana = [
   { simbolo: "☽", dios: "la Luna", color: "#8E9AA6" },
   { simbolo: "♂", dios: "Marte", color: "#A23B2A" },
@@ -316,10 +429,12 @@ const diosesSemana = [
   { simbolo: "☉", dios: "el Sol", color: "#C9A23A" },
 ];
 
+// Dibuja la semana actual con cuántos hábitos se cumplieron cada día.
 function mostrarHistorial() {
   const contenedor = document.getElementById("semana");
   contenedor.innerHTML = "";
 
+  // Lunes de esta semana
   const lunes = new Date();
   lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
 
@@ -329,6 +444,7 @@ function mostrarHistorial() {
     const clave = fecha.toLocaleDateString("en-CA");
     const resumen = resumenDelDia(fecha);
 
+    // Casilla del día: verde si se cumplió todo, borde terracota si es hoy, clara si es futuro
     const dia = document.createElement("div");
     dia.classList.add("dia");
 
@@ -348,12 +464,14 @@ function mostrarHistorial() {
       weekday: "short",
     });
 
+    // Símbolo y color del dios del día (\uFE0E: que se vea como letra, no como emoji)
     const simbolo = document.createElement("span");
     simbolo.classList.add("simbolo-dia");
     simbolo.textContent = diosesSemana[i].simbolo + "\uFE0E";
     simbolo.style.color = diosesSemana[i].color;
     dia.title = "Día de " + diosesSemana[i].dios;
 
+    // Cumplidos / los que tocaban ese día (— si no tocaba ninguno)
     const marcador = document.createElement("span");
 
     if (resumen.tocan === 0) {
@@ -369,29 +487,16 @@ function mostrarHistorial() {
   }
 }
 
-// ---------- MOSAICO DEL MES ----------
+// ==========================================================================
+// 7. MOSAICO DEL MES
+// Cada día es una tesela que se colorea según lo cumplido; los perfectos, en oro.
+// ==========================================================================
 
+// Mes que se ve en el mosaico (siempre en su día 1). Las flechas lo cambian.
 const mesVisible = new Date();
 mesVisible.setDate(1);
 
-function resumenDelDia(fecha) {
-  const clave = fecha.toLocaleDateString("en-CA");
-  const habitosDia = registro[clave] || {};
-  let tocan = 0;
-  let cumplidos = 0;
-
-  habitos.forEach(function (habito) {
-    if (tocaEn(habito, fecha)) {
-      tocan++;
-      if (estaCumplido(habito, habitosDia)) {
-        cumplidos++;
-      }
-    }
-  });
-
-  return { tocan: tocan, cumplidos: cumplidos };
-}
-
+// Nivel de la tesela: 0 nada, 1 algo, 2 la mitad o más, 3 todo (oro).
 function nivelDelDia(fecha) {
   const resumen = resumenDelDia(fecha);
   if (resumen.tocan === 0) {
@@ -409,6 +514,7 @@ function nivelDelDia(fecha) {
   return 0;
 }
 
+// Dibuja el mosaico del mes que se está viendo.
 function mostrarMosaico() {
   const contenedor = document.getElementById("mosaico");
   contenedor.innerHTML = "";
@@ -418,6 +524,7 @@ function mostrarMosaico() {
   document.getElementById("mosaico-titulo").textContent =
     mesVisible.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
 
+  // Días que tiene el mes y huecos hasta su primer día (la semana empieza en lunes)
   const diasDelMes = new Date(anio, mes + 1, 0).getDate();
   const huecos = (new Date(anio, mes, 1).getDay() + 6) % 7;
 
@@ -428,6 +535,7 @@ function mostrarMosaico() {
   let perfectos = 0;
   let vividos = 0;
 
+  // Una tesela por día. Los futuros, sin color; los vividos, según su nivel
   for (let dia = 1; dia <= diasDelMes; dia++) {
     const fecha = new Date(anio, mes, dia);
     const clave = fecha.toLocaleDateString("en-CA");
@@ -458,10 +566,12 @@ function mostrarMosaico() {
     contenedor.appendChild(tesela);
   }
 
+  // Resumen: días perfectos del mes
   document.getElementById("mosaico-resumen").textContent =
     perfectos + " de " + vividos + " días con todas tus disciplinas cumplidas";
 }
 
+// Flechas para ir al mes anterior y al siguiente.
 document.getElementById("mes-anterior").addEventListener("click", function () {
   mesVisible.setMonth(mesVisible.getMonth() - 1);
   mostrarMosaico();
@@ -472,14 +582,13 @@ document.getElementById("mes-siguiente").addEventListener("click", function () {
   mostrarMosaico();
 });
 
-// ---------- METAS ----------
+// ==========================================================================
+// 8. METAS
+// Objetivos divididos en pasos. Las cumplidas pasan a «Laureles».
+// ==========================================================================
 
-const metas = JSON.parse(localStorage.getItem("ergon-metas")) || [];
-
-function guardarMetas() {
-  localStorage.setItem("ergon-metas", JSON.stringify(metas));
-}
-
+// Dibuja las metas: las pendientes arriba y las cumplidas en «Laureles»,
+// con su corona.
 function mostrarMetas() {
   const contenedor = document.getElementById("lista-metas");
   const contenedorCumplidas = document.getElementById("lista-cumplidas");
@@ -631,10 +740,11 @@ function mostrarMetas() {
   seccionCumplidas.hidden = contenedorCumplidas.children.length === 0;
 }
 
+// Piezas del formulario de metas.
 const formMeta = document.getElementById("form-meta");
-
 const selectHabito = document.getElementById("meta-habito");
 
+// Rellena el desplegable de hábitos para vincular la meta.
 function rellenarSelectHabitos() {
   selectHabito.innerHTML = "<option value=''>Sin hábito vinculado</option>";
 
@@ -646,6 +756,8 @@ function rellenarSelectHabitos() {
   });
 }
 
+// Al pulsar «Agregar meta»: cada línea del texto es un paso
+// (hace falta al menos uno).
 formMeta.addEventListener("submit", function (event) {
   event.preventDefault();
 
@@ -673,10 +785,15 @@ formMeta.addEventListener("submit", function (event) {
   formMeta.reset();
 });
 
-// ---------- COPIA DE SEGURIDAD ----------
+// ==========================================================================
+// 9. COPIA DE SEGURIDAD
+// Descargar todos los datos en un archivo y restaurarlos después.
+// ==========================================================================
 
+// Datos que entran en la copia.
 const claves = ["ergon-registro", "ergon-habitos", "ergon-metas"];
 
+// «Descargar copia»: junta los datos en un archivo .json.
 document
   .getElementById("boton-exportar")
   .addEventListener("click", function () {
@@ -696,6 +813,8 @@ document
     URL.revokeObjectURL(enlace.href);
   });
 
+// «Restaurar copia»: lee el archivo, pide confirmación, sustituye los
+// datos y recarga la app.
 document
   .getElementById("archivo-importar")
   .addEventListener("change", async function (evento) {
@@ -737,11 +856,15 @@ document
     }
   });
 
-// ---------- NAVEGACIÓN ----------
+// ==========================================================================
+// 10. NAVEGACIÓN ENTRE PANTALLAS
+// La barra de abajo: Hoy · Mosaico · Metas · Archivo.
+// ==========================================================================
 
 const pantallas = document.querySelectorAll(".pantalla");
 const botonesNavegacion = document.querySelectorAll(".navegacion button");
 
+// Muestra una pantalla, ilumina su botón y la recuerda para la próxima vez.
 function mostrarPantalla(nombre) {
   pantallas.forEach(function (pantalla) {
     pantalla.hidden = pantalla.dataset.pantalla !== nombre;
@@ -755,20 +878,28 @@ function mostrarPantalla(nombre) {
   window.scrollTo(0, 0);
 }
 
+// Cada botón de la barra abre su pantalla.
 botonesNavegacion.forEach(function (boton) {
   boton.addEventListener("click", function () {
     mostrarPantalla(boton.dataset.destino);
   });
 });
 
-// ---------- APP INSTALABLE ----------
+// ==========================================================================
+// 11. APP INSTALABLE (SERVICE WORKER)
+// sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
+// ==========================================================================
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
 
-// ---------- INICIO ----------
+// ==========================================================================
+// 12. INICIO
+// Lo que pasa al abrir la app.
+// ==========================================================================
 
+// Vuelve a dibujar todo. Se llama cada vez que cambia algo.
 function actualizarTodo() {
   mostrarHabitos();
   mostrarHistorial();
@@ -777,6 +908,7 @@ function actualizarTodo() {
   mostrarMetas();
 }
 
+// Al abrir: dibujar todo, poner la cita y abrir la última pantalla usada.
 actualizarTodo();
 mostrarCitaDelDia();
 mostrarPantalla(localStorage.getItem("ergon-pantalla") || "hoy");

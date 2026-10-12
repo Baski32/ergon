@@ -1,12 +1,15 @@
 <!doctype html>
 <html lang="es">
   <head>
+    <!-- Letras con tilde y símbolos -->
     <meta charset="UTF-8" />
+    <!-- Ancho del móvil; viewport-fit=cover ocupa también la zona de la muesca del iPhone -->
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>Ergon</title>
+    <!-- App instalable (PWA): nombre, iconos y colores para la pantalla de inicio -->
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="iconos/icono-180.png" />
     <meta name="theme-color" content="#F4F1EA" />
@@ -14,15 +17,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Ergon" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Fuentes de Google: Cinzel (títulos) y EB Garamond (texto) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=EB+Garamond:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <!-- Nuestro estilo -->
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <!-- ============================================================
+         DIBUJOS SVG
+         Se definen una vez aquí y se usan con <use href="#nombre">.
+         rama: media corona · laurel: las dos ramas · llama: la de Prometeo
+         ============================================================ -->
     <svg class="simbolos" aria-hidden="true">
       <symbol id="rama" viewBox="0 0 100 100">
         <path
@@ -110,20 +120,33 @@
       </symbol>
     </svg>
 
+    <!-- ============================================================
+         CONTENIDO
+         La cabecera y las cuatro pantallas. Solo se ve una pantalla a la vez:
+         script.js quita el atributo hidden a la que toca.
+         ============================================================ -->
     <main class="contenedor">
+      <!-- Cabecera: siempre visible -->
       <header class="cabecera">
         <h1>Ergon</h1>
         <p class="subtitulo">Disciplinas diarias</p>
       </header>
 
+      <!-- ============================================================
+           PANTALLA HOY
+           Cita del día, hábitos, formulario de hábito nuevo y semana.
+           ============================================================ -->
       <div class="pantalla" data-pantalla="hoy">
+        <!-- Cita del día: la rellena script.js con citas.json -->
         <blockquote class="cita">
           <p id="cita-texto"></p>
           <span id="cita-autor" class="autor"></span>
         </blockquote>
 
+        <!-- Lista de hábitos: script.js crea una ficha por hábito -->
         <ul id="lista-habitos" class="lista-habitos"></ul>
 
+        <!-- Formulario de hábito nuevo -->
         <form id="form-habito" class="form-habito">
           <input
             type="text"
@@ -131,10 +154,12 @@
             placeholder="Nuevo hábito"
             required
           />
+          <!-- ¿Cuándo toca? -->
           <select id="habito-frecuencia">
             <option value="diario">Todos los días</option>
             <option value="dias">Días concretos</option>
           </select>
+          <!-- Días concretos: el value es el número de getDay() (0 = domingo) -->
           <fieldset id="habito-dias" class="habito-dias" hidden>
             <legend>¿Qué días?</legend>
             <label><input type="checkbox" value="1" />L</label>
@@ -145,10 +170,12 @@
             <label><input type="checkbox" value="6" />S</label>
             <label><input type="checkbox" value="0" />D</label>
           </fieldset>
+          <!-- ¿Cómo se cumple? -->
           <select id="habito-medida">
             <option value="casilla">Se marca como hecho</option>
             <option value="cantidad">Se cumple con una cantidad</option>
           </select>
+          <!-- Cantidad: objetivo de cada día y unidad -->
           <fieldset id="habito-cantidad" class="habito-cantidad" hidden>
             <legend>Objetivo de cada día</legend>
             <input
@@ -167,15 +194,21 @@
           <button type="submit">Añadir hábito</button>
         </form>
 
+        <!-- Semana: la rellena script.js -->
         <section class="historial">
           <h2>Semana</h2>
           <div id="semana" class="semana"></div>
         </section>
       </div>
 
+      <!-- ============================================================
+           PANTALLA MOSAICO
+           El mes en teselas sobre un pergamino.
+           ============================================================ -->
       <div class="pantalla" data-pantalla="mosaico" hidden>
         <section class="mosaico-seccion">
           <h2>Mosaico</h2>
+          <!-- Flechas para cambiar de mes y nombre del mes -->
           <div class="mosaico-cabecera">
             <button id="mes-anterior" type="button" aria-label="Mes anterior">
               ‹
@@ -185,19 +218,27 @@
               ›
             </button>
           </div>
+          <!-- Letras de los días de la semana -->
           <div class="mosaico-dias">
             <span>L</span><span>M</span><span>X</span><span>J</span
             ><span>V</span><span>S</span><span>D</span>
           </div>
+          <!-- Teselas: las crea script.js -->
           <div id="mosaico" class="mosaico"></div>
           <p id="mosaico-resumen" class="mosaico-resumen"></p>
         </section>
       </div>
 
+      <!-- ============================================================
+           PANTALLA METAS
+           Metas pendientes, formulario de meta nueva y Laureles (metas cumplidas).
+           ============================================================ -->
       <div class="pantalla" data-pantalla="metas" hidden>
         <section class="metas">
           <h2>Metas</h2>
+          <!-- Metas pendientes: las crea script.js -->
           <div id="lista-metas"></div>
+          <!-- Formulario de meta nueva -->
           <form id="form-meta" class="form-meta">
             <h3>Agregar meta</h3>
 
@@ -230,6 +271,7 @@
             <button type="submit">Agregar meta</button>
           </form>
 
+          <!-- Laureles: metas cumplidas (se oculta si no hay ninguna) -->
           <section id="seccion-cumplidas" class="cumplidas">
             <h2>Laureles</h2>
             <p class="cumplidas-intro">Metas cumplidas</p>
@@ -238,6 +280,10 @@
         </section>
       </div>
 
+      <!-- ============================================================
+           PANTALLA ARCHIVO
+           Copia de seguridad: descargar y restaurar todos los datos.
+           ============================================================ -->
       <div class="pantalla" data-pantalla="archivo" hidden>
         <footer class="pie">
           <h2>Copia de seguridad</h2>
@@ -255,6 +301,10 @@
       </div>
     </main>
 
+    <!-- ============================================================
+         NAVEGACIÓN INFERIOR
+         Cada botón abre la pantalla de su data-destino.
+         ============================================================ -->
     <nav class="navegacion">
       <button type="button" data-destino="hoy">Hoy</button>
       <button type="button" data-destino="mosaico">Mosaico</button>
@@ -262,6 +312,7 @@
       <button type="button" data-destino="archivo">Archivo</button>
     </nav>
 
+    <!-- Toda la lógica de la app (al final, cuando el HTML ya está cargado) -->
     <script src="script.js"></script>
   </body>
 </html>
