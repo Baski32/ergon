@@ -16,6 +16,7 @@
 - **Cita del día** de filósofos clásicos (Marco Aurelio, Séneca, Epicteto, Aristóteles…), con la obra de la que procede.
 - **Copia de seguridad** para descargar y restaurar los datos.
 - **Pestañas** con navegación inferior pensada para el móvil.
+- **Instalable en el móvil** como una app (PWA) y funciona sin conexión.
 
 Los datos se guardan solo en el navegador de cada dispositivo: no se envían a ningún servidor.
 
@@ -24,6 +25,7 @@ Los datos se guardan solo en el navegador de cada dispositivo: no se envían a n
 - HTML, CSS y JavaScript, sin librerías.
 - `localStorage` para guardar los datos.
 - Dibujos en SVG (laurel, llama) y animaciones con CSS.
+- PWA: `manifest.json` y un *service worker* para instalarla y usarla sin conexión.
 - Publicada con GitHub Pages.
 - Fuentes: Cinzel y EB Garamond.
 
@@ -32,7 +34,7 @@ Los datos se guardan solo en el navegador de cada dispositivo: no se envían a n
 - [x] Tracker de hábitos
 - [x] Metas
 - [x] Publicación en internet y pestañas
-- [ ] Instalable en el móvil (PWA)
+- [x] Instalable en el móvil (PWA)
 - [ ] Tipos de hábito (semanales, días concretos, abstención, cantidad) e iconos clásicos
 - [ ] Sincronización entre dispositivos
 - [ ] Consejeros con IA: Méntor (Μέντωρ) y Prometheus (Προμηθεύς)

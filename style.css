@@ -383,10 +383,11 @@ h1 {
 .form-habito {
     display: flex;
     gap: 8px;
+    flex-direction: column;
 }
 
-.form-habito input {
-    flex: 1;
+.form-habito input[type="text"],
+.form-habito select {
     padding: 10px;
     font-family: inherit;
     font-size: 1rem;
@@ -396,7 +397,8 @@ h1 {
     border-radius: 4px;
 }
 
-.form-habito input:focus {
+.form-habito input[type="text"]:focus,
+.form-habito select:focus {
     outline: none;
     border-color: var(--bronce);
 }
@@ -644,4 +646,59 @@ h1 {
 .pantalla[data-pantalla="mosaico"] .mosaico-seccion,
 .pie {
     margin-top: 0;
+}
+
+.habito-dias {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.habito-dias[hidden] {
+    display: none;
+}
+
+.habito-dias legend {
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    color: var(--bronce);
+}
+.habito-dias label {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    color: var(--bronce);
+    background-color: #FFFDF8;
+    border: 1px solid var(--piedra);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.habito-dias label:has(input:checked) {
+    color: var(--marmol);
+    background-color: var(--oliva);
+    border-color: var(--oliva);
+}
+
+.habito-dias input {
+    position: absolute;
+    opacity: 0;
+}
+
+.habito-detalles {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: var(--bronce);
+}
+
+.lista-habitos li.descanso {
+    opacity: 0.55;
 }

@@ -2,7 +2,10 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Ergon</title>
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="iconos/icono-180.png" />
@@ -128,6 +131,20 @@
             placeholder="Nuevo hábito"
             required
           />
+          <select id="habito-frecuencia">
+            <option value="diario">Todos los días</option>
+            <option value="dias">Días concretos</option>
+          </select>
+          <fieldset id="habito-dias" class="habito-dias" hidden>
+            <legend>¿Qué días?</legend>
+            <label><input type="checkbox" value="1" />L</label>
+            <label><input type="checkbox" value="2" />M</label>
+            <label><input type="checkbox" value="3" />X</label>
+            <label><input type="checkbox" value="4" />J</label>
+            <label><input type="checkbox" value="5" />V</label>
+            <label><input type="checkbox" value="6" />S</label>
+            <label><input type="checkbox" value="0" />D</label>
+          </fieldset>
           <button type="submit">Añadir hábito</button>
         </form>
 
