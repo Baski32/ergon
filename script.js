@@ -98,9 +98,28 @@ async function mostrarCitaDelDia() {
 // Letra de cada día en el orden de getDay(): 0 = domingo, 1 = lunes…
 const letrasDias = ["D", "L", "M", "X", "J", "V", "S"];
 
-// ¿Toca este hábito en esta fecha? Los diarios (y los antiguos, sin
-// frecuencia) tocan siempre; los de días concretos, solo sus días.
+// Día en que empezó un hábito, como texto "2026-10-12". Los nuevos lo guardan
+// en «inicio». Los antiguos no lo tienen: se saca de su id, que lleva dentro
+// el momento en que se crearon ("h" + Date.now()).
+function inicioDe(habito) {
+  if (habito.inicio) {
+    return habito.inicio;
+  }
+  const creado = new Date(Number(habito.id.slice(1)));
+  if (isNaN(creado)) {
+    return "";
+  }
+  return creado.toLocaleDateString("en-CA");
+}
+
+// ¿Toca este hábito en esta fecha? Antes de su inicio, nunca. Después, los
+// diarios (y los antiguos, sin frecuencia) tocan siempre; los de días
+// concretos, solo sus días.
 function tocaEn(habito, fecha) {
+  if (fecha.toLocaleDateString("en-CA") < inicioDe(habito)) {
+    return false;
+  }
+
   if (habito.frecuencia === "dias") {
     return habito.dias.includes(fecha.getDay());
   }
@@ -130,6 +149,7 @@ function calcularRacha(id) {
 
   let racha = 0;
   const fecha = new Date();
+  const inicio = inicioDe(habito);
 
   if (!estaCumplido(habito, habitosHoy)) {
     fecha.setDate(fecha.getDate() - 1);
@@ -138,6 +158,10 @@ function calcularRacha(id) {
   for (let vueltas = 0; vueltas < 3650; vueltas++) {
     const clave = fecha.toLocaleDateString("en-CA");
     const habitosDia = registro[clave] || {};
+    // Antes de empezar el hábito ya no hay nada que contar
+    if (clave < inicio) {
+      break;
+    }
 
     if (estaCumplido(habito, habitosDia)) {
       racha++;
@@ -392,6 +416,7 @@ formHabito.addEventListener("submit", function (evento) {
     nombre: nombre,
     frecuencia: frecuencia,
     medida: medida,
+    inicio: hoy,
   };
 
   if (frecuencia === "dias") {
