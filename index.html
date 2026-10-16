@@ -178,9 +178,13 @@
               Es algo que quiero dejar (templanza)
             </option>
           </select>
-          <!-- Cantidad: objetivo de cada día y unidad -->
+          <!-- Cantidad: al menos o como mucho, objetivo de cada día y unidad -->
           <fieldset id="habito-cantidad" class="habito-cantidad" hidden>
             <legend>Objetivo de cada día</legend>
+            <select id="habito-limite">
+              <option value="minimo">Al menos</option>
+              <option value="maximo">Como mucho</option>
+            </select>
             <input
               type="number"
               id="habito-objetivo"

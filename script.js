@@ -126,12 +126,16 @@ function tocaEn(habito, fecha) {
   return true;
 }
 
-// ¿Está cumplido ese día? Los de cantidad, si llegan al objetivo; los de
-// templanza, si no hubo recaída; los de casilla, si están marcados.
+// ¿Está cumplido ese día? Los de cantidad, si llegan al objetivo (o, si es
+// un máximo, si se apuntó un número y no se pasa); los de templanza, si no
+// hubo recaída; los de casilla, si están marcados.
 function estaCumplido(habito, habitosDia) {
   const valor = habitosDia[habito.id];
 
   if (habito.medida === "cantidad") {
+    if (habito.limite === "maximo") {
+      return valor !== undefined && valor <= habito.objetivo;
+    }
     return valor >= habito.objetivo;
   }
 
@@ -140,8 +144,20 @@ function estaCumplido(habito, habitosDia) {
   }
 
   return valor === true;
+}
 
-  
+// ¿Hoy ya no tiene remedio? En templanza, si hubo recaída; en los de
+// «como mucho», si el número apuntado hoy pasa del máximo.
+function hoyYaFallado(habito) {
+  const valor = habitosHoy[habito.id];
+
+  if (habito.medida === "abstencion") {
+    return valor === "recaida";
+  }
+  if (habito.medida === "cantidad" && habito.limite === "maximo") {
+    return valor > habito.objetivo;
+  }
+  return false;
 }
 
 // Días seguidos cumpliendo un hábito, contando hacia atrás desde hoy.
@@ -159,8 +175,8 @@ function calcularRacha(id) {
   const inicio = inicioDe(habito);
 
   // Si hoy aún no está cumplido, se cuenta desde ayer: todavía hay tiempo.
-  // En templanza no: una recaída hoy deja la racha a 0.
-  if (habito.medida !== "abstencion" && !estaCumplido(habito, habitosHoy)) {
+  // Pero si hoy ya no tiene remedio, la racha cae a 0.
+  if (!estaCumplido(habito, habitosHoy) && !hoyYaFallado(habito)) {
     fecha.setDate(fecha.getDate() - 1);
   }
 
@@ -296,10 +312,17 @@ function mostrarHabitos() {
       control.inputMode = "numeric";
       control.placeholder = habito.objetivo.toLocaleString("es-ES");
       control.classList.add("habito-campo");
-      control.value = habitosHoy[habito.id] || "";
+            if (habitosHoy[habito.id] !== undefined) {
+        control.value = habitosHoy[habito.id];
+      }
 
       control.addEventListener("change", function () {
-        habitosHoy[habito.id] = Number(control.value);
+        // Campo vacío: no se apunta nada (0 es un número de verdad)
+        if (control.value === "") {
+          delete habitosHoy[habito.id];
+        } else {
+          habitosHoy[habito.id] = Number(control.value);
+        }
         guardarRegistro();
         actualizarTodo();
       });
@@ -310,7 +333,6 @@ function mostrarHabitos() {
 
       if (habitosHoy[habito.id] === "recaida") {
         control.textContent = "Deshacer";
-        item.classList.add("recaida");
       } else {
         control.textContent = "Recaída";
       }
@@ -341,6 +363,11 @@ function mostrarHabitos() {
       item.classList.add("hecho");
     }
 
+        // Ficha en terracota si hoy ya no tiene remedio
+    if (hoyYaFallado(habito)) {
+      item.classList.add("fallado");
+    }
+
     // Nombre y detalles debajo (días, objetivo y «hoy toca descanso»)
     const nombre = document.createElement("span");
     nombre.textContent = habito.nombre;
@@ -355,12 +382,13 @@ function mostrarHabitos() {
       detalles.push(letras.join(" · "));
     }
 
-    if (habito.medida === "cantidad") {
+        if (habito.medida === "cantidad") {
+      let texto = "Objetivo: ";
+      if (habito.limite === "maximo") {
+        texto = "Máximo: ";
+      }
       detalles.push(
-        "Objetivo: " +
-          habito.objetivo.toLocaleString("es-ES") +
-          " " +
-          habito.unidad,
+        texto + habito.objetivo.toLocaleString("es-ES") + " " + habito.unidad,
       );
     }
 
@@ -497,6 +525,7 @@ formHabito.addEventListener("submit", function (evento) {
   const medida = selectMedida.value;
   const objetivo = Number(document.getElementById("habito-objetivo").value);
   const unidad = document.getElementById("habito-unidad").value.trim();
+    const limite = document.getElementById("habito-limite").value;
 
   if (medida === "cantidad" && objetivo <= 0) {
     alert("Escribe el objetivo de cada día.");
@@ -527,6 +556,7 @@ formHabito.addEventListener("submit", function (evento) {
   if (medida === "cantidad") {
     nuevo.objetivo = objetivo;
     nuevo.unidad = unidad;
+        nuevo.limite = limite;
   }
 
   if (medida === "abstencion") {

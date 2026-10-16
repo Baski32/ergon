@@ -171,8 +171,8 @@ h1 {
   order: 1;
 }
 
-/* Ficha de templanza con recaída hoy: en terracota */
-.lista-habitos li.recaida {
+/* Ficha que hoy ya no tiene remedio (recaída o máximo superado): en terracota */
+.lista-habitos li.fallado {
   border-color: var(--terracota);
   background-color: #f6e9e4;
 }
