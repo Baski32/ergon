@@ -92,7 +92,8 @@ async function mostrarCitaDelDia() {
 // ==========================================================================
 // 3. HÁBITOS · REGLAS, RACHAS Y RESUMEN DEL DÍA
 // Las preguntas que el resto de la app hace sobre los hábitos.
-// Cada hábito tiene una frecuencia (cuándo toca) y una medida (cómo se cumple).
+// Cada hábito tiene una frecuencia (cuándo toca: todos los días, días
+// concretos o unas veces por semana) y una medida (cómo se cumple).
 // ==========================================================================
 
 // Letra de cada día en el orden de getDay(): 0 = domingo, 1 = lunes…
@@ -146,11 +147,22 @@ function estaCumplido(habito, habitosDia) {
   return valor === true;
 }
 
-// ¿Hoy ya no tiene remedio? En templanza, si hubo recaída; en los de
+// ¿Hoy ya no tiene remedio? En los de «unas veces por semana», si ya no da
+// tiempo a llegar esta semana; en templanza, si hubo recaída; en los de
 // «como mucho», si el número apuntado hoy pasa del máximo.
 function hoyYaFallado(habito) {
   const valor = habitosHoy[habito.id];
 
+  if (habito.frecuencia === "semanal") {
+    const ahora = new Date();
+    const hechas = vecesEnSemana(habito, ahora);
+    // Días que quedan hasta el domingo, hoy incluido (si hoy ya está hecho, no)
+    let quedan = 7 - ((ahora.getDay() + 6) % 7);
+    if (estaCumplido(habito, habitosHoy)) {
+      quedan--;
+    }
+    return hechas + quedan < habito.vecesSemana;
+  }
   if (habito.medida === "abstencion") {
     return valor === "recaida";
   }
@@ -160,14 +172,82 @@ function hoyYaFallado(habito) {
   return false;
 }
 
-// Días seguidos cumpliendo un hábito, contando hacia atrás desde hoy.
-// Los días de descanso ni suman ni rompen la racha.
+// Lunes (a las 00:00) de la semana de una fecha.
+function lunesDe(fecha) {
+  const lunes = new Date(
+    fecha.getFullYear(),
+    fecha.getMonth(),
+    fecha.getDate(),
+  );
+  lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
+  return lunes;
+}
+
+// Cuántas veces se cumplió un hábito en la semana (de lunes a domingo) de una
+// fecha.
+function vecesEnSemana(habito, fecha) {
+  const dia = lunesDe(fecha);
+  let veces = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const habitosDia = registro[dia.toLocaleDateString("en-CA")] || {};
+    if (estaCumplido(habito, habitosDia)) {
+      veces++;
+    }
+    dia.setDate(dia.getDate() + 1);
+  }
+
+  return veces;
+}
+
+// Racha de los hábitos de «unas veces por semana»: semanas seguidas llegando
+// a las veces que tocan. La semana actual suma si ya se ha llegado; si no,
+// aún hay tiempo (salvo que ya no dé tiempo: entonces la racha cae a 0).
+function calcularRachaSemanas(habito) {
+  let racha = 0;
+  const lunes = lunesDe(new Date());
+  const inicio = inicioDe(habito);
+
+  if (vecesEnSemana(habito, lunes) >= habito.vecesSemana) {
+    racha++;
+  } else if (hoyYaFallado(habito)) {
+    return 0;
+  }
+
+  // Semanas anteriores, hacia atrás, hasta la primera que no llegó
+  for (let vueltas = 0; vueltas < 520; vueltas++) {
+    lunes.setDate(lunes.getDate() - 7);
+    const domingo = new Date(lunes);
+    domingo.setDate(domingo.getDate() + 6);
+
+    // Semana entera antes de empezar el hábito: ya no hay nada que contar
+    if (domingo.toLocaleDateString("en-CA") < inicio) {
+      break;
+    }
+
+    if (vecesEnSemana(habito, lunes) >= habito.vecesSemana) {
+      racha++;
+    } else {
+      break;
+    }
+  }
+
+  return racha;
+}
+
+// Racha de un hábito: días seguidos cumpliéndolo, contando hacia atrás desde
+// hoy (los días de descanso ni suman ni rompen la racha). En los de «unas
+// veces por semana» se cuentan semanas.
 function calcularRacha(id) {
   const habito = habitos.find(function (h) {
     return h.id === id;
   });
   if (!habito) {
     return 0;
+  }
+
+  if (habito.frecuencia === "semanal") {
+    return calcularRachaSemanas(habito);
   }
 
   let racha = 0;
@@ -237,14 +317,22 @@ function textoDias(numero) {
   return numero + " días";
 }
 
-// Convierte la racha en texto: "", "1 día de racha", "5 días de racha".
-function textoRacha(racha) {
+// Convierte la racha en texto: "", "1 día de racha", "5 días de racha" o, en
+// semanas, "3 semanas de racha".
+function textoRacha(racha, enSemanas) {
+  let unidad = "día";
+  let unidades = "días";
+  if (enSemanas) {
+    unidad = "semana";
+    unidades = "semanas";
+  }
+
   if (racha === 0) {
     return "";
   } else if (racha === 1) {
-    return "1 día de racha";
+    return "1 " + unidad + " de racha";
   } else {
-    return racha + " días de racha";
+    return racha + " " + unidades + " de racha";
   }
 }
 
@@ -268,6 +356,16 @@ function resumenDelDia(fecha) {
   let cumplidos = 0;
 
   habitos.forEach(function (habito) {
+    // Los de «unas veces por semana» no tienen días fijos: solo cuentan el día
+    // que se hacen (así, un día sin hacerlos no estropea el mosaico)
+    if (habito.frecuencia === "semanal") {
+      if (clave <= hoy && estaCumplido(habito, habitosDia)) {
+        tocan++;
+        cumplidos++;
+      }
+      return;
+    }
+
     if (tocaEn(habito, fecha)) {
       tocan++;
       // Los días que aún no han llegado no cuentan como cumplidos
@@ -382,6 +480,15 @@ function mostrarHabitos() {
       detalles.push(letras.join(" · "));
     }
 
+    if (habito.frecuencia === "semanal") {
+      const hechas = vecesEnSemana(habito, new Date());
+      let texto = "Esta semana: " + hechas + " de " + habito.vecesSemana;
+      if (hechas >= habito.vecesSemana) {
+        texto = texto + ", cumplida";
+      }
+      detalles.push(texto);
+    }
+
     if (habito.medida === "cantidad") {
       let texto = "Objetivo: ";
       if (habito.limite === "maximo") {
@@ -419,19 +526,29 @@ function mostrarHabitos() {
       control.disabled = true;
     }
 
-    // Racha, con la llama de Prometeo a partir de 7 días
-    const dias = calcularRacha(habito.id);
+    // Racha, con la llama de Prometeo a partir de 7 días (o 4 semanas) y la
+    // llama grande a partir de 30 días (o 12 semanas)
+    const enSemanas = habito.frecuencia === "semanal";
+    const numeroRacha = calcularRacha(habito.id);
     const racha = document.createElement("span");
     racha.classList.add("racha");
-    racha.textContent = textoRacha(dias);
+    racha.textContent = textoRacha(numeroRacha, enSemanas);
 
-    if (dias >= 7) {
+    let minimoLlama = 7;
+    let minimoLlamaGrande = 30;
+    if (enSemanas) {
+      minimoLlama = 4;
+      minimoLlamaGrande = 12;
+    }
+
+    if (numeroRacha >= minimoLlama) {
       const llama = document.createElement("span");
       llama.classList.add("llama");
-      if (dias >= 30) {
+      if (numeroRacha >= minimoLlamaGrande) {
         llama.classList.add("llama-grande");
       }
-      llama.title = "La llama de Prometeo: " + dias + " días seguidos";
+      llama.title =
+        "La llama de Prometeo: " + textoRacha(numeroRacha, enSemanas);
       llama.innerHTML =
         '<svg viewBox="0 0 24 32"><use href="#llama"></use></svg>';
       racha.prepend(llama);
@@ -477,6 +594,8 @@ function mostrarHabitos() {
 const formHabito = document.getElementById("form-habito");
 const selectFrecuencia = document.getElementById("habito-frecuencia");
 const cajaDias = document.getElementById("habito-dias");
+const cajaSemanal = document.getElementById("habito-semanal");
+const campoVeces = document.getElementById("habito-veces");
 const selectMedida = document.getElementById("habito-medida");
 const cajaCantidad = document.getElementById("habito-cantidad");
 const cajaTemplanza = document.getElementById("habito-templanza");
@@ -486,9 +605,11 @@ const campoInicio = document.getElementById("habito-inicio");
 campoInicio.value = hoy;
 campoInicio.max = hoy;
 
-// Muestra los días solo si se elige «Días concretos».
+// Muestra los días solo con «Días concretos» y las veces solo con «Unas
+// veces por semana».
 selectFrecuencia.addEventListener("change", function () {
   cajaDias.hidden = selectFrecuencia.value !== "dias";
+  cajaSemanal.hidden = selectFrecuencia.value !== "semanal";
 });
 
 // Muestra el objetivo solo con «Se cumple con una cantidad» y la fecha de
@@ -521,6 +642,14 @@ formHabito.addEventListener("submit", function (evento) {
     return;
   }
 
+  // Unas veces por semana: de 1 a 6
+  const veces = Number(campoVeces.value);
+
+  if (frecuencia === "semanal" && !(veces >= 1 && veces <= 6)) {
+    alert("Elige entre 1 y 6 veces por semana.");
+    return;
+  }
+
   // Medida: objetivo y unidad, si es por cantidad
   const medida = selectMedida.value;
   const objetivo = Number(document.getElementById("habito-objetivo").value);
@@ -540,6 +669,11 @@ formHabito.addEventListener("submit", function (evento) {
     return;
   }
 
+  if (medida === "abstencion" && frecuencia === "semanal") {
+    alert("La templanza cuenta todos los días: elige otra frecuencia.");
+    return;
+  }
+
   // Crear el hábito solo con las propiedades que necesita
   const nuevo = {
     id: "h" + Date.now(),
@@ -551,6 +685,10 @@ formHabito.addEventListener("submit", function (evento) {
 
   if (frecuencia === "dias") {
     nuevo.dias = dias;
+  }
+
+  if (frecuencia === "semanal") {
+    nuevo.vecesSemana = veces;
   }
 
   if (medida === "cantidad") {
@@ -570,6 +708,7 @@ formHabito.addEventListener("submit", function (evento) {
   actualizarTodo();
   formHabito.reset();
   cajaDias.hidden = true;
+  cajaSemanal.hidden = true;
   cajaCantidad.hidden = true;
   cajaTemplanza.hidden = true;
   campoInicio.value = hoy;
@@ -880,11 +1019,15 @@ function mostrarMetas() {
 
     if (meta.habito) {
       const racha = calcularRacha(meta.habito);
+      const habitoMeta = habitos.find(function (h) {
+        return h.id === meta.habito;
+      });
+      const enSemanas =
+        habitoMeta !== undefined && habitoMeta.frecuencia === "semanal";
+
       let texto = "Impulsada por: " + nombreHabito(meta.habito);
-      if (racha === 1) {
-        texto = texto + " · 1 día seguido";
-      } else if (racha > 1) {
-        texto = texto + " · " + racha + " días seguidos";
+      if (racha > 0) {
+        texto = texto + " · " + textoRacha(racha, enSemanas);
       }
       vinculo.textContent = texto;
     }

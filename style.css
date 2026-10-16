@@ -422,16 +422,18 @@ body {
   border: none;
 }
 
-/* Las cajas de días y de cantidad, ocultas hasta elegir su opción.
-   Hace falta porque display: flex ganaría al atributo hidden */
+/* Las cajas de días, veces por semana, cantidad y templanza, ocultas hasta
+   elegir su opción. Hace falta porque display: flex ganaría al atributo hidden */
 .habito-dias[hidden],
+.habito-semanal[hidden],
 .habito-cantidad[hidden],
 .habito-templanza[hidden] {
   display: none;
 }
 
-/* «¿Qué días?» y «Objetivo de cada día» */
+/* «¿Qué días?», «¿Cuántas veces por semana?», «Objetivo de cada día»… */
 .habito-dias legend,
+.habito-semanal legend,
 .habito-cantidad legend,
 .habito-templanza legend {
   margin-bottom: 6px;
@@ -485,7 +487,8 @@ body {
   min-width: 0;
 }
 
-/* Caja de templanza: la fecha de inicio ocupa todo el ancho */
+/* Cajas de veces por semana y de templanza: su campo ocupa todo el ancho */
+.habito-semanal,
 .habito-templanza {
   display: flex;
   flex-direction: column;

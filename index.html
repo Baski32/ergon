@@ -170,6 +170,7 @@
           <select id="habito-frecuencia">
             <option value="diario">Todos los días</option>
             <option value="dias">Días concretos</option>
+            <option value="semanal">Unas veces por semana</option>
           </select>
           <!-- Días concretos: el value es el número de getDay() (0 = domingo) -->
           <fieldset id="habito-dias" class="habito-dias" hidden>
@@ -181,6 +182,18 @@
             <label><input type="checkbox" value="5" />V</label>
             <label><input type="checkbox" value="6" />S</label>
             <label><input type="checkbox" value="0" />D</label>
+          </fieldset>
+          <!-- Unas veces por semana: cuántas (de 1 a 6; 7 sería «todos los días») -->
+          <fieldset id="habito-semanal" class="habito-semanal" hidden>
+            <legend>¿Cuántas veces por semana?</legend>
+            <input
+              type="number"
+              id="habito-veces"
+              min="1"
+              max="6"
+              inputmode="numeric"
+              value="3"
+            />
           </fieldset>
           <!-- ¿Cómo se cumple? -->
           <select id="habito-medida">

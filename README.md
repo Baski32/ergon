@@ -8,7 +8,7 @@
 
 ## Qué hace
 
-- **Hábitos** diarios, de días concretos (por ejemplo, L-X-V) o por cantidad (por ejemplo, 10.000 pasos), con rachas que respetan los días de descanso y la llama de Prometeo a partir de 7 días seguidos.
+- **Hábitos** diarios, de días concretos (por ejemplo, L-X-V), de unas veces por semana (por ejemplo, 3 veces, con la racha en semanas) o por cantidad (por ejemplo, al menos 10.000 pasos o como mucho 300 minutos), con rachas que respetan los días de descanso y la llama de Prometeo.
 - **Templanza**: hábitos para dejar algo. Cuentan los días sin hacerlo, con la mejor racha y el total, para que una recaída no borre lo conseguido.
 - **Semana** con el símbolo y el color del dios de cada día (☽ ♂ ☿ ♃ ♀ ♄ ☉).
 - **Mosaico del mes** sobre pergamino: cada día es una tesela que se colorea según los hábitos cumplidos, y en oro los días perfectos.
@@ -37,7 +37,7 @@ Los datos se guardan solo en el navegador de cada dispositivo: no se envían a n
 - [x] Publicación en internet y pestañas
 - [x] Instalable en el móvil (PWA)
 - [x] Tipos de hábito: días concretos, cantidad y templanza
-- [ ] Tipos de hábito: X veces por semana
+- [x] Tipos de hábito: X veces por semana
 - [ ] Iconos clásicos para cada hábito
 - [ ] Sincronización entre dispositivos
 - [ ] Consejeros con IA: Méntor (Μέντωρ) y Prometheus (Προμηθεύς)
