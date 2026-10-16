@@ -1210,35 +1210,32 @@ button.recordatorio {
 }
 
 /* Méntor: a la izquierda, en mármol blanco. margin-left deja sitio a su
-   inicial griega (Μ, «mi»), que se dibuja con ::before */
+   cara */
 .burbuja-mentor {
   position: relative;
   align-self: flex-start;
-  margin-left: 38px;
+  margin-left: 42px;
   background-color: #fffdf8;
   border: 1px solid var(--piedra);
   border-bottom-left-radius: 4px;
 }
 
-.burbuja-mentor::before {
-  content: "Μ";
+/* La cara de Méntor (el busto de bronce), abajo a la izquierda de su
+   burbuja. border-radius y overflow recortan el dibujo en un círculo; la
+   sombra hace un fino aro dorado */
+.mentor-cara {
   position: absolute;
-  left: -38px;
+  left: -42px;
   bottom: 0;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "EB Garamond", serif;
-  font-size: 1rem;
-  color: var(--marmol);
-  background-color: var(--bronce);
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--oro);
 }
 
-/* Si Méntor dice dos cosas seguidas, su inicial solo sale en la última */
-.burbuja-mentor:has(+ .burbuja-mentor)::before {
+/* Si Méntor dice dos cosas seguidas, su cara solo sale en la última */
+.burbuja-mentor:has(+ .burbuja-mentor) .mentor-cara {
   visibility: hidden;
 }
 

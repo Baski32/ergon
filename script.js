@@ -1392,11 +1392,14 @@ function textoRespuesta(pregunta, valor) {
   return valor;
 }
 
-// Burbuja de Méntor, a la izquierda.
+// Burbuja de Méntor, a la izquierda, con su cara (el dibujo #mentor de
+// index.html) al lado.
 function burbujaMentor(texto) {
   const burbuja = document.createElement("p");
   burbuja.classList.add("burbuja", "burbuja-mentor");
-  burbuja.textContent = texto;
+  burbuja.innerHTML =
+    '<svg class="mentor-cara" viewBox="0 0 40 40" aria-hidden="true"><use href="#mentor"></use></svg>';
+  burbuja.append(texto);
   return burbuja;
 }
 
@@ -1822,7 +1825,11 @@ function dibujarConversacion(animar) {
   const escribiendo = burbujaMentor("");
   escribiendo.classList.add("escribiendo");
   escribiendo.setAttribute("aria-label", "Méntor está escribiendo");
-  escribiendo.innerHTML = "<span></span><span></span><span></span>";
+  // insertAdjacentHTML añade los tres puntos al final, sin borrar la cara
+  escribiendo.insertAdjacentHTML(
+    "beforeend",
+    "<span></span><span></span><span></span>",
+  );
   conversacion.append(escribiendo);
   bajarAlFinal();
 
