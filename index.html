@@ -121,17 +121,29 @@
     </svg>
 
     <!-- ============================================================
+         BARRA SUPERIOR
+         Laurel, nombre de la pantalla y fecha. Se queda fija arriba.
+         ============================================================ -->
+    <header class="barra-superior">
+      <div class="barra-dentro">
+        <!-- El laurel con la «E», como el icono de la app -->
+        <svg class="emblema" viewBox="0 0 100 100" aria-hidden="true">
+          <use href="#laurel"></use>
+          <text x="50" y="63" text-anchor="middle">E</text>
+        </svg>
+        <!-- Nombre de la pantalla: lo cambia script.js -->
+        <h1 id="titulo-pantalla">Hoy</h1>
+        <!-- Fecha de hoy: la pone script.js -->
+        <span id="fecha-hoy" class="fecha-hoy"></span>
+      </div>
+    </header>
+
+    <!-- ============================================================
          CONTENIDO
-         La cabecera y las cuatro pantallas. Solo se ve una pantalla a la vez:
-         script.js quita el atributo hidden a la que toca.
+         Las cuatro pantallas. Solo se ve una a la vez: script.js quita
+         el atributo hidden a la que toca.
          ============================================================ -->
     <main class="contenedor">
-      <!-- Cabecera: siempre visible -->
-      <header class="cabecera">
-        <h1>Ergon</h1>
-        <p class="subtitulo">Disciplinas diarias</p>
-      </header>
-
       <!-- ============================================================
            PANTALLA HOY
            Cita del día, hábitos, formulario de hábito nuevo y semana.
@@ -215,11 +227,11 @@
 
       <!-- ============================================================
            PANTALLA MOSAICO
-           El mes en teselas sobre un pergamino.
+           El mes en teselas sobre un pergamino que ocupa la pantalla y se
+           enrolla y desenrolla al cambiar de mes.
            ============================================================ -->
       <div class="pantalla" data-pantalla="mosaico" hidden>
         <section class="mosaico-seccion">
-          <h2>Mosaico</h2>
           <!-- Flechas para cambiar de mes y nombre del mes -->
           <div class="mosaico-cabecera">
             <button id="mes-anterior" type="button" aria-label="Mes anterior">
@@ -230,14 +242,24 @@
               ›
             </button>
           </div>
-          <!-- Letras de los días de la semana -->
-          <div class="mosaico-dias">
-            <span>L</span><span>M</span><span>X</span><span>J</span
-            ><span>V</span><span>S</span><span>D</span>
+          <!-- El papel: la hoja que se enrolla y el rodillo que la enrolla -->
+          <div class="mosaico-papel">
+            <div id="mosaico-hoja" class="mosaico-hoja">
+              <!-- Letras de los días de la semana -->
+              <div class="mosaico-dias">
+                <span>L</span><span>M</span><span>X</span><span>J</span
+                ><span>V</span><span>S</span><span>D</span>
+              </div>
+              <!-- Teselas: las crea script.js -->
+              <div id="mosaico" class="mosaico"></div>
+              <p id="mosaico-resumen" class="mosaico-resumen"></p>
+            </div>
+            <div
+              id="mosaico-rodillo"
+              class="mosaico-rodillo"
+              aria-hidden="true"
+            ></div>
           </div>
-          <!-- Teselas: las crea script.js -->
-          <div id="mosaico" class="mosaico"></div>
-          <p id="mosaico-resumen" class="mosaico-resumen"></p>
         </section>
       </div>
 
@@ -247,7 +269,6 @@
            ============================================================ -->
       <div class="pantalla" data-pantalla="metas" hidden>
         <section class="metas">
-          <h2>Metas</h2>
           <!-- Metas pendientes: las crea script.js -->
           <div id="lista-metas"></div>
           <!-- Formulario de meta nueva -->

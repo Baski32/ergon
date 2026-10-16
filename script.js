@@ -12,7 +12,7 @@
 //  7. Mosaico del mes
 //  8. Metas
 //  9. Copia de seguridad
-// 10. Navegación entre pantallas
+// 10. Barra superior y navegación
 // 11. App instalable (service worker)
 // 12. Inicio
 // ==========================================================================
@@ -267,7 +267,7 @@ function resumenDelDia(fecha) {
   let tocan = 0;
   let cumplidos = 0;
 
-   habitos.forEach(function (habito) {
+  habitos.forEach(function (habito) {
     if (tocaEn(habito, fecha)) {
       tocan++;
       // Los días que aún no han llegado no cuentan como cumplidos
@@ -312,7 +312,7 @@ function mostrarHabitos() {
       control.inputMode = "numeric";
       control.placeholder = habito.objetivo.toLocaleString("es-ES");
       control.classList.add("habito-campo");
-            if (habitosHoy[habito.id] !== undefined) {
+      if (habitosHoy[habito.id] !== undefined) {
         control.value = habitosHoy[habito.id];
       }
 
@@ -363,7 +363,7 @@ function mostrarHabitos() {
       item.classList.add("hecho");
     }
 
-        // Ficha en terracota si hoy ya no tiene remedio
+    // Ficha en terracota si hoy ya no tiene remedio
     if (hoyYaFallado(habito)) {
       item.classList.add("fallado");
     }
@@ -382,7 +382,7 @@ function mostrarHabitos() {
       detalles.push(letras.join(" · "));
     }
 
-        if (habito.medida === "cantidad") {
+    if (habito.medida === "cantidad") {
       let texto = "Objetivo: ";
       if (habito.limite === "maximo") {
         texto = "Máximo: ";
@@ -525,7 +525,7 @@ formHabito.addEventListener("submit", function (evento) {
   const medida = selectMedida.value;
   const objetivo = Number(document.getElementById("habito-objetivo").value);
   const unidad = document.getElementById("habito-unidad").value.trim();
-    const limite = document.getElementById("habito-limite").value;
+  const limite = document.getElementById("habito-limite").value;
 
   if (medida === "cantidad" && objetivo <= 0) {
     alert("Escribe el objetivo de cada día.");
@@ -556,7 +556,7 @@ formHabito.addEventListener("submit", function (evento) {
   if (medida === "cantidad") {
     nuevo.objetivo = objetivo;
     nuevo.unidad = unidad;
-        nuevo.limite = limite;
+    nuevo.limite = limite;
   }
 
   if (medida === "abstencion") {
@@ -733,15 +733,89 @@ function mostrarMosaico() {
     perfectos + " de " + vividos + " días con todas tus disciplinas cumplidas";
 }
 
+// ¿Se está enrollando el pergamino? Mientras dura, las flechas no hacen nada.
+let enrollando = false;
+
+// Cambia de mes con la animación del pergamino: la hoja se enrolla, cambia el
+// mes y se vuelve a desenrollar. paso: -1 (mes anterior) o 1 (mes siguiente).
+async function cambiarMes(paso) {
+  if (enrollando) {
+    return;
+  }
+
+  // Con «reducir movimiento» activado en el móvil, se cambia sin animación
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    mesVisible.setMonth(mesVisible.getMonth() + paso);
+    mostrarMosaico();
+    return;
+  }
+
+  enrollando = true;
+  const hoja = document.getElementById("mosaico-hoja");
+  const rodillo = document.getElementById("mosaico-rodillo");
+
+  // Hacia delante, la hoja se enrolla hacia arriba; hacia atrás, hacia abajo.
+  // clip-path: inset(arriba derecha abajo izquierda) recorta la hoja, y el
+  // rodillo va siempre por el borde que se está recortando.
+  const abierta = "inset(0 0 0 0)";
+  let enrollada = "inset(0 0 100% 0)";
+  let bordeAbierto = "100%";
+  let bordeEnrollado = "0%";
+  if (paso < 0) {
+    enrollada = "inset(100% 0 0 0)";
+    bordeAbierto = "0%";
+    bordeEnrollado = "100%";
+  }
+
+  // 1. Enrollar
+  const enrollar = { duration: 350, easing: "ease-in", fill: "forwards" };
+  const hojaSube = hoja.animate(
+    [{ clipPath: abierta }, { clipPath: enrollada }],
+    enrollar,
+  );
+  const rodilloSube = rodillo.animate(
+    [
+      { top: bordeAbierto, opacity: 1 },
+      { top: bordeEnrollado, opacity: 1 },
+    ],
+    enrollar,
+  );
+  await rodilloSube.finished;
+
+  // 2. Con la hoja enrollada, cambiar de mes
+  mesVisible.setMonth(mesVisible.getMonth() + paso);
+  mostrarMosaico();
+
+  // 3. Desenrollar
+  const desenrollar = { duration: 450, easing: "ease-out", fill: "forwards" };
+  const hojaBaja = hoja.animate(
+    [{ clipPath: enrollada }, { clipPath: abierta }],
+    desenrollar,
+  );
+  const rodilloBaja = rodillo.animate(
+    [
+      { top: bordeEnrollado, opacity: 1 },
+      { top: bordeAbierto, opacity: 1 },
+    ],
+    desenrollar,
+  );
+  hojaSube.cancel();
+  rodilloSube.cancel();
+  await rodilloBaja.finished;
+
+  // 4. Quitar las animaciones: la hoja queda abierta y el rodillo, escondido
+  hojaBaja.cancel();
+  rodilloBaja.cancel();
+  enrollando = false;
+}
+
 // Flechas para ir al mes anterior y al siguiente.
 document.getElementById("mes-anterior").addEventListener("click", function () {
-  mesVisible.setMonth(mesVisible.getMonth() - 1);
-  mostrarMosaico();
+  cambiarMes(-1);
 });
 
 document.getElementById("mes-siguiente").addEventListener("click", function () {
-  mesVisible.setMonth(mesVisible.getMonth() + 1);
-  mostrarMosaico();
+  cambiarMes(1);
 });
 
 // ==========================================================================
@@ -1019,21 +1093,40 @@ document
   });
 
 // ==========================================================================
-// 10. NAVEGACIÓN ENTRE PANTALLAS
-// La barra de abajo: Hoy · Mosaico · Metas · Archivo.
+// 10. BARRA SUPERIOR Y NAVEGACIÓN
+// Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
+// Hoy · Mosaico · Metas · Archivo.
 // ==========================================================================
 
 const pantallas = document.querySelectorAll(".pantalla");
 const botonesNavegacion = document.querySelectorAll(".navegacion button");
+const tituloPantalla = document.getElementById("titulo-pantalla");
 
-// Muestra una pantalla, ilumina su botón y la recuerda para la próxima vez.
+// Pone la fecha de hoy en la barra de arriba, p. ej. «vie, 16 oct».
+function mostrarFecha() {
+  document.getElementById("fecha-hoy").textContent =
+    new Date().toLocaleDateString("es-ES", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
+}
+
+// Muestra una pantalla, ilumina su botón, pone su nombre en la barra de
+// arriba y la recuerda para la próxima vez.
 function mostrarPantalla(nombre) {
   pantallas.forEach(function (pantalla) {
     pantalla.hidden = pantalla.dataset.pantalla !== nombre;
   });
 
   botonesNavegacion.forEach(function (boton) {
-    boton.classList.toggle("activa", boton.dataset.destino === nombre);
+    const esLaActiva = boton.dataset.destino === nombre;
+    boton.classList.toggle("activa", esLaActiva);
+
+    // El título de la barra es el texto del botón de la pantalla activa
+    if (esLaActiva) {
+      tituloPantalla.textContent = boton.textContent;
+    }
   });
 
   localStorage.setItem("ergon-pantalla", nombre);
@@ -1070,7 +1163,9 @@ function actualizarTodo() {
   mostrarMetas();
 }
 
-// Al abrir: dibujar todo, poner la cita y abrir la última pantalla usada.
+// Al abrir: dibujar todo, poner la cita y la fecha y abrir la última
+// pantalla usada.
 actualizarTodo();
 mostrarCitaDelDia();
+mostrarFecha();
 mostrarPantalla(localStorage.getItem("ergon-pantalla") || "hoy");
