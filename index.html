@@ -307,8 +307,10 @@
     <main class="contenedor">
       <!-- ============================================================
            PANTALLA HOY
-           Cita del día, aviso de copia, hábitos, botón de hábito nuevo,
-           semana y constancia.
+           Cita del día; rituales, revisión, aviso de copia, hábitos y
+           botón de hábito nuevo (columna principal); semana y constancia
+           (columna lateral). En el móvil las dos columnas van una debajo
+           de otra; en el PC, una al lado de otra.
            ============================================================ -->
       <div class="pantalla" data-pantalla="hoy">
         <!-- Cita del día: la rellena script.js con citas.json -->
@@ -317,34 +319,46 @@
           <span id="cita-autor" class="autor"></span>
         </blockquote>
 
-        <!-- Aviso de copia: sale si hace 7 días o más que no se hace una -->
-        <div id="aviso-copia" class="aviso-copia" hidden>
-          <p id="aviso-copia-texto"></p>
-          <button id="aviso-copia-boton" type="button">
-            Hacer copia ahora
-          </button>
+        <div class="hoy-columnas">
+          <div class="hoy-principal">
+            <!-- Ritual de la mañana o de la noche: lo pone script.js -->
+            <div id="ritual" class="rituales" hidden></div>
+
+            <!-- Propósito de la semana y aviso de la revisión del domingo -->
+            <div id="revision-hoy" class="rituales" hidden></div>
+
+            <!-- Aviso de copia: sale si hace 7 días o más que no se hace una -->
+            <div id="aviso-copia" class="aviso-copia" hidden>
+              <p id="aviso-copia-texto"></p>
+              <button id="aviso-copia-boton" type="button">
+                Hacer copia ahora
+              </button>
+            </div>
+
+            <!-- Lista de hábitos: script.js crea una ficha por hábito -->
+            <ul id="lista-habitos" class="lista-habitos"></ul>
+
+            <!-- Hábito nuevo: abre la conversación con Méntor -->
+            <button id="boton-nuevo-habito" class="boton-nuevo" type="button">
+              + Nuevo hábito
+            </button>
+          </div>
+
+          <div class="hoy-lateral">
+            <!-- Semana: la rellena script.js -->
+            <section class="historial">
+              <h2>Semana</h2>
+              <div id="semana" class="semana"></div>
+            </section>
+
+            <!-- Constancia de los últimos 30 días: la rellena script.js -->
+            <section id="seccion-constancia" class="constancia">
+              <h2>Constancia</h2>
+              <p class="constancia-intro">Últimos 30 días</p>
+              <ul id="lista-constancia" class="lista-constancia"></ul>
+            </section>
+          </div>
         </div>
-
-        <!-- Lista de hábitos: script.js crea una ficha por hábito -->
-        <ul id="lista-habitos" class="lista-habitos"></ul>
-
-        <!-- Hábito nuevo: abre la conversación con Méntor -->
-        <button id="boton-nuevo-habito" class="boton-nuevo" type="button">
-          + Nuevo hábito
-        </button>
-
-        <!-- Semana: la rellena script.js -->
-        <section class="historial">
-          <h2>Semana</h2>
-          <div id="semana" class="semana"></div>
-        </section>
-
-        <!-- Constancia de los últimos 30 días: la rellena script.js -->
-        <section id="seccion-constancia" class="constancia">
-          <h2>Constancia</h2>
-          <p class="constancia-intro">Últimos 30 días</p>
-          <ul id="lista-constancia" class="lista-constancia"></ul>
-        </section>
       </div>
 
       <!-- ============================================================
@@ -393,7 +407,7 @@
         <section class="metas">
           <!-- Metas pendientes: las crea script.js -->
           <div id="lista-metas"></div>
-          <!-- Meta nueva: abre la ventana de meta -->
+          <!-- Meta nueva: abre la conversación con Méntor -->
           <button id="boton-nueva-meta" class="boton-nuevo" type="button">
             + Nueva meta
           </button>
@@ -409,9 +423,27 @@
 
       <!-- ============================================================
            PANTALLA ARCHIVO
-           Copia de seguridad: descargar y restaurar todos los datos.
+           Perfil, revisiones semanales y copia de seguridad.
            ============================================================ -->
       <div class="pantalla" data-pantalla="archivo" hidden>
+        <!-- Perfil: los datos los pone script.js -->
+        <section class="perfil">
+          <h2>Perfil</h2>
+          <div id="perfil-datos"></div>
+          <div id="historial-peso" class="historial-peso" hidden></div>
+          <div class="pie-botones">
+            <button id="boton-editar-perfil" type="button">
+              Editar perfil y peso
+            </button>
+          </div>
+        </section>
+
+        <!-- Revisiones semanales: script.js crea una por semana -->
+        <section id="seccion-revisiones" class="revisiones" hidden>
+          <h2>Revisiones</h2>
+          <div id="lista-revisiones"></div>
+        </section>
+
         <footer class="pie">
           <h2>Copia de seguridad</h2>
           <p class="pie-texto">
@@ -446,7 +478,7 @@
          script.js la rellena con el hábito que se toca.
          ============================================================ -->
     <dialog id="ventana-habito" class="ventana">
-      <form id="form-habito" class="form-habito">
+      <form id="form-habito" class="form-habito" novalidate>
         <!-- autofocus en el título: al abrir, el foco va aquí y no al nombre
              (en el iPhone, eso abriría el teclado sin querer) -->
         <h2 tabindex="-1" autofocus>Editar hábito</h2>
@@ -520,6 +552,8 @@
           Los cambios cuentan desde hoy: los días pasados y la racha se quedan
           como estaban.
         </p>
+        <!-- Aquí sale lo que falta («Elige al menos un día.»…) -->
+        <p id="habito-error" class="ventana-error"></p>
         <div class="ventana-botones">
           <button type="button" id="habito-eliminar" class="boton-eliminar">
             Eliminar
@@ -533,17 +567,18 @@
     </dialog>
 
     <!-- ============================================================
-         VENTANA DE META
-         La misma ventana sirve para crear una meta y para editarla.
+         VENTANA DE EDITAR META
+         Se abre con el lápiz de cada meta. (Las nuevas, con Méntor.)
          ============================================================ -->
     <dialog id="ventana-meta" class="ventana">
-      <form id="form-meta" class="form-meta">
-        <h2 id="ventana-meta-titulo" tabindex="-1" autofocus>Nueva meta</h2>
+      <form id="form-meta" class="form-meta" novalidate>
+        <h2 tabindex="-1" autofocus>Editar meta</h2>
 
         <input
           type="text"
           id="meta-titulo"
           placeholder="¿Qué quieres conseguir?"
+          maxlength="60"
           required
         />
 
@@ -563,12 +598,13 @@
         <textarea
           id="meta-pasos"
           placeholder="Escribe los pasos para conseguir tu meta (un paso por cada línea)"
-          required
         ></textarea>
 
-        <p id="meta-nota" class="ventana-nota">
-          Los pasos que dejes igual conservan si ya estaban hechos.
+        <p class="ventana-nota">
+          Un paso por línea. Los pasos que dejes igual conservan si ya estaban
+          hechos.
         </p>
+        <p id="meta-error" class="ventana-error"></p>
 
         <div class="ventana-botones">
           <button type="button" id="meta-eliminar" class="boton-eliminar">
@@ -577,18 +613,95 @@
           <button type="button" id="meta-cancelar" class="boton-secundario">
             Cancelar
           </button>
-          <button type="submit" id="meta-guardar" class="boton-principal">
-            Agregar meta
-          </button>
+          <button type="submit" class="boton-principal">Guardar</button>
         </div>
       </form>
     </dialog>
 
     <!-- ============================================================
-         NAVEGACIÓN INFERIOR
-         Cada botón abre la pantalla de su data-destino.
+         VENTANA DE PERFIL
+         Nombre, nacimiento, altura y el peso de hoy. Todo opcional.
+         ============================================================ -->
+    <dialog id="ventana-perfil" class="ventana">
+      <form id="form-perfil" class="form-habito" novalidate>
+        <h2 tabindex="-1" autofocus>Perfil</h2>
+        <label class="etiqueta-campo" for="perfil-nombre">Nombre</label>
+        <input type="text" id="perfil-nombre" maxlength="40" />
+        <label class="etiqueta-campo" for="perfil-nacimiento">
+          Fecha de nacimiento
+        </label>
+        <input type="date" id="perfil-nacimiento" />
+        <label class="etiqueta-campo" for="perfil-altura">
+          Altura (centímetros)
+        </label>
+        <input
+          type="text"
+          id="perfil-altura"
+          inputmode="numeric"
+          placeholder="175"
+        />
+        <label class="etiqueta-campo" for="perfil-peso">
+          Peso de hoy (kilos)
+        </label>
+        <input
+          type="text"
+          id="perfil-peso"
+          inputmode="decimal"
+          placeholder="72,5"
+        />
+        <p class="ventana-nota">
+          El peso se guarda con la fecha de hoy y se suma al historial. Lo que
+          dejes vacío no se guarda.
+        </p>
+        <p id="perfil-error" class="ventana-error"></p>
+        <div class="ventana-botones">
+          <button type="button" id="perfil-cancelar" class="boton-secundario">
+            Cancelar
+          </button>
+          <button type="submit" class="boton-principal">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============================================================
+         VENTANA DE AVISO
+         Para preguntar («¿Eliminar…?») o avisar, con el estilo de Ergon.
+         method="dialog": al pulsar un botón se cierra y guarda su value.
+         ============================================================ -->
+    <dialog id="ventana-aviso" class="ventana ventana-aviso">
+      <form method="dialog" class="form-aviso">
+        <p id="aviso-texto" tabindex="-1" autofocus></p>
+        <div class="ventana-botones">
+          <button
+            type="submit"
+            value="no"
+            id="aviso-no"
+            class="boton-secundario"
+          ></button>
+          <button
+            type="submit"
+            value="si"
+            id="aviso-si"
+            class="boton-principal"
+          ></button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============================================================
+         NAVEGACIÓN
+         Abajo en el móvil y a la izquierda en el PC (style.css, bloque
+         Escritorio). Cada botón abre la pantalla de su data-destino.
          ============================================================ -->
     <nav class="navegacion">
+      <!-- Solo en el PC (barra lateral): el laurel y el nombre de la app -->
+      <div class="navegacion-marca" aria-hidden="true">
+        <svg class="emblema" viewBox="0 0 100 100">
+          <use href="#laurel"></use>
+          <text x="50" y="63" text-anchor="middle">E</text>
+        </svg>
+        <span>Ergon</span>
+      </div>
       <button type="button" data-destino="hoy">Hoy</button>
       <button type="button" data-destino="mosaico">Mosaico</button>
       <button type="button" data-destino="metas">Metas</button>

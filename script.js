@@ -9,16 +9,23 @@
 //  4. Hábitos · Iconos
 //  5. Hábitos · Lista de hoy
 //  6. Hábitos · Ventana de editar hábito
-//  7. Méntor · Conversación para crear un hábito
-//  8. Semana
-//  9. Constancia
-// 10. Mosaico del mes
-// 11. Metas · Tarjetas
-// 12. Metas · Ventana de meta
-// 13. Copia de seguridad
-// 14. Barra superior y navegación
-// 15. App instalable (service worker)
-// 16. Inicio
+//  7. Avisos
+//  8. Méntor · La conversación
+//  9. Méntor · Hábito nuevo
+// 10. Méntor · Meta nueva
+// 11. Méntor · Bienvenida
+// 12. Rituales de mañana y de noche
+// 13. Revisión semanal
+// 14. Semana
+// 15. Constancia
+// 16. Mosaico del mes
+// 17. Metas · Tarjetas
+// 18. Metas · Ventana de editar meta
+// 19. Perfil
+// 20. Copia de seguridad
+// 21. Barra superior y navegación
+// 22. App instalable (service worker)
+// 23. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -44,6 +51,17 @@ const habitos = JSON.parse(localStorage.getItem("ergon-habitos")) || [];
 // victoria (el día en que se cumplió) }
 const metas = JSON.parse(localStorage.getItem("ergon-metas")) || [];
 
+// Perfil: { nombre, nacimiento, altura, pesos: [{ fecha, kilos }] }. Todo es
+// opcional: lo que no se ha rellenado, no está.
+const perfil = JSON.parse(localStorage.getItem("ergon-perfil")) || {};
+
+// Rituales de cada día: { "2026-10-16": { intencion, examen } }
+const rituales = JSON.parse(localStorage.getItem("ergon-rituales")) || {};
+
+// Revisiones de cada semana, por el lunes de esa semana:
+// { "2026-10-12": { fecha, cumplido, bien, costado, proposito, perfectos, vividos } }
+const revisiones = JSON.parse(localStorage.getItem("ergon-revisiones")) || {};
+
 // Guarda la lista de hábitos.
 function guardarHabitos() {
   localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
@@ -58,6 +76,21 @@ function guardarRegistro() {
 // Guarda la lista de metas.
 function guardarMetas() {
   localStorage.setItem("ergon-metas", JSON.stringify(metas));
+}
+
+// Guarda el perfil.
+function guardarPerfil() {
+  localStorage.setItem("ergon-perfil", JSON.stringify(perfil));
+}
+
+// Guarda los rituales.
+function guardarRituales() {
+  localStorage.setItem("ergon-rituales", JSON.stringify(rituales));
+}
+
+// Guarda las revisiones semanales.
+function guardarRevisiones() {
+  localStorage.setItem("ergon-revisiones", JSON.stringify(revisiones));
 }
 
 // ==========================================================================
@@ -928,6 +961,7 @@ const cajaTemplanza = document.getElementById("habito-templanza");
 const campoInicio = document.getElementById("habito-inicio");
 const cajaComodin = document.getElementById("caja-comodin");
 const casillaComodin = document.getElementById("habito-comodin");
+const errorHabito = document.getElementById("habito-error");
 
 // El hábito que se está editando.
 let habitoEditado = null;
@@ -978,7 +1012,9 @@ function abrirVentanaHabito(habito) {
   cajaComodin.hidden = medida === "abstencion" || frecuencia === "semanal";
   casillaComodin.checked = habito.comodin === true;
 
-  // showModal abre el <dialog> encima de todo y oscurece el fondo
+  // Sin fallos de la vez anterior. showModal abre el <dialog> encima de todo
+  // y oscurece el fondo
+  errorHabito.textContent = "";
   ventanaHabito.showModal();
 }
 
@@ -1007,7 +1043,8 @@ function guardarReglasAntiguas(habito, antes) {
 }
 
 // Al pulsar «Guardar»: comprueba los datos, cambia el hábito y guarda las
-// reglas de antes si han cambiado.
+// reglas de antes si han cambiado. Si algo falla, lo explica en la propia
+// ventana (errorHabito) y no la cierra.
 formHabito.addEventListener("submit", function (evento) {
   evento.preventDefault();
   const habito = habitoEditado;
@@ -1016,6 +1053,7 @@ formHabito.addEventListener("submit", function (evento) {
   // Nombre (obligatorio)
   const nombre = campoNombre.value.trim();
   if (nombre === "") {
+    errorHabito.textContent = "Escribe el nombre del hábito.";
     return;
   }
 
@@ -1027,28 +1065,28 @@ formHabito.addEventListener("submit", function (evento) {
   });
 
   if (frecuencia === "dias" && dias.length === 0) {
-    alert("Elige al menos un día.");
+    errorHabito.textContent = "Elige al menos un día.";
     return;
   }
 
   // Unas veces por semana: de 1 a 6
   const veces = Number(campoVeces.value);
   if (frecuencia === "semanal" && !(veces >= 1 && veces <= 6)) {
-    alert("Elige entre 1 y 6 veces por semana.");
+    errorHabito.textContent = "Elige entre 1 y 6 veces por semana.";
     return;
   }
 
   // Cantidad: el objetivo, mayor que 0
   const objetivo = Number(campoObjetivo.value);
   if (medida === "cantidad" && !(objetivo > 0)) {
-    alert("Escribe el objetivo de cada día.");
+    errorHabito.textContent = "Escribe el objetivo de cada día.";
     return;
   }
 
   // Templanza: el inicio, nunca futuro
   const inicio = campoInicio.value || inicioDe(habito);
   if (medida === "abstencion" && inicio > hoy) {
-    alert("La fecha de inicio no puede ser futura.");
+    errorHabito.textContent = "La fecha de inicio no puede ser futura.";
     return;
   }
 
@@ -1094,17 +1132,19 @@ formHabito.addEventListener("submit", function (evento) {
   ventanaHabito.close();
 });
 
-// «Eliminar»: borra el hábito después de preguntar.
+// «Eliminar»: borra el hábito después de preguntar. La función es async
+// para poder esperar (await) la respuesta de la ventana de aviso.
 document
   .getElementById("habito-eliminar")
-  .addEventListener("click", function () {
-    if (
-      confirm(
-        "¿Eliminar el hábito «" +
-          habitoEditado.nombre +
-          "»? Se perderán su racha y sus días apuntados.",
-      )
-    ) {
+  .addEventListener("click", async function () {
+    const borrar = await preguntar(
+      "¿Eliminar el hábito «" +
+        habitoEditado.nombre +
+        "»? Se perderán su racha y sus días apuntados.",
+      "Eliminar",
+      "Cancelar",
+    );
+    if (borrar) {
       habitos.splice(habitos.indexOf(habitoEditado), 1);
       guardarHabitos();
       actualizarTodo();
@@ -1132,21 +1172,712 @@ function cerrarAlTocarFuera(ventana) {
 cerrarAlTocarFuera(ventanaHabito);
 
 // ==========================================================================
-// 7. MÉNTOR · CONVERSACIÓN PARA CREAR UN HÁBITO
-// Méntor pregunta y yo respondo, en burbujas como un chat. Solo pregunta lo
-// que toca según lo ya respondido. Todavía no es una IA: sus preguntas
-// están escritas aquí abajo, como una lista de datos.
+// 7. AVISOS
+// La ventana de aviso de Ergon, en lugar de los alert() y confirm() del
+// navegador (que no se pueden decorar y paran toda la página).
 // ==========================================================================
 
-// Las preguntas, en orden. Cada una tiene:
-//   clave:    dónde se guarda la respuesta (respuestas.nombre, respuestas.medida…)
-//   texto:    lo que dice Méntor (o una función que lo escribe con lo ya respondido)
-//   tipo:     cómo se responde: "texto", "numero", "opciones", "dias", "fecha" o "icono"
-//   cuando:   (si la tiene) función que dice si hay que hacer esta pregunta
-//   opciones: (en las de tipo "opciones") los botones; cada uno puede tener su «cuando»
-//   ejemplo:  (en las de escribir) el texto gris del campo
-//   vacio:    (en las de escribir) qué se ve si se envía sin escribir nada
-//   validar:  (si la tiene) función que devuelve el fallo, o "" si todo está bien
+// Piezas de la ventana de aviso.
+const ventanaAviso = document.getElementById("ventana-aviso");
+const textoAviso = document.getElementById("aviso-texto");
+const botonAvisoSi = document.getElementById("aviso-si");
+const botonAvisoNo = document.getElementById("aviso-no");
+
+// Hace una pregunta en la ventana de aviso y espera la respuesta.
+// Devuelve una promesa (Promise): una respuesta que llegará más tarde. Con
+// «await preguntar(…)», el código se queda esperando y recibe true (el
+// botón del sí) o false (el del no, Escape o tocar fuera).
+// Los botones están en un <form method="dialog">: al pulsar uno, la ventana
+// se cierra sola y guarda en returnValue el value del botón ("si" o "no").
+function preguntar(mensaje, textoSi, textoNo) {
+  textoAviso.textContent = mensaje;
+  botonAvisoSi.textContent = textoSi;
+  botonAvisoNo.textContent = textoNo || "";
+  botonAvisoNo.hidden = !textoNo;
+  ventanaAviso.returnValue = "";
+  ventanaAviso.showModal();
+
+  return new Promise(function (resolver) {
+    // { once: true }: este «close» se escucha una sola vez
+    ventanaAviso.addEventListener(
+      "close",
+      function () {
+        resolver(ventanaAviso.returnValue === "si");
+      },
+      { once: true },
+    );
+  });
+}
+
+// Un aviso con un solo botón, «Entendido».
+function avisar(mensaje) {
+  return preguntar(mensaje, "Entendido");
+}
+
+cerrarAlTocarFuera(ventanaAviso);
+
+// ==========================================================================
+// 8. MÉNTOR · LA CONVERSACIÓN
+// Méntor pregunta y yo respondo, en burbujas como un chat. La misma pantalla
+// sirve para varias conversaciones (hábito nuevo, meta nueva, bienvenida y
+// revisión semanal): cada una es un objeto con sus preguntas y con lo que
+// pasa al terminar. Todavía no es una IA: lo que dice está escrito aquí.
+// ==========================================================================
+
+// Cada conversación es un objeto con:
+//   saludo:     lo primero que dice Méntor (un texto, una lista de textos o
+//               una función que los devuelve)
+//   preguntas:  la lista de preguntas, en orden
+//   cierre:     lo que dice antes del resumen
+//   resumen:    función que devuelve { icono, nombre, lineas } para la
+//               tarjeta del final (icono puede ser null)
+//   boton:      el texto del botón del final («Crear hábito»…)
+//   alTerminar: qué hacer al pulsarlo
+//   otroBoton:  (si lo tiene) { texto, alPulsar }: un segundo botón al final
+//   salir:      lo que pregunta «Salir» si ya hay algo respondido
+//   alSalir:    qué hacer al salir (p. ej. volver a Hoy)
+//
+// Cada pregunta tiene:
+//   clave:     dónde se guarda la respuesta (respuestas.nombre…)
+//   texto:     lo que dice Méntor (o una función que lo escribe con lo ya
+//              respondido)
+//   tipo:      cómo se responde: "texto", "parrafo", "numero", "opciones",
+//              "dias", "fecha", "icono" o "lista"
+//   cuando:    (si la tiene) función que dice si hay que hacer la pregunta
+//   opciones:  (en las de tipo "opciones") los botones, o una función que
+//              los devuelve; cada uno puede tener su «cuando»
+//   ejemplo:   (en las de escribir) el texto gris del campo
+//   inicial:   (en las de escribir) lo que sale ya escrito
+//   unidad:    (en las de número) lo que va detrás: «pasos», «kg»…
+//   decimales: (en las de número) true si admite decimales, como 72,5
+//   largo:     (en las de escribir) cuántas letras como mucho (40 si no)
+//   mostrar:   (si la tiene) función que escribe la respuesta en su burbuja
+//   vacio:     si se puede dejar sin responder, lo que se ve entonces
+//   saltar:    true para que salga un botón con el texto de «vacio»
+//   validar:   (si la tiene) función que devuelve el fallo, o "" si está bien
+
+// La conversación que se está teniendo.
+let conversacionActual = null;
+
+// Lo respondido hasta ahora: { nombre: "Leer", medida: "casilla", … }
+let respuestas = {};
+
+// Clave de la respuesta que se está cambiando (null si ninguna).
+let respuestaEditada = null;
+
+// Temporizador de «Méntor está escribiendo…» (para poder cancelarlo).
+let temporizadorMentor = null;
+
+// «Salve, Joel.» si el perfil tiene nombre; si no, «Salve.».
+function salve() {
+  if (perfil.nombre) {
+    return "Salve, " + perfil.nombre + ".";
+  }
+  return "Salve.";
+}
+
+// Busca una pregunta de la conversación por su clave.
+function preguntaDe(clave) {
+  return conversacionActual.preguntas.find(function (pregunta) {
+    return pregunta.clave === clave;
+  });
+}
+
+// Si «algo» es una función, la llama con lo respondido; si no, lo devuelve
+// tal cual. Sirve para los textos que cambian según las respuestas.
+function segunRespuestas(algo) {
+  if (typeof algo === "function") {
+    return algo(respuestas);
+  }
+  return algo;
+}
+
+// Las opciones de una pregunta (pueden venir de una función, como la lista
+// de hábitos de las metas).
+function opcionesDe(pregunta) {
+  return segunRespuestas(pregunta.opciones);
+}
+
+// ¿Hay que hacer esta pregunta (o mostrar esta opción)? Sí, si no tiene
+// «cuando» o si su «cuando» dice que sí.
+function hayQue(algo) {
+  return !algo.cuando || algo.cuando(respuestas);
+}
+
+// Borra las respuestas que ya no valen: las de preguntas que ya no tocan y
+// las opciones que ya no se pueden elegir (p. ej. «Unas veces por semana»
+// si se cambia a templanza). Va en orden, así lo que depende de una
+// respuesta borrada también se borra.
+function limpiarRespuestas() {
+  conversacionActual.preguntas.forEach(function (pregunta) {
+    const valor = respuestas[pregunta.clave];
+    if (valor === undefined) {
+      return;
+    }
+
+    if (!hayQue(pregunta)) {
+      delete respuestas[pregunta.clave];
+    } else if (pregunta.tipo === "opciones") {
+      const sigueValiendo = opcionesDe(pregunta).some(function (opcion) {
+        return opcion.valor === valor && hayQue(opcion);
+      });
+      if (!sigueValiendo) {
+        delete respuestas[pregunta.clave];
+      }
+    }
+  });
+}
+
+// Convierte lo escrito en un número. Con decimales, la coma vale como punto
+// (72,5 → 72.5); sin decimales, los puntos y comas de los miles se quitan
+// (10.000 → 10000). Si no es un número, da NaN («no es un número»).
+function leerNumero(texto, decimales) {
+  if (decimales) {
+    return Number(texto.replace(",", "."));
+  }
+  return Number(texto.replace(/[.,]/g, ""));
+}
+
+// Una fecha "2026-10-16" escrita para leer: «16 de octubre de 2026».
+function fechaLarga(clave) {
+  return new Date(clave + "T00:00").toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// Texto de mi respuesta en su burbuja: «Todos los días», «10.000 pasos»…
+function textoRespuesta(pregunta, valor) {
+  if (valor === "" && pregunta.vacio !== undefined) {
+    return pregunta.vacio;
+  }
+
+  if (pregunta.mostrar) {
+    return pregunta.mostrar(valor);
+  }
+
+  if (pregunta.tipo === "opciones") {
+    const opcion = opcionesDe(pregunta).find(function (o) {
+      return o.valor === valor;
+    });
+    return opcion.texto;
+  }
+
+  if (pregunta.tipo === "numero") {
+    const unidad = segunRespuestas(pregunta.unidad) || "";
+    return (valor.toLocaleString("es-ES") + " " + unidad).trim();
+  }
+
+  if (pregunta.tipo === "dias") {
+    return valor
+      .map(function (numero) {
+        return letrasDias[numero];
+      })
+      .join(" · ");
+  }
+
+  if (pregunta.tipo === "lista") {
+    return valor.join("\n");
+  }
+
+  if (pregunta.tipo === "fecha") {
+    return fechaLarga(valor);
+  }
+
+  if (pregunta.tipo === "icono") {
+    return datosIcono(valor).corto;
+  }
+
+  return valor;
+}
+
+// Burbuja de Méntor, a la izquierda.
+function burbujaMentor(texto) {
+  const burbuja = document.createElement("p");
+  burbuja.classList.add("burbuja", "burbuja-mentor");
+  burbuja.textContent = texto;
+  return burbuja;
+}
+
+// Burbuja con mi respuesta, a la derecha. Es un botón: al tocarla, Méntor
+// vuelve a hacer esa pregunta para cambiar la respuesta.
+function burbujaMia(pregunta, valor) {
+  const burbuja = document.createElement("button");
+  burbuja.type = "button";
+  burbuja.classList.add("burbuja", "burbuja-mia");
+  burbuja.title = "Cambiar esta respuesta";
+
+  if (pregunta.tipo === "icono") {
+    burbuja.append(crearIcono(valor));
+  }
+  burbuja.append(textoRespuesta(pregunta, valor));
+
+  burbuja.addEventListener("click", function () {
+    respuestaEditada = pregunta.clave;
+    dibujarConversacion(false);
+  });
+  return burbuja;
+}
+
+// La pregunta respondida que va justo antes de «pregunta» (la que cambia
+// el botón «Atrás»). Con pregunta = null, la última respondida.
+function preguntaAnterior(pregunta) {
+  const preguntas = conversacionActual.preguntas;
+  let anterior = null;
+  for (let i = 0; i < preguntas.length; i++) {
+    const otra = preguntas[i];
+    if (otra === pregunta) {
+      break;
+    }
+    if (hayQue(otra) && respuestas[otra.clave] !== undefined) {
+      anterior = otra;
+    }
+  }
+  return anterior;
+}
+
+// Los botones de abajo: «Atrás» (vuelve a la pregunta anterior; en la
+// primera no sale) y «Salir».
+function crearAtrasYSalir(pregunta) {
+  const fila = document.createElement("div");
+  fila.classList.add("mentor-acciones");
+
+  const anterior = preguntaAnterior(pregunta);
+  if (anterior) {
+    const atras = document.createElement("button");
+    atras.type = "button";
+    atras.textContent = "‹ Atrás";
+    atras.addEventListener("click", function () {
+      respuestaEditada = anterior.clave;
+      dibujarConversacion(false);
+    });
+    fila.append(atras);
+  }
+
+  const salir = document.createElement("button");
+  salir.type = "button";
+  salir.textContent = "Salir";
+  salir.addEventListener("click", salirDeConversacion);
+  fila.append(salir);
+
+  return fila;
+}
+
+// Crea un botón con su clase y lo que hace al pulsarlo.
+function crearBoton(texto, clase, alPulsar) {
+  const boton = document.createElement("button");
+  boton.type = "button";
+  boton.classList.add(clase);
+  boton.textContent = texto;
+  boton.addEventListener("click", alPulsar);
+  return boton;
+}
+
+// La forma de responder a una pregunta: botones, días, iconos, una lista o
+// un campo para escribir. Si ya estaba respondida (al cambiarla), sale lo
+// de antes.
+function crearControles(pregunta) {
+  const zona = document.createElement("div");
+  zona.classList.add("mentor-respuesta");
+
+  // Aquí sale el fallo si la respuesta no vale
+  const error = document.createElement("p");
+  error.classList.add("mentor-error");
+
+  const anterior = respuestas[pregunta.clave];
+
+  // Comprueba la respuesta y, si vale, la guarda; si no, explica por qué.
+  // Si se puede dejar vacía (vacio), vacía siempre vale
+  function enviar(valor) {
+    if (valor === "" && pregunta.vacio !== undefined) {
+      responder(pregunta, "");
+      return;
+    }
+    if (pregunta.validar) {
+      const fallo = pregunta.validar(valor);
+      if (fallo !== "") {
+        error.textContent = fallo;
+        return;
+      }
+    }
+    responder(pregunta, valor);
+  }
+
+  if (pregunta.tipo === "opciones") {
+    // Un botón por opción (solo las que tocan); la de antes, marcada
+    const botones = document.createElement("div");
+    botones.classList.add("mentor-opciones");
+
+    opcionesDe(pregunta).forEach(function (opcion) {
+      if (!hayQue(opcion)) {
+        return;
+      }
+      const boton = document.createElement("button");
+      boton.type = "button";
+      boton.textContent = opcion.texto;
+      if (opcion.valor === anterior) {
+        boton.classList.add("elegida");
+      }
+      boton.addEventListener("click", function () {
+        enviar(opcion.valor);
+      });
+      botones.append(boton);
+    });
+
+    zona.append(botones);
+  } else if (pregunta.tipo === "dias") {
+    // Los siete círculos de los días (los mismos de la ventana de editar)
+    // y el botón «Listo»
+    const caja = document.createElement("div");
+    caja.classList.add("habito-dias");
+    const elegidos = anterior || [];
+
+    [1, 2, 3, 4, 5, 6, 0].forEach(function (numero) {
+      const dia = document.createElement("label");
+      const casilla = document.createElement("input");
+      casilla.type = "checkbox";
+      casilla.value = numero;
+      casilla.checked = elegidos.includes(numero);
+      dia.append(casilla, letrasDias[numero]);
+      caja.append(dia);
+    });
+
+    const listo = crearBoton("Listo", "boton-principal", function () {
+      const dias = [];
+      caja.querySelectorAll("input:checked").forEach(function (casilla) {
+        dias.push(Number(casilla.value));
+      });
+      enviar(dias);
+    });
+
+    zona.append(caja, listo);
+  } else if (pregunta.tipo === "icono") {
+    // Los diez iconos; sale marcado el propuesto y basta con tocar uno
+    const caja = document.createElement("div");
+    caja.classList.add("selector-iconos");
+    const propuesto =
+      anterior || sugerirIcono(respuestas.nombre, respuestas.medida);
+    crearSelectorIconos(caja, "icono-mentor", propuesto, enviar);
+    zona.append(caja);
+  } else if (pregunta.tipo === "lista") {
+    // Una lista que se va llenando: se escribe un elemento, «Añadir», y al
+    // final «Listo». Cada elemento tiene su × para quitarlo
+    const elementos = (anterior || []).slice(); // slice: una copia de la lista
+    const lista = document.createElement("ol");
+    lista.classList.add("mentor-lista");
+
+    function dibujarLista() {
+      lista.innerHTML = "";
+      elementos.forEach(function (texto, posicion) {
+        const item = document.createElement("li");
+        item.textContent = texto;
+        const quitar = crearBoton("×", "mentor-quitar", function () {
+          elementos.splice(posicion, 1);
+          dibujarLista();
+        });
+        quitar.setAttribute("aria-label", "Quitar «" + texto + "»");
+        item.append(quitar);
+        lista.append(item);
+      });
+      lista.hidden = elementos.length === 0;
+    }
+    dibujarLista();
+
+    const formulario = document.createElement("form");
+    formulario.classList.add("mentor-escribir");
+    const campo = document.createElement("input");
+    campo.type = "text";
+    campo.maxLength = pregunta.largo || 80;
+    campo.placeholder = segunRespuestas(pregunta.ejemplo) || "";
+    const anadir = document.createElement("button");
+    anadir.type = "submit";
+    anadir.classList.add("boton-secundario");
+    anadir.textContent = "Añadir";
+    formulario.append(campo, anadir);
+
+    formulario.addEventListener("submit", function (evento) {
+      evento.preventDefault();
+      const texto = campo.value.trim();
+      if (texto !== "") {
+        elementos.push(texto);
+        campo.value = "";
+        error.textContent = "";
+        dibujarLista();
+      }
+      campo.focus();
+    });
+
+    const listo = crearBoton("Listo", "boton-principal", function () {
+      // Si quedó algo escrito sin añadir, también cuenta
+      const pendiente = campo.value.trim();
+      if (pendiente !== "") {
+        elementos.push(pendiente);
+      }
+      enviar(elementos.slice());
+    });
+
+    zona.append(lista, formulario, listo);
+  } else {
+    // Texto, párrafo, número o fecha: un campo para escribir y «Enviar».
+    // Va en un <form> para que también se envíe con la tecla Intro.
+    // noValidate: que el navegador no frene el envío por su cuenta; así
+    // contesta Méntor con su propio mensaje
+    const formulario = document.createElement("form");
+    formulario.classList.add("mentor-escribir");
+    formulario.noValidate = true;
+
+    let campo;
+    if (pregunta.tipo === "parrafo") {
+      // Un párrafo: un cuadro de varias líneas (Intro hace una línea nueva)
+      campo = document.createElement("textarea");
+      campo.rows = 3;
+      formulario.classList.add("mentor-parrafo");
+    } else {
+      campo = document.createElement("input");
+      if (pregunta.tipo === "fecha") {
+        campo.type = "date";
+        campo.max = hoy;
+      } else {
+        // Los números también van en un campo de texto: así se puede
+        // escribir «10.000» o «72,5». inputMode elige el teclado del móvil
+        campo.type = "text";
+        if (pregunta.tipo === "numero" && pregunta.decimales) {
+          campo.inputMode = "decimal";
+        } else if (pregunta.tipo === "numero") {
+          campo.inputMode = "numeric";
+        }
+      }
+    }
+    campo.maxLength = pregunta.largo || 40;
+    campo.placeholder = segunRespuestas(pregunta.ejemplo) || "";
+
+    if (anterior !== undefined && anterior !== "") {
+      campo.value = anterior;
+    } else {
+      campo.value = segunRespuestas(pregunta.inicial) || "";
+    }
+
+    formulario.append(campo);
+
+    // En los números, la unidad detrás: «10000 pasos», «72 kg»
+    const unidad = segunRespuestas(pregunta.unidad);
+    if (pregunta.tipo === "numero" && unidad) {
+      const textoUnidad = document.createElement("span");
+      textoUnidad.classList.add("mentor-unidad");
+      textoUnidad.textContent = unidad;
+      formulario.append(textoUnidad);
+    }
+
+    const boton = document.createElement("button");
+    boton.type = "submit";
+    boton.classList.add("boton-principal");
+    boton.textContent = "Enviar";
+    formulario.append(boton);
+
+    formulario.addEventListener("submit", function (evento) {
+      evento.preventDefault();
+      let valor = campo.value.trim();
+      if (pregunta.tipo === "numero" && valor !== "") {
+        valor = leerNumero(valor, pregunta.decimales);
+      }
+      enviar(valor);
+    });
+
+    zona.append(formulario);
+  }
+
+  // Botón para no responder («Prefiero no decirlo»)
+  if (pregunta.saltar) {
+    zona.append(
+      crearBoton(pregunta.vacio, "mentor-saltar", function () {
+        enviar("");
+      }),
+    );
+  }
+
+  zona.append(error, crearAtrasYSalir(pregunta));
+  return zona;
+}
+
+// El resumen final: la tarjeta que da la conversación y sus botones.
+function crearResumen() {
+  const zona = document.createElement("div");
+  zona.classList.add("mentor-respuesta");
+  const datos = conversacionActual.resumen();
+
+  // La tarjeta: icono (si tiene) y nombre arriba, las líneas debajo
+  const tarjeta = document.createElement("div");
+  tarjeta.classList.add("mentor-resumen");
+
+  const cabecera = document.createElement("p");
+  cabecera.classList.add("mentor-resumen-nombre");
+  if (datos.icono) {
+    cabecera.append(crearIcono(datos.icono));
+  }
+  cabecera.append(datos.nombre);
+  tarjeta.append(cabecera);
+
+  datos.lineas.forEach(function (linea) {
+    const fila = document.createElement("p");
+    fila.textContent = linea;
+    tarjeta.append(fila);
+  });
+
+  zona.append(
+    tarjeta,
+    crearBoton(
+      conversacionActual.boton,
+      "boton-principal",
+      conversacionActual.alTerminar,
+    ),
+  );
+
+  const otro = conversacionActual.otroBoton;
+  if (otro) {
+    zona.append(crearBoton(otro.texto, "boton-secundario", otro.alPulsar));
+  }
+
+  zona.append(crearAtrasYSalir(null));
+  return zona;
+}
+
+// Baja la página hasta el final de la conversación.
+function bajarAlFinal() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+}
+
+// Dibuja la conversación: el saludo, lo ya respondido en burbujas y la
+// pregunta que toca con su forma de responder (o el resumen, si ya está
+// todo). animar: true para que lo nuevo salga tras «Méntor está
+// escribiendo…» (un instante).
+function dibujarConversacion(animar) {
+  clearTimeout(temporizadorMentor);
+  const conversacion = document.getElementById("conversacion");
+  conversacion.innerHTML = "";
+
+  // El saludo: uno o varios mensajes (Array.isArray: ¿es una lista?)
+  let saludo = segunRespuestas(conversacionActual.saludo);
+  if (!Array.isArray(saludo)) {
+    saludo = [saludo];
+  }
+  saludo.forEach(function (texto) {
+    conversacion.append(burbujaMentor(texto));
+  });
+
+  // Las preguntas que tocan, en orden, hasta la primera sin responder (o la
+  // que se está cambiando)
+  const preguntas = conversacionActual.preguntas;
+  let actual = null;
+  for (let i = 0; i < preguntas.length; i++) {
+    const pregunta = preguntas[i];
+    if (!hayQue(pregunta)) {
+      continue;
+    }
+
+    const valor = respuestas[pregunta.clave];
+    if (valor === undefined || pregunta.clave === respuestaEditada) {
+      actual = pregunta;
+      break;
+    }
+    conversacion.append(
+      burbujaMentor(segunRespuestas(pregunta.texto)),
+      burbujaMia(pregunta, valor),
+    );
+  }
+
+  // Lo último: la pregunta que toca o, si no queda ninguna, el resumen
+  let mensaje;
+  let controles;
+  if (actual) {
+    mensaje = segunRespuestas(actual.texto);
+    controles = crearControles(actual);
+  } else {
+    mensaje = segunRespuestas(conversacionActual.cierre);
+    controles = crearResumen();
+  }
+
+  // Muestra el mensaje y la forma de responder. En el PC, además, deja el
+  // cursor en el campo de escribir (en el móvil no: abriría el teclado)
+  function mostrarFinal() {
+    conversacion.append(burbujaMentor(mensaje), controles);
+    bajarAlFinal();
+    const campo = controles.querySelector(
+      "textarea, input:not([type=checkbox]):not([type=radio])",
+    );
+    if (campo && !window.matchMedia("(pointer: coarse)").matches) {
+      campo.focus();
+    }
+  }
+
+  const sinMovimiento = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  if (!animar || sinMovimiento) {
+    mostrarFinal();
+    return;
+  }
+
+  // «Méntor está escribiendo…»: tres puntos un instante (350 milisegundos)
+  const escribiendo = burbujaMentor("");
+  escribiendo.classList.add("escribiendo");
+  escribiendo.setAttribute("aria-label", "Méntor está escribiendo");
+  escribiendo.innerHTML = "<span></span><span></span><span></span>";
+  conversacion.append(escribiendo);
+  bajarAlFinal();
+
+  temporizadorMentor = setTimeout(function () {
+    escribiendo.remove();
+    mostrarFinal();
+  }, 350);
+}
+
+// Guarda una respuesta y sigue con la conversación.
+function responder(pregunta, valor) {
+  respuestas[pregunta.clave] = valor;
+  respuestaEditada = null;
+  limpiarRespuestas();
+  dibujarConversacion(true);
+}
+
+// Empieza una conversación desde cero.
+function abrirConversacion(conversacion) {
+  conversacionActual = conversacion;
+  respuestas = {};
+  respuestaEditada = null;
+  mostrarPantalla("mentor");
+  dibujarConversacion(true);
+}
+
+// ¿Se está en medio de una conversación con algo ya respondido?
+function conversacionEmpezada() {
+  return (
+    document.body.classList.contains("conversando") &&
+    Object.keys(respuestas).length > 0
+  );
+}
+
+// «Salir»: si ya hay algo respondido, pregunta antes. Luego hace lo que
+// diga la conversación (alSalir).
+async function salirDeConversacion() {
+  if (conversacionEmpezada()) {
+    const salir = await preguntar(conversacionActual.salir, "Salir", "Seguir");
+    if (!salir) {
+      return;
+    }
+  }
+  clearTimeout(temporizadorMentor);
+  respuestas = {};
+  conversacionActual.alSalir();
+}
+
+// ==========================================================================
+// 9. MÉNTOR · HÁBITO NUEVO
+// Las preguntas para crear un hábito y lo que pasa al terminar. «+ Nuevo
+// hábito» (en Hoy) abre esta conversación.
+// ==========================================================================
+
+// Las preguntas, en orden (cómo se escribe cada una: bloque 8).
 const preguntasHabito = [
   {
     clave: "nombre",
@@ -1205,6 +1936,9 @@ const preguntasHabito = [
       return "¿Cuál es tu objetivo de cada día?";
     },
     tipo: "numero",
+    unidad: function (r) {
+      return r.unidad;
+    },
     ejemplo: function (r) {
       if (r.limite === "maximo") {
         return "300";
@@ -1278,6 +2012,15 @@ const preguntasHabito = [
     texto:
       "¿Desde qué día lo cuento? Si ya llevas unos días sin hacerlo, elige el primero.",
     tipo: "fecha",
+    inicial: function () {
+      return hoy;
+    },
+    mostrar: function (valor) {
+      if (valor === hoy) {
+        return "Desde hoy";
+      }
+      return "Desde el " + fechaLarga(valor);
+    },
     cuando: function (r) {
       return r.medida === "abstencion";
     },
@@ -1315,323 +2058,6 @@ const preguntasHabito = [
   },
 ];
 
-// Lo respondido hasta ahora: { nombre: "Leer", medida: "casilla", … }
-let respuestas = {};
-
-// Clave de la respuesta que se está cambiando (null si ninguna).
-let respuestaEditada = null;
-
-// Temporizador de «Méntor está escribiendo…» (para poder cancelarlo).
-let temporizadorMentor = null;
-
-// Busca una pregunta por su clave.
-function preguntaDe(clave) {
-  return preguntasHabito.find(function (pregunta) {
-    return pregunta.clave === clave;
-  });
-}
-
-// Si «algo» es una función, la llama con lo respondido; si no, lo devuelve
-// tal cual. Sirve para los textos que cambian según las respuestas.
-function segunRespuestas(algo) {
-  if (typeof algo === "function") {
-    return algo(respuestas);
-  }
-  return algo;
-}
-
-// ¿Hay que hacer esta pregunta (o mostrar esta opción)? Sí, si no tiene
-// «cuando» o si su «cuando» dice que sí.
-function hayQue(algo) {
-  return !algo.cuando || algo.cuando(respuestas);
-}
-
-// Borra las respuestas que ya no valen: las de preguntas que ya no tocan y
-// las opciones que ya no se pueden elegir (p. ej. «Unas veces por semana»
-// si se cambia a templanza). Va en orden, así lo que depende de una
-// respuesta borrada también se borra.
-function limpiarRespuestas() {
-  preguntasHabito.forEach(function (pregunta) {
-    const valor = respuestas[pregunta.clave];
-    if (valor === undefined) {
-      return;
-    }
-
-    if (!hayQue(pregunta)) {
-      delete respuestas[pregunta.clave];
-    } else if (pregunta.tipo === "opciones") {
-      const sigueValiendo = pregunta.opciones.some(function (opcion) {
-        return opcion.valor === valor && hayQue(opcion);
-      });
-      if (!sigueValiendo) {
-        delete respuestas[pregunta.clave];
-      }
-    }
-  });
-}
-
-// Texto de mi respuesta en su burbuja: «Todos los días», «10.000 pasos»…
-function textoRespuesta(pregunta, valor) {
-  if (pregunta.tipo === "opciones") {
-    const opcion = pregunta.opciones.find(function (o) {
-      return o.valor === valor;
-    });
-    return opcion.texto;
-  }
-
-  if (pregunta.tipo === "numero") {
-    const unidad = respuestas.unidad || "";
-    return (valor.toLocaleString("es-ES") + " " + unidad).trim();
-  }
-
-  if (pregunta.tipo === "dias") {
-    return valor
-      .map(function (numero) {
-        return letrasDias[numero];
-      })
-      .join(" · ");
-  }
-
-  if (pregunta.tipo === "fecha") {
-    if (valor === hoy) {
-      return "Desde hoy";
-    }
-    return (
-      "Desde el " +
-      new Date(valor + "T00:00").toLocaleDateString("es-ES", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    );
-  }
-
-  if (pregunta.tipo === "icono") {
-    return datosIcono(valor).corto;
-  }
-
-  if (valor === "" && pregunta.vacio) {
-    return pregunta.vacio;
-  }
-  return valor;
-}
-
-// Burbuja de Méntor, a la izquierda.
-function burbujaMentor(texto) {
-  const burbuja = document.createElement("p");
-  burbuja.classList.add("burbuja", "burbuja-mentor");
-  burbuja.textContent = texto;
-  return burbuja;
-}
-
-// Burbuja con mi respuesta, a la derecha. Es un botón: al tocarla, Méntor
-// vuelve a hacer esa pregunta para cambiar la respuesta.
-function burbujaMia(pregunta, valor) {
-  const burbuja = document.createElement("button");
-  burbuja.type = "button";
-  burbuja.classList.add("burbuja", "burbuja-mia");
-  burbuja.title = "Cambiar esta respuesta";
-
-  if (pregunta.tipo === "icono") {
-    burbuja.append(crearIcono(valor));
-  }
-  burbuja.append(textoRespuesta(pregunta, valor));
-
-  burbuja.addEventListener("click", function () {
-    respuestaEditada = pregunta.clave;
-    dibujarConversacion(false);
-  });
-  return burbuja;
-}
-
-// La pregunta respondida que va justo antes de «pregunta» (la que cambia
-// el botón «Atrás»). Con pregunta = null, la última respondida.
-function preguntaAnterior(pregunta) {
-  let anterior = null;
-  for (let i = 0; i < preguntasHabito.length; i++) {
-    const otra = preguntasHabito[i];
-    if (otra === pregunta) {
-      break;
-    }
-    if (hayQue(otra) && respuestas[otra.clave] !== undefined) {
-      anterior = otra;
-    }
-  }
-  return anterior;
-}
-
-// Los botones de abajo: «Atrás» (vuelve a la pregunta anterior; en la
-// primera no sale) y «Salir».
-function crearAtrasYSalir(pregunta) {
-  const fila = document.createElement("div");
-  fila.classList.add("mentor-acciones");
-
-  const anterior = preguntaAnterior(pregunta);
-  if (anterior) {
-    const atras = document.createElement("button");
-    atras.type = "button";
-    atras.textContent = "‹ Atrás";
-    atras.addEventListener("click", function () {
-      respuestaEditada = anterior.clave;
-      dibujarConversacion(false);
-    });
-    fila.append(atras);
-  }
-
-  const salir = document.createElement("button");
-  salir.type = "button";
-  salir.textContent = "Salir";
-  salir.addEventListener("click", salirDeMentor);
-  fila.append(salir);
-
-  return fila;
-}
-
-// La forma de responder a una pregunta: botones, días, iconos o un campo
-// para escribir. Si ya estaba respondida (al cambiarla), sale lo de antes.
-function crearControles(pregunta) {
-  const zona = document.createElement("div");
-  zona.classList.add("mentor-respuesta");
-
-  // Aquí sale el fallo si la respuesta no vale
-  const error = document.createElement("p");
-  error.classList.add("mentor-error");
-
-  const anterior = respuestas[pregunta.clave];
-
-  // Comprueba la respuesta y, si vale, la guarda; si no, explica por qué
-  function enviar(valor) {
-    if (pregunta.validar) {
-      const fallo = pregunta.validar(valor);
-      if (fallo !== "") {
-        error.textContent = fallo;
-        return;
-      }
-    }
-    responder(pregunta, valor);
-  }
-
-  if (pregunta.tipo === "opciones") {
-    // Un botón por opción (solo las que tocan); la de antes, marcada
-    const botones = document.createElement("div");
-    botones.classList.add("mentor-opciones");
-
-    pregunta.opciones.forEach(function (opcion) {
-      if (!hayQue(opcion)) {
-        return;
-      }
-      const boton = document.createElement("button");
-      boton.type = "button";
-      boton.textContent = opcion.texto;
-      if (opcion.valor === anterior) {
-        boton.classList.add("elegida");
-      }
-      boton.addEventListener("click", function () {
-        enviar(opcion.valor);
-      });
-      botones.append(boton);
-    });
-
-    zona.append(botones);
-  } else if (pregunta.tipo === "dias") {
-    // Los siete círculos de los días (los mismos de la ventana de editar)
-    // y el botón «Listo»
-    const caja = document.createElement("div");
-    caja.classList.add("habito-dias");
-    const elegidos = anterior || [];
-
-    [1, 2, 3, 4, 5, 6, 0].forEach(function (numero) {
-      const dia = document.createElement("label");
-      const casilla = document.createElement("input");
-      casilla.type = "checkbox";
-      casilla.value = numero;
-      casilla.checked = elegidos.includes(numero);
-      dia.append(casilla, letrasDias[numero]);
-      caja.append(dia);
-    });
-
-    const listo = document.createElement("button");
-    listo.type = "button";
-    listo.classList.add("boton-principal");
-    listo.textContent = "Listo";
-    listo.addEventListener("click", function () {
-      const dias = [];
-      caja.querySelectorAll("input:checked").forEach(function (casilla) {
-        dias.push(Number(casilla.value));
-      });
-      enviar(dias);
-    });
-
-    zona.append(caja, listo);
-  } else if (pregunta.tipo === "icono") {
-    // Los diez iconos; sale marcado el propuesto y basta con tocar uno
-    const caja = document.createElement("div");
-    caja.classList.add("selector-iconos");
-    const propuesto =
-      anterior || sugerirIcono(respuestas.nombre, respuestas.medida);
-    crearSelectorIconos(caja, "icono-mentor", propuesto, enviar);
-    zona.append(caja);
-  } else {
-    // Texto, número o fecha: un campo para escribir y el botón «Enviar».
-    // Va en un <form> para que también se envíe con la tecla Intro.
-    const formulario = document.createElement("form");
-    formulario.classList.add("mentor-escribir");
-    // noValidate: que el navegador no frene el envío por su cuenta (p. ej. con
-    // un 0 en el objetivo); así contesta Méntor con su propio mensaje
-    formulario.noValidate = true;
-
-    const campo = document.createElement("input");
-    if (pregunta.tipo === "numero") {
-      campo.type = "number";
-      campo.min = "1";
-      campo.inputMode = "numeric";
-    } else if (pregunta.tipo === "fecha") {
-      campo.type = "date";
-      campo.max = hoy;
-    } else {
-      campo.type = "text";
-      campo.maxLength = 40;
-    }
-    campo.placeholder = segunRespuestas(pregunta.ejemplo) || "";
-
-    if (anterior !== undefined) {
-      campo.value = anterior;
-    } else if (pregunta.tipo === "fecha") {
-      campo.value = hoy;
-    }
-
-    formulario.append(campo);
-
-    // En el objetivo, la unidad detrás del número: «10000 pasos»
-    if (pregunta.tipo === "numero" && respuestas.unidad) {
-      const unidad = document.createElement("span");
-      unidad.classList.add("mentor-unidad");
-      unidad.textContent = respuestas.unidad;
-      formulario.append(unidad);
-    }
-
-    const boton = document.createElement("button");
-    boton.type = "submit";
-    boton.classList.add("boton-principal");
-    boton.textContent = "Enviar";
-    formulario.append(boton);
-
-    formulario.addEventListener("submit", function (evento) {
-      evento.preventDefault();
-      let valor = campo.value.trim();
-      if (pregunta.tipo === "numero") {
-        valor = Number(valor);
-      }
-      enviar(valor);
-    });
-
-    zona.append(formulario);
-  }
-
-  zona.append(error, crearAtrasYSalir(pregunta));
-  return zona;
-}
-
 // El hábito que sale de las respuestas, con solo las propiedades que necesita.
 function habitoDesdeRespuestas() {
   const nuevo = {
@@ -1664,13 +2090,9 @@ function habitoDesdeRespuestas() {
   return nuevo;
 }
 
-// El resumen final: cómo queda el hábito y el botón «Crear hábito».
-function crearResumen() {
-  const zona = document.createElement("div");
-  zona.classList.add("mentor-respuesta");
+// La tarjeta del resumen: cómo queda el hábito.
+function resumenHabito() {
   const habito = habitoDesdeRespuestas();
-
-  // Las líneas del resumen
   const lineas = [];
 
   if (habito.medida === "cantidad") {
@@ -1711,142 +2133,7 @@ function crearResumen() {
     lineas.push("Con comodín");
   }
 
-  // La tarjeta: icono y nombre arriba, las líneas debajo
-  const tarjeta = document.createElement("div");
-  tarjeta.classList.add("mentor-resumen");
-
-  const cabecera = document.createElement("p");
-  cabecera.classList.add("mentor-resumen-nombre");
-  cabecera.append(crearIcono(habito.icono), habito.nombre);
-  tarjeta.append(cabecera);
-
-  lineas.forEach(function (linea) {
-    const fila = document.createElement("p");
-    fila.textContent = linea;
-    tarjeta.append(fila);
-  });
-
-  const crear = document.createElement("button");
-  crear.type = "button";
-  crear.classList.add("boton-principal");
-  crear.textContent = "Crear hábito";
-  crear.addEventListener("click", crearHabito);
-
-  zona.append(tarjeta, crear, crearAtrasYSalir(null));
-  return zona;
-}
-
-// Baja la página hasta el final de la conversación.
-function bajarAlFinal() {
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-}
-
-// Dibuja la conversación: lo ya respondido, en burbujas, y la pregunta que
-// toca con su forma de responder (o el resumen, si ya está todo).
-// animar: true para que la pregunta nueva salga tras «Méntor está
-// escribiendo…» (un instante).
-function dibujarConversacion(animar) {
-  clearTimeout(temporizadorMentor);
-  const conversacion = document.getElementById("conversacion");
-  conversacion.innerHTML = "";
-
-  conversacion.append(
-    burbujaMentor(
-      "Salve. Soy Méntor. Vamos a dar forma a tu nuevo hábito, paso a paso.",
-    ),
-  );
-
-  // Las preguntas que tocan, en orden, hasta la primera sin responder (o la
-  // que se está cambiando)
-  let actual = null;
-  for (let i = 0; i < preguntasHabito.length; i++) {
-    const pregunta = preguntasHabito[i];
-    if (!hayQue(pregunta)) {
-      continue;
-    }
-
-    const valor = respuestas[pregunta.clave];
-    if (valor === undefined || pregunta.clave === respuestaEditada) {
-      actual = pregunta;
-      break;
-    }
-    conversacion.append(
-      burbujaMentor(segunRespuestas(pregunta.texto)),
-      burbujaMia(pregunta, valor),
-    );
-  }
-
-  // Lo último: la pregunta que toca o, si no queda ninguna, el resumen
-  let mensaje;
-  let controles;
-  if (actual) {
-    mensaje = segunRespuestas(actual.texto);
-    controles = crearControles(actual);
-  } else {
-    mensaje =
-      "Así queda tu hábito. Si quieres cambiar algo, toca tu respuesta.";
-    controles = crearResumen();
-  }
-
-  // Muestra el mensaje y la forma de responder. En el PC, además, deja el
-  // cursor en el campo de escribir (en el móvil no: abriría el teclado)
-  function mostrarFinal() {
-    conversacion.append(burbujaMentor(mensaje), controles);
-    bajarAlFinal();
-    const campo = controles.querySelector(
-      "input:not([type=checkbox]):not([type=radio])",
-    );
-    if (campo && !window.matchMedia("(pointer: coarse)").matches) {
-      campo.focus();
-    }
-  }
-
-  const sinMovimiento = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-  if (!animar || sinMovimiento) {
-    mostrarFinal();
-    return;
-  }
-
-  // «Méntor está escribiendo…»: tres puntos un instante (350 milisegundos)
-  const escribiendo = burbujaMentor("");
-  escribiendo.classList.add("escribiendo");
-  escribiendo.setAttribute("aria-label", "Méntor está escribiendo");
-  escribiendo.innerHTML = "<span></span><span></span><span></span>";
-  conversacion.append(escribiendo);
-  bajarAlFinal();
-
-  temporizadorMentor = setTimeout(function () {
-    escribiendo.remove();
-    mostrarFinal();
-  }, 350);
-}
-
-// Guarda una respuesta y sigue con la conversación.
-function responder(pregunta, valor) {
-  respuestas[pregunta.clave] = valor;
-  respuestaEditada = null;
-  limpiarRespuestas();
-  dibujarConversacion(true);
-}
-
-// Abre la conversación desde cero.
-function abrirMentor() {
-  respuestas = {};
-  respuestaEditada = null;
-  mostrarPantalla("mentor");
-  dibujarConversacion(true);
-}
-
-// «Salir»: vuelve a Hoy (si ya hay algo respondido, pregunta antes).
-function salirDeMentor() {
-  const hayAlgo = Object.keys(respuestas).length > 0;
-  if (hayAlgo && !confirm("¿Salir sin crear el hábito?")) {
-    return;
-  }
-  clearTimeout(temporizadorMentor);
-  mostrarPantalla("hoy");
+  return { icono: habito.icono, nombre: habito.nombre, lineas: lineas };
 }
 
 // «Crear hábito»: lo guarda y vuelve a Hoy, donde su ficha brilla un momento.
@@ -1861,13 +2148,938 @@ function crearHabito() {
   actualizarTodo();
 }
 
-// El botón «Nuevo hábito» de Hoy abre la conversación.
+// La conversación del hábito nuevo (qué es cada cosa: bloque 8).
+const conversacionHabito = {
+  saludo: function () {
+    return salve() + " Vamos a dar forma a tu nuevo hábito, paso a paso.";
+  },
+  preguntas: preguntasHabito,
+  cierre: "Así queda tu hábito. Si quieres cambiar algo, toca tu respuesta.",
+  resumen: resumenHabito,
+  boton: "Crear hábito",
+  alTerminar: crearHabito,
+  salir: "¿Salir sin crear el hábito?",
+  alSalir: function () {
+    mostrarPantalla("hoy");
+  },
+};
+
+// El botón «+ Nuevo hábito» de Hoy abre la conversación.
 document
   .getElementById("boton-nuevo-habito")
-  .addEventListener("click", abrirMentor);
+  .addEventListener("click", function () {
+    abrirConversacion(conversacionHabito);
+  });
 
 // ==========================================================================
-// 8. SEMANA
+// 10. MÉNTOR · META NUEVA
+// Las preguntas para crear una meta y lo que pasa al terminar. «+ Nueva
+// meta» (en Metas) abre esta conversación. Editarla después, en la ventana
+// de editar meta (bloque 18).
+// ==========================================================================
+
+// Las preguntas, en orden (cómo se escribe cada una: bloque 8).
+const preguntasMeta = [
+  {
+    clave: "titulo",
+    texto: "¿Qué quieres conseguir?",
+    tipo: "texto",
+    largo: 60,
+    ejemplo: "Correr una media maratón…",
+    validar: function (valor) {
+      if (valor === "") {
+        return "Dime qué quieres conseguir.";
+      }
+      return "";
+    },
+  },
+  {
+    clave: "area",
+    texto: function (r) {
+      return (
+        "«" + r.titulo + "». Una gran obra. ¿A qué parte de tu vida pertenece?"
+      );
+    },
+    tipo: "opciones",
+    opciones: [
+      { valor: "Hábitos", texto: "Hábitos" },
+      { valor: "Salud", texto: "Salud" },
+      { valor: "Carrera", texto: "Carrera" },
+      { valor: "Finanzas", texto: "Finanzas" },
+      { valor: "Hobbies", texto: "Hobbies" },
+      { valor: "Social", texto: "Social" },
+    ],
+  },
+  {
+    clave: "habito",
+    texto: "¿Qué hábito te acerca a ella cada día?",
+    tipo: "opciones",
+    // Solo si ya hay hábitos
+    cuando: function () {
+      return habitos.length > 0;
+    },
+    // Una opción por hábito y, al final, «Ninguno» (valor "")
+    opciones: function () {
+      const lista = habitos.map(function (habito) {
+        return { valor: habito.id, texto: habito.nombre };
+      });
+      lista.push({ valor: "", texto: "Ninguno" });
+      return lista;
+    },
+  },
+  {
+    clave: "pasos",
+    texto:
+      "Toda gran obra se levanta piedra a piedra. Escribe los pasos que te llevarán hasta ella, de uno en uno, y pulsa «Listo» al terminar.",
+    tipo: "lista",
+    ejemplo: "Un paso…",
+    validar: function (valor) {
+      if (valor.length === 0) {
+        return "Añade al menos un paso.";
+      }
+      return "";
+    },
+  },
+];
+
+// Índice (posición en «metas») de la meta que Méntor acaba de crear: su
+// tarjeta brilla un momento.
+let metaRecienCreada = null;
+
+// La tarjeta del resumen: cómo queda la meta.
+function resumenMeta() {
+  const lineas = [respuestas.area];
+  if (respuestas.habito) {
+    lineas.push("Impulsada por: " + nombreHabito(respuestas.habito));
+  }
+  lineas.push(
+    "Pasos:\n" +
+      respuestas.pasos
+        .map(function (paso, posicion) {
+          return posicion + 1 + ". " + paso;
+        })
+        .join("\n"),
+  );
+  return { icono: null, nombre: respuestas.titulo, lineas: lineas };
+}
+
+// «Crear meta»: la guarda y vuelve a Metas, donde su tarjeta brilla.
+function crearMeta() {
+  const pasos = respuestas.pasos.map(function (texto) {
+    return { texto: texto, completado: false };
+  });
+
+  metas.push({
+    titulo: respuestas.titulo,
+    area: respuestas.area,
+    habito: respuestas.habito || "",
+    pasos: pasos,
+  });
+  guardarMetas();
+
+  respuestas = {};
+  metaRecienCreada = metas.length - 1;
+  mostrarPantalla("metas");
+  actualizarTodo();
+}
+
+// La conversación de la meta nueva (qué es cada cosa: bloque 8).
+const conversacionMeta = {
+  saludo: function () {
+    return salve() + " Pensemos juntos en tu próxima meta.";
+  },
+  preguntas: preguntasMeta,
+  cierre: "Así queda tu meta. Si quieres cambiar algo, toca tu respuesta.",
+  resumen: resumenMeta,
+  boton: "Crear meta",
+  alTerminar: crearMeta,
+  salir: "¿Salir sin crear la meta?",
+  alSalir: function () {
+    mostrarPantalla("metas");
+  },
+};
+
+// El botón «+ Nueva meta» de Metas abre la conversación.
+document
+  .getElementById("boton-nueva-meta")
+  .addEventListener("click", function () {
+    abrirConversacion(conversacionMeta);
+  });
+
+// ==========================================================================
+// 11. MÉNTOR · BIENVENIDA
+// La primera vez que se abre Ergon (sin datos), Méntor se presenta, pregunta
+// lo básico para el perfil (todo opcional) y propone el primer hábito.
+// ==========================================================================
+
+// Las preguntas, en orden (cómo se escribe cada una: bloque 8).
+const preguntasBienvenida = [
+  {
+    clave: "nombre",
+    texto: "Para empezar, ¿cómo te llamas?",
+    tipo: "texto",
+    ejemplo: "Tu nombre",
+    vacio: "Prefiero no decirlo",
+    saltar: true,
+  },
+  {
+    clave: "nacimiento",
+    texto: function (r) {
+      let texto = "¿Cuándo naciste?";
+      if (r.nombre) {
+        texto = "Encantado, " + r.nombre + ". " + texto;
+      }
+      return texto;
+    },
+    tipo: "fecha",
+    vacio: "Prefiero no decirlo",
+    saltar: true,
+    validar: function (valor) {
+      if (valor > hoy) {
+        return "Esa fecha aún no ha llegado.";
+      }
+      return "";
+    },
+  },
+  {
+    clave: "altura",
+    texto: "¿Cuánto mides, en centímetros?",
+    tipo: "numero",
+    unidad: "cm",
+    ejemplo: "175",
+    vacio: "Prefiero no decirlo",
+    saltar: true,
+    validar: function (valor) {
+      if (!(valor >= 50 && valor <= 250)) {
+        return "Escribe tu altura en centímetros, p. ej. 175.";
+      }
+      return "";
+    },
+  },
+  {
+    clave: "peso",
+    texto:
+      "¿Y cuánto pesas hoy, en kilos? Lo apuntaré con la fecha, para que veas cómo cambia.",
+    tipo: "numero",
+    unidad: "kg",
+    decimales: true,
+    ejemplo: "72,5",
+    vacio: "Prefiero no decirlo",
+    saltar: true,
+    validar: function (valor) {
+      if (!(valor >= 20 && valor <= 400)) {
+        return "Escribe tu peso en kilos, p. ej. 72,5.";
+      }
+      return "";
+    },
+  },
+];
+
+// ¿Toca la bienvenida? Solo la primera vez: sin perfil guardado, sin
+// hábitos y sin metas (en un móvil que ya tiene datos, nunca).
+function tocaBienvenida() {
+  return (
+    localStorage.getItem("ergon-perfil") === null &&
+    habitos.length === 0 &&
+    metas.length === 0
+  );
+}
+
+// Guarda en el perfil lo respondido (lo que se dejó vacío, no se guarda).
+function guardarPerfilDeBienvenida() {
+  if (respuestas.nombre) {
+    perfil.nombre = respuestas.nombre;
+  }
+  if (respuestas.nacimiento) {
+    perfil.nacimiento = respuestas.nacimiento;
+  }
+  if (respuestas.altura) {
+    perfil.altura = respuestas.altura;
+  }
+  if (respuestas.peso) {
+    perfil.pesos = [{ fecha: hoy, kilos: respuestas.peso }];
+  }
+  guardarPerfil();
+}
+
+// La tarjeta del resumen: el perfil tal como queda.
+function resumenBienvenida() {
+  const lineas = [];
+  if (respuestas.nacimiento) {
+    lineas.push(
+      "Nacimiento: " +
+        fechaLarga(respuestas.nacimiento) +
+        " (" +
+        edadDe(respuestas.nacimiento) +
+        " años)",
+    );
+  }
+  if (respuestas.altura) {
+    lineas.push("Altura: " + respuestas.altura + " cm");
+  }
+  if (respuestas.peso) {
+    lineas.push("Peso: " + respuestas.peso.toLocaleString("es-ES") + " kg");
+  }
+  if (lineas.length === 0) {
+    lineas.push("Sin datos por ahora: puedes añadirlos cuando quieras.");
+  }
+  return {
+    icono: null,
+    nombre: respuestas.nombre || "Tu perfil",
+    lineas: lineas,
+  };
+}
+
+// La conversación de bienvenida (qué es cada cosa: bloque 8).
+const conversacionBienvenida = {
+  saludo: [
+    "Salve. Soy Méntor, y te acompañaré en Ergon.",
+    "Ergon viene del griego ἔργον, «la obra»: lo que uno construye con su trabajo de cada día. Aquí irás levantando la tuya con hábitos, metas y un poco de filosofía.",
+  ],
+  preguntas: preguntasBienvenida,
+  cierre:
+    "Todo listo. Puedes cambiarlo cuando quieras en Archivo, en tu perfil. ¿Construimos tu primer hábito?",
+  resumen: resumenBienvenida,
+  boton: "Crear mi primer hábito",
+  alTerminar: function () {
+    guardarPerfilDeBienvenida();
+    abrirConversacion(conversacionHabito);
+  },
+  otroBoton: {
+    texto: "Empezar sin hábitos",
+    alPulsar: function () {
+      guardarPerfilDeBienvenida();
+      respuestas = {};
+      mostrarPantalla("hoy");
+      actualizarTodo();
+    },
+  },
+  salir: "¿Saltar la bienvenida? Podrás rellenar tu perfil en Archivo.",
+  // Al saltarla se guarda el perfil vacío, para que no vuelva a salir
+  alSalir: function () {
+    guardarPerfil();
+    mostrarPantalla("hoy");
+    actualizarTodo();
+  },
+};
+
+// ==========================================================================
+// 12. RITUALES DE MAÑANA Y DE NOCHE
+// Por la mañana, la intención del día. Por la noche, el examen de Séneca:
+// Ergon recuerda sus tres preguntas para responderlas en el diario de papel.
+// ==========================================================================
+
+// La mañana empieza a las 4 y la noche, a las 20. De madrugada (antes de las
+// 4) todavía es la noche del día anterior. Cambia estas horas si quieres.
+const horaManana = 4;
+const horaNoche = 20;
+
+// Las tres preguntas que Séneca se hacía cada noche (las tomó del filósofo
+// Sextio). Están en «Sobre la ira», libro III, capítulo 36.
+const preguntasSeneca = [
+  "¿Qué mal tuyo has curado hoy?",
+  "¿A qué vicio te has resistido?",
+  "¿En qué eres mejor?",
+];
+
+// ¿Se está cambiando la intención? (al tocarla para corregirla)
+let cambiandoIntencion = false;
+
+// ¿Es de noche? (de las 20 a las 4)
+function esDeNoche() {
+  const hora = new Date().getHours();
+  return hora >= horaNoche || hora < horaManana;
+}
+
+// El día del que habla el ritual, como "2026-10-16": hoy o, de madrugada,
+// el día que se acaba de vivir.
+function diaDelRitual() {
+  const fecha = new Date();
+  if (fecha.getHours() < horaManana) {
+    fecha.setDate(fecha.getDate() - 1);
+  }
+  return fecha.toLocaleDateString("en-CA");
+}
+
+// Un párrafo con su clase (para no repetir siempre las mismas tres líneas).
+function crearParrafo(texto, clase) {
+  const parrafo = document.createElement("p");
+  parrafo.classList.add(clase);
+  parrafo.textContent = texto;
+  return parrafo;
+}
+
+// La tarjeta de la mañana: «¿Qué quieres que hoy no se te escape?» con un
+// campo, «Guardar» y «Hoy no». escrito: lo que ya había en el campo (para
+// no perderlo si la pantalla se vuelve a dibujar mientras se escribe).
+function tarjetaManana(ritual, escrito) {
+  const tarjeta = document.createElement("form");
+  tarjeta.classList.add("ritual");
+
+  let saludo = "Buenos días";
+  if (new Date().getHours() >= 14) {
+    saludo = "Buenas tardes";
+  }
+  if (perfil.nombre) {
+    saludo = saludo + ", " + perfil.nombre;
+  }
+
+  const campo = document.createElement("input");
+  campo.type = "text";
+  campo.maxLength = 120;
+  campo.placeholder = "Una sola frase…";
+  campo.value = ritual.intencion || "";
+  if (escrito) {
+    campo.value = escrito;
+  }
+
+  const fila = document.createElement("div");
+  fila.classList.add("ritual-fila");
+  const guardar = document.createElement("button");
+  guardar.type = "submit";
+  guardar.classList.add("boton-principal");
+  guardar.textContent = "Guardar";
+  fila.append(campo, guardar);
+
+  // «Hoy no»: se guarda una intención vacía y la tarjeta no vuelve hoy
+  const hoyNo = crearBoton("Hoy no", "ritual-hoy-no", function () {
+    ritual.intencion = "";
+    cambiandoIntencion = false;
+    guardarRitual(ritual);
+  });
+
+  tarjeta.append(
+    crearParrafo("Intención del día", "ritual-titulo"),
+    crearParrafo(
+      saludo + ". ¿Qué quieres que hoy no se te escape?",
+      "ritual-texto",
+    ),
+    fila,
+    hoyNo,
+  );
+
+  tarjeta.addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    if (campo.value.trim() === "") {
+      return;
+    }
+    ritual.intencion = campo.value.trim();
+    cambiandoIntencion = false;
+    guardarRitual(ritual);
+  });
+
+  return tarjeta;
+}
+
+// La tarjeta de la noche: las preguntas de Séneca, la intención de la
+// mañana, cómo ha ido el día y «Examen hecho».
+function tarjetaNoche(ritual, dia) {
+  const tarjeta = document.createElement("div");
+  tarjeta.classList.add("ritual", "ritual-noche");
+
+  const lista = document.createElement("ol");
+  lista.classList.add("ritual-preguntas");
+  preguntasSeneca.forEach(function (pregunta) {
+    const item = document.createElement("li");
+    item.textContent = pregunta;
+    lista.append(item);
+  });
+
+  tarjeta.append(
+    crearParrafo("Examen de la noche", "ritual-titulo"),
+    crearParrafo(
+      "Antes de dormir, Séneca repasaba su día con tres preguntas. Respóndelas en tu diario:",
+      "ritual-texto",
+    ),
+    lista,
+    crearParrafo("— Séneca, Sobre la ira, III 36", "ritual-fuente"),
+  );
+
+  if (ritual.intencion) {
+    tarjeta.append(
+      crearParrafo(
+        "Tu intención de hoy era: «" + ritual.intencion + "»",
+        "ritual-recuerdo",
+      ),
+    );
+  }
+
+  // Cómo ha ido el día con los hábitos
+  const resumen = resumenDelDia(new Date(dia + "T00:00"));
+  if (resumen.tocan > 0) {
+    tarjeta.append(
+      crearParrafo(
+        "Hábitos cumplidos: " + resumen.cumplidos + " de " + resumen.tocan,
+        "ritual-recuerdo",
+      ),
+    );
+  }
+
+  tarjeta.append(
+    crearBoton("Examen hecho", "boton-principal", function () {
+      ritual.examen = true;
+      guardarRitual(ritual);
+    }),
+  );
+
+  return tarjeta;
+}
+
+// Guarda el ritual del día y vuelve a dibujar los rituales.
+function guardarRitual(ritual) {
+  rituales[diaDelRitual()] = ritual;
+  guardarRituales();
+  mostrarRituales();
+}
+
+// Dibuja lo que toca según la hora: por la mañana, la tarjeta de la
+// intención (o la intención ya escrita); por la noche, el examen (hasta que
+// se marca hecho).
+function mostrarRituales() {
+  const caja = document.getElementById("ritual");
+
+  // Lo que se estaba escribiendo en la intención (al marcar un hábito, todo
+  // se vuelve a dibujar y se perdería)
+  const campoAnterior = caja.querySelector("input");
+  let escrito = "";
+  if (campoAnterior) {
+    escrito = campoAnterior.value;
+  }
+
+  caja.innerHTML = "";
+  const dia = diaDelRitual();
+  const ritual = rituales[dia] || {};
+
+  if (esDeNoche()) {
+    if (!ritual.examen) {
+      caja.append(tarjetaNoche(ritual, dia));
+    }
+  } else if (ritual.intencion === undefined || cambiandoIntencion) {
+    caja.append(tarjetaManana(ritual, escrito));
+  } else if (ritual.intencion !== "") {
+    // La intención ya escrita, como recordatorio. Al tocarla, se cambia
+    const linea = crearBoton(
+      "Intención de hoy: «" + ritual.intencion + "»",
+      "recordatorio",
+      function () {
+        cambiandoIntencion = true;
+        mostrarRituales();
+      },
+    );
+    linea.title = "Cambiar la intención";
+    caja.append(linea);
+  }
+
+  caja.hidden = caja.children.length === 0;
+}
+
+// ==========================================================================
+// 13. REVISIÓN SEMANAL
+// El domingo (o el lunes, si se pasó), Méntor repasa la semana con sus
+// datos y hace tres preguntas. El propósito que sale se recuerda en Hoy
+// toda la semana siguiente, y las revisiones se pueden releer en Archivo.
+// ==========================================================================
+
+// La semana que se está revisando (el texto de su lunes).
+let semanaRevisada = null;
+
+// ¿Se ha dejado la revisión para luego? (hasta que se vuelve a abrir la app)
+let revisionAplazada = false;
+
+// El lunes de la semana que toca revisar: el domingo, la de hoy; el lunes,
+// la que acaba de terminar. Los demás días, ninguna (null).
+function semanaARevisar() {
+  const ahora = new Date();
+  if (ahora.getDay() === 0) {
+    return lunesDe(ahora).toLocaleDateString("en-CA");
+  }
+  if (ahora.getDay() === 1) {
+    const ayer = new Date(ahora);
+    ayer.setDate(ayer.getDate() - 1);
+    return lunesDe(ayer).toLocaleDateString("en-CA");
+  }
+  return null;
+}
+
+// El lunes de 7 días antes de otro lunes ("2026-10-19" → "2026-10-12").
+function lunesAnterior(clave) {
+  const lunes = new Date(clave + "T00:00");
+  lunes.setDate(lunes.getDate() - 7);
+  return lunes.toLocaleDateString("en-CA");
+}
+
+// El propósito que salió de la revisión de la semana anterior a «clave»
+// ("" si no hubo).
+function propositoAnterior(clave) {
+  const revision = revisiones[lunesAnterior(clave)];
+  if (revision && revision.proposito) {
+    return revision.proposito;
+  }
+  return "";
+}
+
+// Los datos de una semana (la que empieza el lunes «clave»), hasta hoy: los
+// días perfectos, cómo le ha ido a cada hábito y las metas conseguidas.
+function datosDeLaSemana(clave) {
+  const lunes = new Date(clave + "T00:00");
+  const domingo = new Date(lunes);
+  domingo.setDate(domingo.getDate() + 6);
+  const claveDomingo = domingo.toLocaleDateString("en-CA");
+
+  // Días vividos y días perfectos (todo cumplido, en oro en el mosaico)
+  let vividos = 0;
+  let perfectos = 0;
+  const fecha = new Date(lunes);
+  for (let i = 0; i < 7; i++) {
+    if (fecha.toLocaleDateString("en-CA") <= hoy) {
+      vividos++;
+      if (nivelDelDia(fecha) === 3) {
+        perfectos++;
+      }
+    }
+    fecha.setDate(fecha.getDate() + 1);
+  }
+
+  // Cada hábito: cuántas veces se cumplió de las que tocaba
+  const porHabito = [];
+  habitos.forEach(function (habito) {
+    let hechos = 0;
+    let tocan = 0;
+
+    if (habito.frecuencia === "semanal") {
+      // Los semanales: las veces hechas de las que tocaban (sin pasarse)
+      tocan = reglasEn(habito, claveDomingo).vecesSemana;
+      hechos = Math.min(vecesEnSemana(habito, lunes), tocan);
+    } else {
+      const dia = new Date(lunes);
+      for (let i = 0; i < 7; i++) {
+        const claveDia = dia.toLocaleDateString("en-CA");
+        const reglas = reglasEn(habito, claveDia);
+        if (claveDia <= hoy && tocaEn(reglas, dia)) {
+          tocan++;
+          if (estaCumplido(reglas, registro[claveDia] || {})) {
+            hechos++;
+          }
+        }
+        dia.setDate(dia.getDate() + 1);
+      }
+    }
+
+    if (tocan > 0) {
+      porHabito.push({ nombre: habito.nombre, hechos: hechos, tocan: tocan });
+    }
+  });
+
+  // Las metas cuya victoria cayó en esta semana
+  const victorias = [];
+  metas.forEach(function (meta) {
+    if (
+      meta.victoria &&
+      meta.victoria >= clave &&
+      meta.victoria <= claveDomingo
+    ) {
+      victorias.push(meta.titulo);
+    }
+  });
+
+  return {
+    vividos: vividos,
+    perfectos: perfectos,
+    porHabito: porHabito,
+    victorias: victorias,
+  };
+}
+
+// Lo que dice Méntor al empezar: el saludo y los datos de la semana.
+function saludoRevision() {
+  const datos = datosDeLaSemana(semanaRevisada);
+  const frases = [salve() + " Cerremos juntos la semana."];
+
+  let dias = " días perfectos";
+  if (datos.perfectos === 1) {
+    dias = " día perfecto";
+  }
+  frases.push(
+    "Esta semana has tenido " +
+      datos.perfectos +
+      dias +
+      " de " +
+      datos.vividos +
+      ", con todas tus disciplinas cumplidas.",
+  );
+
+  // El hábito más constante y el que más ha costado (por proporción)
+  if (datos.porHabito.length > 0) {
+    let mejor = datos.porHabito[0];
+    let peor = datos.porHabito[0];
+    datos.porHabito.forEach(function (h) {
+      if (h.hechos / h.tocan > mejor.hechos / mejor.tocan) {
+        mejor = h;
+      }
+      if (h.hechos / h.tocan < peor.hechos / peor.tocan) {
+        peor = h;
+      }
+    });
+
+    if (
+      mejor === peor ||
+      mejor.hechos / mejor.tocan === peor.hechos / peor.tocan
+    ) {
+      if (peor.hechos === peor.tocan) {
+        frases.push(
+          "Has cumplido todos tus hábitos cada vez que tocaban. Así se levanta una obra.",
+        );
+      }
+    } else {
+      frases.push(
+        "Lo más constante: " +
+          mejor.nombre +
+          " (" +
+          mejor.hechos +
+          " de " +
+          mejor.tocan +
+          "). Lo que más te ha costado: " +
+          peor.nombre +
+          " (" +
+          peor.hechos +
+          " de " +
+          peor.tocan +
+          ").",
+      );
+    }
+  }
+
+  if (datos.victorias.length === 1) {
+    frases.push(
+      "Y has conseguido una meta: «" +
+        datos.victorias[0] +
+        "». Merece su laurel.",
+    );
+  } else if (datos.victorias.length > 1) {
+    frases.push(
+      "Y has conseguido " +
+        datos.victorias.length +
+        " metas: «" +
+        datos.victorias.join("», «") +
+        "».",
+    );
+  }
+
+  const proposito = propositoAnterior(semanaRevisada);
+  if (proposito) {
+    frases.push("La semana pasada te propusiste: «" + proposito + "».");
+  }
+
+  return frases;
+}
+
+// Las preguntas, en orden (cómo se escribe cada una: bloque 8).
+const preguntasRevision = [
+  {
+    clave: "cumplido",
+    texto: "¿Lo has cumplido?",
+    tipo: "opciones",
+    // Solo si la semana pasada hubo propósito
+    cuando: function () {
+      return propositoAnterior(semanaRevisada) !== "";
+    },
+    opciones: [
+      { valor: "Sí", texto: "Sí" },
+      { valor: "A medias", texto: "A medias" },
+      { valor: "No", texto: "No" },
+    ],
+  },
+  {
+    clave: "bien",
+    texto: "¿Qué ha ido bien esta semana?",
+    tipo: "parrafo",
+    largo: 300,
+    vacio: "Sin respuesta",
+  },
+  {
+    clave: "costado",
+    texto: "¿Y qué te ha costado más? Si sabes por qué, dímelo también.",
+    tipo: "parrafo",
+    largo: 300,
+    vacio: "Sin respuesta",
+  },
+  {
+    clave: "proposito",
+    texto:
+      "Para terminar, un propósito para la semana que viene: una sola frase, algo que harás distinto.",
+    tipo: "texto",
+    largo: 120,
+    ejemplo: "Acostarme antes de medianoche…",
+    vacio: "Sin propósito",
+  },
+];
+
+// «Semana del 12 de octubre»
+function nombreSemana(clave) {
+  return (
+    "Semana del " +
+    new Date(clave + "T00:00").toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+    })
+  );
+}
+
+// Una línea del resumen: «Ha ido bien: …» (o «Sin respuesta»).
+function lineaRevision(titulo, clave) {
+  return titulo + ": " + textoRespuesta(preguntaDe(clave), respuestas[clave]);
+}
+
+// La tarjeta del resumen: lo respondido.
+function resumenRevision() {
+  const lineas = [];
+  if (respuestas.cumplido !== undefined) {
+    lineas.push(lineaRevision("Propósito anterior", "cumplido"));
+  }
+  lineas.push(
+    lineaRevision("Ha ido bien", "bien"),
+    lineaRevision("Ha costado", "costado"),
+    lineaRevision("Propósito", "proposito"),
+  );
+  return { icono: null, nombre: nombreSemana(semanaRevisada), lineas: lineas };
+}
+
+// «Guardar revisión»: guarda lo respondido y los datos de la semana.
+function guardarRevision() {
+  const datos = datosDeLaSemana(semanaRevisada);
+  revisiones[semanaRevisada] = {
+    fecha: hoy,
+    cumplido: respuestas.cumplido || "",
+    bien: respuestas.bien,
+    costado: respuestas.costado,
+    proposito: respuestas.proposito,
+    perfectos: datos.perfectos,
+    vividos: datos.vividos,
+  };
+  guardarRevisiones();
+
+  respuestas = {};
+  mostrarPantalla("hoy");
+  actualizarTodo();
+}
+
+// La conversación de la revisión (qué es cada cosa: bloque 8).
+const conversacionRevision = {
+  saludo: saludoRevision,
+  preguntas: preguntasRevision,
+  cierre: "Así queda tu revisión. Si quieres cambiar algo, toca tu respuesta.",
+  resumen: resumenRevision,
+  boton: "Guardar revisión",
+  alTerminar: guardarRevision,
+  salir: "¿Salir sin guardar la revisión?",
+  alSalir: function () {
+    mostrarPantalla("hoy");
+  },
+};
+
+// Empieza la revisión de la semana que toca.
+function abrirRevision() {
+  semanaRevisada = semanaARevisar();
+  abrirConversacion(conversacionRevision);
+}
+
+// En Hoy: el propósito de esta semana (si lo hay) y, el domingo y el lunes,
+// la tarjeta para empezar la revisión (si aún no está hecha).
+function mostrarRevisionEnHoy() {
+  const caja = document.getElementById("revision-hoy");
+  caja.innerHTML = "";
+
+  const esteLunes = lunesDe(new Date()).toLocaleDateString("en-CA");
+  const proposito = propositoAnterior(esteLunes);
+  if (proposito) {
+    caja.append(
+      crearParrafo(
+        "Propósito de la semana: «" + proposito + "»",
+        "recordatorio",
+      ),
+    );
+  }
+
+  const clave = semanaARevisar();
+  if (clave && !revisiones[clave] && habitos.length > 0 && !revisionAplazada) {
+    const tarjeta = document.createElement("div");
+    tarjeta.classList.add("ritual", "ritual-revision");
+
+    let texto =
+      "Es domingo: buen momento para mirar atrás y decidir cómo será la semana que viene.";
+    if (new Date().getDay() === 1) {
+      texto =
+        "Ayer acabó la semana y aún no la has revisado. ¿La miramos juntos?";
+    }
+
+    const botones = document.createElement("div");
+    botones.classList.add("ritual-fila");
+    botones.append(
+      crearBoton("Empezar con Méntor", "boton-principal", abrirRevision),
+      crearBoton("Ahora no", "ritual-hoy-no", function () {
+        revisionAplazada = true;
+        mostrarRevisionEnHoy();
+      }),
+    );
+
+    tarjeta.append(
+      crearParrafo("Revisión de la semana", "ritual-titulo"),
+      crearParrafo(texto, "ritual-texto"),
+      botones,
+    );
+    caja.append(tarjeta);
+  }
+
+  caja.hidden = caja.children.length === 0;
+}
+
+// En Archivo: las revisiones guardadas, de la más nueva a la más antigua.
+// Cada una se abre al tocarla (<details>).
+function mostrarRevisiones() {
+  const lista = document.getElementById("lista-revisiones");
+  lista.innerHTML = "";
+
+  // Object.keys: las claves (los lunes); sort las ordena y reverse les da
+  // la vuelta, para que la más nueva vaya primero
+  const semanas = Object.keys(revisiones).sort().reverse();
+
+  semanas.forEach(function (clave) {
+    const revision = revisiones[clave];
+    const detalles = document.createElement("details");
+    detalles.classList.add("revision");
+
+    const resumen = document.createElement("summary");
+    let dias = " días perfectos";
+    if (revision.perfectos === 1) {
+      dias = " día perfecto";
+    }
+    resumen.textContent =
+      nombreSemana(clave) + " · " + revision.perfectos + dias;
+    detalles.append(resumen);
+
+    // Cada línea: [título, respuesta]. Las vacías salen con «—»
+    const partes = [];
+    if (revision.cumplido) {
+      partes.push(["Propósito anterior cumplido", revision.cumplido]);
+    }
+    partes.push(["Ha ido bien", revision.bien]);
+    partes.push(["Ha costado", revision.costado]);
+    partes.push(["Propósito", revision.proposito]);
+
+    partes.forEach(function (parte) {
+      detalles.append(
+        crearParrafo(parte[0] + ": " + (parte[1] || "—"), "revision-linea"),
+      );
+    });
+
+    lista.append(detalles);
+  });
+
+  document.getElementById("seccion-revisiones").hidden = semanas.length === 0;
+}
+
+// ==========================================================================
+// 14. SEMANA
 // Los siete días de esta semana, con el dios de cada día y lo cumplido.
 // ==========================================================================
 
@@ -1941,7 +3153,7 @@ function mostrarHistorial() {
 }
 
 // ==========================================================================
-// 9. CONSTANCIA
+// 15. CONSTANCIA
 // Cuántas veces se ha cumplido cada hábito en los últimos 30 días.
 // ==========================================================================
 
@@ -2057,7 +3269,7 @@ function mostrarConstancia() {
 }
 
 // ==========================================================================
-// 10. MOSAICO DEL MES
+// 16. MOSAICO DEL MES
 // Cada día es una tesela que se colorea según lo cumplido; los perfectos, en oro.
 // ==========================================================================
 
@@ -2226,9 +3438,10 @@ document.getElementById("mes-siguiente").addEventListener("click", function () {
 });
 
 // ==========================================================================
-// 11. METAS · TARJETAS
+// 17. METAS · TARJETAS
 // Objetivos divididos en pasos. Las cumplidas pasan a «Laureles», con su
-// corona y el día de la victoria.
+// corona y el día de la victoria. Las metas nuevas se crean con Méntor
+// (bloque 10).
 // ==========================================================================
 
 // ¿Está cumplida la meta? Sí, si todos sus pasos están hechos.
@@ -2261,7 +3474,7 @@ function mostrarMetas() {
   contenedor.innerHTML = "";
   contenedorCumplidas.innerHTML = "";
 
-  metas.forEach(function (meta) {
+  metas.forEach(function (meta, posicion) {
     // 1. Contar los pasos completados
     let hechos = 0;
     meta.pasos.forEach(function (paso) {
@@ -2279,6 +3492,11 @@ function mostrarMetas() {
 
     if (cumplida) {
       tarjeta.classList.add("cumplida");
+    }
+
+    // La que acaba de crear Méntor brilla un momento
+    if (posicion === metaRecienCreada) {
+      tarjeta.classList.add("recien-creada");
     }
 
     const area = document.createElement("span");
@@ -2387,13 +3605,7 @@ function mostrarMetas() {
       if (meta.victoria) {
         const fecha = document.createElement("p");
         fecha.classList.add("meta-victoria");
-        fecha.textContent = new Date(
-          meta.victoria + "T00:00",
-        ).toLocaleDateString("es-ES", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
+        fecha.textContent = fechaLarga(meta.victoria);
         tarjeta.appendChild(fecha);
       }
     }
@@ -2426,12 +3638,19 @@ function mostrarMetas() {
   }
 
   seccionCumplidas.hidden = contenedorCumplidas.children.length === 0;
+
+  // Llevar la vista hasta la meta recién creada (una sola vez)
+  const nueva = document.querySelector(".meta.recien-creada");
+  if (nueva) {
+    nueva.scrollIntoView({ block: "center" });
+    metaRecienCreada = null;
+  }
 }
 
 // ==========================================================================
-// 12. METAS · VENTANA DE META
-// La misma ventana sirve para crear una meta («Nueva meta») y para editarla
-// (el lápiz de cada tarjeta).
+// 18. METAS · VENTANA DE EDITAR META
+// El lápiz de cada tarjeta abre esta ventana para cambiar la meta o
+// borrarla. (Las nuevas se crean con Méntor, bloque 10.)
 // ==========================================================================
 
 // Piezas de la ventana.
@@ -2439,9 +3658,9 @@ const ventanaMeta = document.getElementById("ventana-meta");
 const formMeta = document.getElementById("form-meta");
 const selectHabito = document.getElementById("meta-habito");
 const campoPasos = document.getElementById("meta-pasos");
-const botonEliminarMeta = document.getElementById("meta-eliminar");
+const errorMeta = document.getElementById("meta-error");
 
-// La meta que se está editando (null si es una nueva).
+// La meta que se está editando.
 let metaEditada = null;
 
 // Rellena el desplegable de hábitos para vincular la meta.
@@ -2456,43 +3675,26 @@ function rellenarSelectHabitos() {
   });
 }
 
-// Abre la ventana: vacía para una meta nueva (meta = null) o con los datos
-// de la meta para editarla. Los pasos van uno por línea.
+// Abre la ventana con los datos de la meta. Los pasos van uno por línea.
 function abrirVentanaMeta(meta) {
   metaEditada = meta;
   rellenarSelectHabitos();
-  formMeta.reset();
 
-  const tituloVentana = document.getElementById("ventana-meta-titulo");
-  const botonGuardar = document.getElementById("meta-guardar");
-  const editar = meta !== null;
+  document.getElementById("meta-titulo").value = meta.titulo;
+  document.getElementById("meta-area").value = meta.area;
+  selectHabito.value = meta.habito;
+  campoPasos.value = meta.pasos
+    .map(function (paso) {
+      return paso.texto;
+    })
+    .join("\n");
 
-  // «Eliminar» y la nota de los pasos, solo al editar
-  botonEliminarMeta.hidden = !editar;
-  document.getElementById("meta-nota").hidden = !editar;
-
-  if (!editar) {
-    tituloVentana.textContent = "Nueva meta";
-    botonGuardar.textContent = "Agregar meta";
-  } else {
-    tituloVentana.textContent = "Editar meta";
-    botonGuardar.textContent = "Guardar";
-    document.getElementById("meta-titulo").value = meta.titulo;
-    document.getElementById("meta-area").value = meta.area;
-    selectHabito.value = meta.habito;
-    campoPasos.value = meta.pasos
-      .map(function (paso) {
-        return paso.texto;
-      })
-      .join("\n");
-  }
-
+  errorMeta.textContent = "";
   ventanaMeta.showModal();
 }
 
-// Al pulsar «Agregar meta» o «Guardar»: cada línea del texto es un paso
-// (hace falta al menos uno). Al editar, los pasos que se quedan igual
-// conservan si estaban hechos.
+// Al pulsar «Guardar»: cada línea del texto es un paso (hace falta al menos
+// uno). Los pasos que se quedan igual conservan si estaban hechos.
 formMeta.addEventListener("submit", function (event) {
   event.preventDefault();
 
@@ -2500,6 +3702,11 @@ formMeta.addEventListener("submit", function (event) {
   const area = document.getElementById("meta-area").value;
   const habito = selectHabito.value;
   const lineas = campoPasos.value.trim().split("\n");
+
+  if (titulo === "") {
+    errorMeta.textContent = "Escribe qué quieres conseguir.";
+    return;
+  }
 
   const pasos = [];
   lineas.forEach(function (linea) {
@@ -2510,32 +3717,26 @@ formMeta.addEventListener("submit", function (event) {
 
     // ¿Ya existía este paso? Entonces sigue hecho (o sin hacer) como estaba
     let completado = false;
-    if (metaEditada) {
-      const antiguo = metaEditada.pasos.find(function (paso) {
-        return paso.texto === texto;
-      });
-      if (antiguo) {
-        completado = antiguo.completado;
-      }
+    const antiguo = metaEditada.pasos.find(function (paso) {
+      return paso.texto === texto;
+    });
+    if (antiguo) {
+      completado = antiguo.completado;
     }
     pasos.push({ texto: texto, completado: completado });
   });
 
   if (pasos.length === 0) {
-    alert("Por favor, añade al menos un paso para la meta.");
+    errorMeta.textContent = "Añade al menos un paso para la meta.";
     return;
   }
 
-  if (metaEditada) {
-    const estabaCumplida = metaCumplida(metaEditada);
-    metaEditada.titulo = titulo;
-    metaEditada.area = area;
-    metaEditada.habito = habito;
-    metaEditada.pasos = pasos;
-    apuntarVictoria(metaEditada, estabaCumplida);
-  } else {
-    metas.push({ titulo: titulo, area: area, habito: habito, pasos: pasos });
-  }
+  const estabaCumplida = metaCumplida(metaEditada);
+  metaEditada.titulo = titulo;
+  metaEditada.area = area;
+  metaEditada.habito = habito;
+  metaEditada.pasos = pasos;
+  apuntarVictoria(metaEditada, estabaCumplida);
 
   guardarMetas();
   mostrarMetas();
@@ -2543,20 +3744,21 @@ formMeta.addEventListener("submit", function (event) {
 });
 
 // «Eliminar»: borra la meta después de preguntar.
-botonEliminarMeta.addEventListener("click", function () {
-  if (
-    confirm(
-      "¿Estás seguro de que deseas eliminar la meta «" +
-        metaEditada.titulo +
-        "»?",
-    )
-  ) {
-    metas.splice(metas.indexOf(metaEditada), 1);
-    guardarMetas();
-    mostrarMetas();
-    ventanaMeta.close();
-  }
-});
+document
+  .getElementById("meta-eliminar")
+  .addEventListener("click", async function () {
+    const borrar = await preguntar(
+      "¿Eliminar la meta «" + metaEditada.titulo + "»?",
+      "Eliminar",
+      "Cancelar",
+    );
+    if (borrar) {
+      metas.splice(metas.indexOf(metaEditada), 1);
+      guardarMetas();
+      mostrarMetas();
+      ventanaMeta.close();
+    }
+  });
 
 // «Cancelar» y tocar fuera: cierran sin guardar.
 document.getElementById("meta-cancelar").addEventListener("click", function () {
@@ -2565,21 +3767,265 @@ document.getElementById("meta-cancelar").addEventListener("click", function () {
 
 cerrarAlTocarFuera(ventanaMeta);
 
-// El botón «Nueva meta» abre la ventana vacía.
-document
-  .getElementById("boton-nueva-meta")
-  .addEventListener("click", function () {
-    abrirVentanaMeta(null);
+// ==========================================================================
+// 19. PERFIL
+// En Archivo: nombre, edad, altura y peso, con el historial del peso. Se
+// cambia en la ventana de perfil. Todo es opcional. Lo que necesiten los
+// consejeros más adelante, lo preguntarán ellos.
+// ==========================================================================
+
+// Piezas de la ventana de perfil.
+const ventanaPerfil = document.getElementById("ventana-perfil");
+const formPerfil = document.getElementById("form-perfil");
+const campoPerfilNombre = document.getElementById("perfil-nombre");
+const campoNacimiento = document.getElementById("perfil-nacimiento");
+const campoAltura = document.getElementById("perfil-altura");
+const campoPeso = document.getElementById("perfil-peso");
+const errorPerfil = document.getElementById("perfil-error");
+
+// El nacimiento no puede ser futuro.
+campoNacimiento.max = hoy;
+
+// Años cumplidos a partir de la fecha de nacimiento ("2004-10-03").
+// Se restan los años y, si este año aún no ha llegado el cumpleaños, uno
+// menos.
+function edadDe(nacimiento) {
+  const hoyFecha = new Date();
+  const fecha = new Date(nacimiento + "T00:00");
+  let edad = hoyFecha.getFullYear() - fecha.getFullYear();
+  const cumpleEsteAno = new Date(
+    hoyFecha.getFullYear(),
+    fecha.getMonth(),
+    fecha.getDate(),
+  );
+  if (hoyFecha < cumpleEsteAno) {
+    edad--;
+  }
+  return edad;
+}
+
+// Los pesos apuntados (del más antiguo al más nuevo), o una lista vacía.
+function pesosDe() {
+  return perfil.pesos || [];
+}
+
+// Un número de kilos para leer: 72.5 → «72,5 kg».
+function textoKilos(kilos) {
+  return kilos.toLocaleString("es-ES") + " kg";
+}
+
+// Dibuja el perfil en Archivo y el historial del peso (los 6 últimos, del
+// más nuevo al más antiguo, con lo que ha cambiado desde el anterior).
+function mostrarPerfil() {
+  const datos = document.getElementById("perfil-datos");
+  datos.innerHTML = "";
+
+  const lineas = [];
+  if (perfil.nombre) {
+    lineas.push(["Nombre", perfil.nombre]);
+  }
+  if (perfil.nacimiento) {
+    lineas.push(["Edad", edadDe(perfil.nacimiento) + " años"]);
+  }
+  if (perfil.altura) {
+    lineas.push(["Altura", perfil.altura + " cm"]);
+  }
+  const pesos = pesosDe();
+  if (pesos.length > 0) {
+    lineas.push(["Peso", textoKilos(pesos[pesos.length - 1].kilos)]);
+  }
+
+  if (lineas.length === 0) {
+    datos.append(
+      crearParrafo(
+        "Aún no has rellenado tu perfil. Todo es opcional.",
+        "pie-texto",
+      ),
+    );
+  }
+
+  // Cada dato en una fila: el nombre a la izquierda y el valor a la derecha
+  lineas.forEach(function (linea) {
+    const fila = document.createElement("p");
+    fila.classList.add("perfil-fila");
+    const nombre = document.createElement("span");
+    nombre.textContent = linea[0];
+    const valor = document.createElement("strong");
+    valor.textContent = linea[1];
+    fila.append(nombre, valor);
+    datos.append(fila);
   });
 
+  // Historial del peso
+  const historial = document.getElementById("historial-peso");
+  historial.innerHTML = "";
+  historial.hidden = pesos.length < 2;
+
+  if (pesos.length >= 2) {
+    historial.append(crearParrafo("Historial del peso", "perfil-subtitulo"));
+    const lista = document.createElement("ul");
+
+    // Desde el último hacia atrás, como mucho 6
+    for (let i = pesos.length - 1; i >= 0 && i >= pesos.length - 6; i--) {
+      const item = document.createElement("li");
+      let texto =
+        new Date(pesos[i].fecha + "T00:00").toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }) +
+        " · " +
+        textoKilos(pesos[i].kilos);
+
+      // La diferencia con el anterior: «(−0,4)» o «(+1,2)». toFixed(1) deja
+      // un decimal y evita cosas como 0,40000000001
+      if (i > 0) {
+        const diferencia = pesos[i].kilos - pesos[i - 1].kilos;
+        let signo = "+";
+        if (diferencia < 0) {
+          signo = "−";
+        }
+        texto =
+          texto +
+          " (" +
+          signo +
+          Math.abs(diferencia).toFixed(1).replace(".", ",") +
+          ")";
+      }
+
+      item.textContent = texto;
+
+      // × para borrar un peso mal apuntado
+      const posicion = i;
+      const borrar = crearBoton("×", "perfil-borrar", async function () {
+        const si = await preguntar(
+          "¿Borrar el peso del " + fechaLarga(pesos[posicion].fecha) + "?",
+          "Borrar",
+          "Cancelar",
+        );
+        if (si) {
+          pesos.splice(posicion, 1);
+          guardarPerfil();
+          mostrarPerfil();
+        }
+      });
+      borrar.setAttribute("aria-label", "Borrar este peso");
+      item.append(borrar);
+      lista.append(item);
+    }
+    historial.append(lista);
+  }
+}
+
+// Abre la ventana de perfil con los datos puestos. El peso es el de hoy (si
+// ya se apuntó hoy, sale para corregirlo).
+function abrirVentanaPerfil() {
+  campoPerfilNombre.value = perfil.nombre || "";
+  campoNacimiento.value = perfil.nacimiento || "";
+  campoAltura.value = perfil.altura || "";
+
+  const pesos = pesosDe();
+  const ultimo = pesos[pesos.length - 1];
+  if (ultimo && ultimo.fecha === hoy) {
+    campoPeso.value = ultimo.kilos.toLocaleString("es-ES");
+  } else {
+    campoPeso.value = "";
+  }
+
+  errorPerfil.textContent = "";
+  ventanaPerfil.showModal();
+}
+
+// Al pulsar «Guardar»: comprueba los datos y los guarda. Lo que se deja
+// vacío se borra del perfil (delete). El peso de hoy se añade al historial
+// (o corrige el de hoy, si ya había uno).
+formPerfil.addEventListener("submit", function (evento) {
+  evento.preventDefault();
+
+  const nombre = campoPerfilNombre.value.trim();
+  const nacimiento = campoNacimiento.value;
+  const altura = campoAltura.value.trim();
+  const peso = campoPeso.value.trim();
+
+  if (nacimiento > hoy) {
+    errorPerfil.textContent = "La fecha de nacimiento aún no ha llegado.";
+    return;
+  }
+
+  const alturaNumero = leerNumero(altura, false);
+  if (altura !== "" && !(alturaNumero >= 50 && alturaNumero <= 250)) {
+    errorPerfil.textContent = "Escribe la altura en centímetros, p. ej. 175.";
+    return;
+  }
+
+  const pesoNumero = leerNumero(peso, true);
+  if (peso !== "" && !(pesoNumero >= 20 && pesoNumero <= 400)) {
+    errorPerfil.textContent = "Escribe el peso en kilos, p. ej. 72,5.";
+    return;
+  }
+
+  if (nombre) {
+    perfil.nombre = nombre;
+  } else {
+    delete perfil.nombre;
+  }
+
+  if (nacimiento) {
+    perfil.nacimiento = nacimiento;
+  } else {
+    delete perfil.nacimiento;
+  }
+
+  if (altura) {
+    perfil.altura = alturaNumero;
+  } else {
+    delete perfil.altura;
+  }
+
+  if (peso) {
+    const pesos = pesosDe();
+    const ultimo = pesos[pesos.length - 1];
+    if (ultimo && ultimo.fecha === hoy) {
+      ultimo.kilos = pesoNumero;
+    } else {
+      pesos.push({ fecha: hoy, kilos: pesoNumero });
+    }
+    perfil.pesos = pesos;
+  }
+
+  guardarPerfil();
+  actualizarTodo();
+  ventanaPerfil.close();
+});
+
+// Botones de la ventana y de Archivo.
+document
+  .getElementById("perfil-cancelar")
+  .addEventListener("click", function () {
+    ventanaPerfil.close();
+  });
+
+document
+  .getElementById("boton-editar-perfil")
+  .addEventListener("click", abrirVentanaPerfil);
+
+cerrarAlTocarFuera(ventanaPerfil);
+
 // ==========================================================================
-// 13. COPIA DE SEGURIDAD
+// 20. COPIA DE SEGURIDAD
 // Descargar todos los datos en un archivo y restaurarlos después. Ergon
 // recuerda el día de la última copia y avisa si hace una semana o más.
 // ==========================================================================
 
 // Datos que entran en la copia.
-const claves = ["ergon-registro", "ergon-habitos", "ergon-metas"];
+const claves = [
+  "ergon-registro",
+  "ergon-habitos",
+  "ergon-metas",
+  "ergon-perfil",
+  "ergon-rituales",
+  "ergon-revisiones",
+];
 
 // El día de la última copia se guarda aparte, en «ergon-ultima-copia»: no
 // va dentro de la copia porque es de este dispositivo.
@@ -2678,13 +4124,14 @@ document
         throw new Error("El archivo no es una copia de Ergon");
       }
 
-      if (
-        !confirm(
-          "Esto sustituirá tus datos actuales por los de la copia del " +
-            copia.fecha +
-            ". ¿Continuar?",
-        )
-      ) {
+      const seguir = await preguntar(
+        "Esto sustituirá tus datos actuales por los de la copia del " +
+          fechaLarga(copia.fecha) +
+          ". ¿Continuar?",
+        "Restaurar",
+        "Cancelar",
+      );
+      if (!seguir) {
         return;
       }
 
@@ -2702,12 +4149,12 @@ document
 
       location.reload();
     } catch (error) {
-      alert("El archivo no es una copia válida de Ergon.");
+      avisar("El archivo no es una copia válida de Ergon.");
     }
   });
 
 // ==========================================================================
-// 14. BARRA SUPERIOR Y NAVEGACIÓN
+// 21. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
 // Hoy · Mosaico · Metas · Archivo.
 // ==========================================================================
@@ -2759,15 +4206,28 @@ function mostrarPantalla(nombre) {
   window.scrollTo(0, 0);
 }
 
-// Cada botón de la barra abre su pantalla.
+// Cada botón de la barra abre su pantalla. En el PC la barra se ve también
+// durante una conversación con Méntor: si ya hay algo respondido, pregunta
+// antes de salir.
 botonesNavegacion.forEach(function (boton) {
-  boton.addEventListener("click", function () {
+  boton.addEventListener("click", async function () {
+    if (conversacionEmpezada()) {
+      const salir = await preguntar(
+        conversacionActual.salir,
+        "Salir",
+        "Seguir",
+      );
+      if (!salir) {
+        return;
+      }
+      respuestas = {};
+    }
     mostrarPantalla(boton.dataset.destino);
   });
 });
 
 // ==========================================================================
-// 15. APP INSTALABLE (SERVICE WORKER)
+// 22. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -2776,23 +4236,48 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 16. INICIO
+// 23. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 
 // Vuelve a dibujar todo. Se llama cada vez que cambia algo.
 function actualizarTodo() {
+  mostrarRituales();
+  mostrarRevisionEnHoy();
   mostrarHabitos();
   mostrarHistorial();
   mostrarConstancia();
   mostrarMosaico();
   mostrarMetas();
+  mostrarPerfil();
+  mostrarRevisiones();
   mostrarAvisoCopia();
 }
 
-// Al abrir: dibujar todo, poner la cita y la fecha y abrir la última
-// pantalla usada.
+// Al abrir: dibujar todo y poner la cita y la fecha. La primera vez (sin
+// datos), la bienvenida de Méntor; si no, la última pantalla usada.
 actualizarTodo();
 mostrarCitaDelDia();
 mostrarFecha();
-mostrarPantalla(localStorage.getItem("ergon-pantalla") || "hoy");
+
+if (tocaBienvenida()) {
+  abrirConversacion(conversacionBienvenida);
+} else {
+  mostrarPantalla(localStorage.getItem("ergon-pantalla") || "hoy");
+}
+
+// En el iPhone, la app puede quedarse abierta de fondo y volver horas
+// después. Al volver (visibilitychange): si ya es otro día, se recarga para
+// que «hoy» sea hoy; si es el mismo, se vuelven a dibujar los rituales (por
+// si ha llegado la noche).
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState !== "visible") {
+    return;
+  }
+  if (new Date().toLocaleDateString("en-CA") !== hoy) {
+    location.reload();
+  } else {
+    mostrarRituales();
+    mostrarRevisionEnHoy();
+  }
+});

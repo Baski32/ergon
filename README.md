@@ -10,7 +10,10 @@
 
 - **Hábitos** diarios, de días concretos (por ejemplo, L-X-V), de unas veces por semana (por ejemplo, 3 veces, con la racha en semanas) o por cantidad (por ejemplo, al menos 10.000 pasos o como mucho 300 minutos), con rachas que respetan los días de descanso y la llama de Prometeo.
 - **Iconos clásicos** en SVG para cada hábito (corona de olivo, pergamino, ánfora, lira, búho, rama de olivo, luna, dracma, pluma y tintero, columna). Se eligen solos por el nombre del hábito y se pueden cambiar a mano.
-- **Méntor**: un hábito nuevo se crea conversando con Méntor, que pregunta paso a paso (solo lo que toca) y muestra un resumen antes de crearlo. Por ahora sin IA.
+- **Méntor**: los hábitos y las metas nuevos se crean conversando con Méntor, que pregunta paso a paso (solo lo que toca) y muestra un resumen antes de crearlos. La primera vez da la bienvenida y pregunta lo básico para el perfil. Por ahora sin IA.
+- **Rituales**: por la mañana, la intención del día; por la noche, el examen de Séneca (sus tres preguntas, para responderlas en el diario).
+- **Revisión semanal** el domingo con Méntor: los datos de la semana, tres preguntas y un propósito que se recuerda toda la semana siguiente.
+- **Perfil** opcional (nombre, edad, altura y peso con su historial).
 - **Editar hábitos** sin perder la racha: las reglas antiguas se guardan con fecha y los días pasados se siguen juzgando con ellas.
 - **Constancia** de los últimos 30 días de cada hábito y **comodín** opcional: un día libre por semana que no rompe la racha.
 - **Templanza**: hábitos para dejar algo. Cuentan los días sin hacerlo, con la mejor racha y el total, para que una recaída no borre lo conseguido.
@@ -20,7 +23,8 @@
 - **Laureles**: las metas cumplidas reciben su corona de laurel y la fecha de la victoria.
 - **Cita del día** de filósofos clásicos (Marco Aurelio, Séneca, Epicteto, Aristóteles…), con la obra de la que procede.
 - **Copia de seguridad** para descargar y restaurar los datos, con aviso si hace una semana o más de la última.
-- **Pestañas** con navegación inferior pensada para el móvil.
+- **Pestañas** con navegación inferior pensada para el móvil y barra lateral en el ordenador.
+- **Avisos propios** con el estilo de la app, en lugar de los del navegador.
 - **Instalable en el móvil** como una app (PWA) y funciona sin conexión.
 
 Los datos se guardan solo en el navegador de cada dispositivo: no se envían a ningún servidor.
@@ -30,7 +34,7 @@ Los datos se guardan solo en el navegador de cada dispositivo: no se envían a n
 - HTML, CSS y JavaScript, sin librerías.
 - `localStorage` para guardar los datos.
 - Dibujos en SVG (laurel, llama, iconos) y animaciones con CSS.
-- Ventanas con el elemento `<dialog>`.
+- Ventanas con el elemento `<dialog>` y avisos con promesas (`async` / `await`).
 - PWA: `manifest.json` y un *service worker* para instalarla y usarla sin conexión.
 - Publicada con GitHub Pages.
 - Fuentes: Cinzel y EB Garamond.
@@ -47,7 +51,10 @@ Los datos se guardan solo en el navegador de cada dispositivo: no se envían a n
 - [x] Editar hábitos y metas
 - [x] Constancia de 30 días, comodín semanal y aviso de copia
 - [x] Conversación con Méntor para crear hábitos (sin IA)
-- [ ] Crear metas con Méntor
+- [x] Crear metas con Méntor y avisos propios
+- [x] Bienvenida y perfil
+- [x] Rituales de mañana y noche y revisión semanal
+- [x] Diseño de escritorio
 - [ ] Sincronización entre dispositivos
 - [ ] Consejeros con IA: Méntor (Μέντωρ) y Prometheus (Προμηθεύς)
 

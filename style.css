@@ -11,18 +11,21 @@
     5. Botones
     6. Iconos
     7. Hoy · Cita del día
-    8. Hoy · Aviso de copia
-    9. Hoy · Lista de hábitos
-   10. Hoy · Llama de Prometeo
-   11. Hoy · Semana
-   12. Hoy · Constancia
-   13. Ventanas (editar hábito y meta)
-   14. Méntor · Conversación
-   15. Mosaico del mes
-   16. Metas · Tarjetas
-   17. Metas · Laureles (metas cumplidas)
-   18. Archivo · Copia de seguridad
-   19. Navegación inferior
+    8. Hoy · Rituales y recordatorios
+    9. Hoy · Aviso de copia
+   10. Hoy · Lista de hábitos
+   11. Hoy · Llama de Prometeo
+   12. Hoy · Semana
+   13. Hoy · Constancia
+   14. Ventanas (editar hábito, meta y perfil; avisos)
+   15. Méntor · Conversación
+   16. Mosaico del mes
+   17. Metas · Tarjetas
+   18. Metas · Laureles (metas cumplidas)
+   19. Archivo · Perfil y revisiones
+   20. Archivo · Copia de seguridad
+   21. Navegación
+   22. Escritorio (pantallas anchas)
    ========================================================================== */
 
 /* ==========================================================================
@@ -197,6 +200,28 @@ body {
   cursor: pointer;
 }
 
+/* Botones de texto pequeños, sin marco: «Hoy no», «Prefiero no decirlo», la
+   × de quitar un paso o un peso… */
+.ritual-hoy-no,
+.mentor-saltar,
+.mentor-quitar,
+.perfil-borrar {
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.ritual-hoy-no:hover,
+.mentor-saltar:hover,
+.mentor-quitar:hover,
+.perfil-borrar:hover {
+  color: var(--terracota);
+}
+
 /* «+ Nuevo hábito» y «+ Nueva meta»: todo el ancho y marco discontinuo */
 .boton-nuevo {
   display: block;
@@ -359,7 +384,141 @@ body {
 }
 
 /* ==========================================================================
-   8. HOY · AVISO DE COPIA
+   8. HOY · RITUALES Y RECORDATORIOS
+   La intención de la mañana, el examen de la noche (en tinta y oro, como un
+   templo a la luz de las antorchas), la revisión del domingo y las líneas
+   que recuerdan la intención y el propósito de la semana.
+   ========================================================================== */
+
+/* Las cajas de los rituales: una cosa debajo de otra. Ocultas si están
+   vacías (display: flex ganaría al atributo hidden) */
+.rituales {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rituales[hidden] {
+  display: none;
+}
+
+/* Cada tarjeta: crema con borde dorado */
+.ritual {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  background-color: #fbf6e9;
+  border: 1px solid var(--oro);
+  border-radius: 6px;
+}
+
+/* «Intención del día», «Examen de la noche»… */
+.ritual-titulo {
+  margin: 0;
+  font-family: "Cinzel", serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--terracota);
+}
+
+.ritual-texto {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* El campo y su botón, en fila */
+.ritual-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ritual-fila input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--tinta);
+  background-color: #fffdf8;
+  border: 1px solid var(--bronce);
+  border-radius: 4px;
+}
+
+.ritual-fila input:focus {
+  outline: none;
+  border-color: var(--terracota);
+}
+
+.ritual .ritual-hoy-no {
+  align-self: flex-start;
+}
+
+/* El examen de la noche: fondo de tinta, letras de mármol y detalles en oro */
+.ritual-noche {
+  color: var(--marmol);
+  background-color: var(--tinta);
+  border-color: var(--oro);
+}
+
+.ritual-noche .ritual-titulo,
+.ritual-noche .ritual-fuente {
+  color: var(--oro);
+}
+
+/* Las tres preguntas de Séneca, en cursiva */
+.ritual-preguntas {
+  margin: 0;
+  padding-left: 22px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.ritual-fuente {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+/* La intención de la mañana y los hábitos del día, más pequeños */
+.ritual-recuerdo {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* «Examen hecho», en oro sobre la tinta */
+.ritual-noche .boton-principal {
+  align-self: flex-start;
+  color: var(--tinta);
+  background-color: var(--oro);
+}
+
+/* Recordatorios de una línea («Intención de hoy: …», «Propósito de la
+   semana: …»): cursiva con una raya dorada a la izquierda. La intención es
+   un botón: al tocarla se puede cambiar */
+.recordatorio {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-style: italic;
+  text-align: left;
+  color: var(--tinta);
+  background: none;
+  border: none;
+  border-left: 3px solid var(--oro);
+}
+
+button.recordatorio {
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   9. HOY · AVISO DE COPIA
    Sale arriba si hace 7 días o más que no se descarga una copia.
    ========================================================================== */
 
@@ -400,7 +559,7 @@ body {
 }
 
 /* ==========================================================================
-   9. HOY · LISTA DE HÁBITOS
+   10. HOY · LISTA DE HÁBITOS
    Una ficha por hábito. Los de casilla llevan la casilla a la izquierda; los
    de cantidad, el campo a la derecha. El icono va justo antes del nombre y
    el lápiz de editar, al final.
@@ -582,7 +741,7 @@ body {
 }
 
 /* ==========================================================================
-   10. HOY · LLAMA DE PROMETEO
+   11. HOY · LLAMA DE PROMETEO
    Aparece en la racha a partir de 7 días seguidos; a partir de 30, más grande
    y con brillo dorado.
    ========================================================================== */
@@ -626,13 +785,14 @@ body {
    (y tampoco brilla la ficha nueva) */
 @media (prefers-reduced-motion: reduce) {
   .llama svg,
-  .lista-habitos li.recien-creado {
+  .lista-habitos li.recien-creado,
+  .meta.recien-creada {
     animation: none;
   }
 }
 
 /* ==========================================================================
-   11. HOY · SEMANA
+   12. HOY · SEMANA
    Los siete días de esta semana, con el símbolo de su dios.
    ========================================================================== */
 
@@ -685,7 +845,7 @@ body {
 }
 
 /* ==========================================================================
-   12. HOY · CONSTANCIA
+   13. HOY · CONSTANCIA
    Una fila por hábito: icono, nombre, «26 de 30 días» y una barra.
    ========================================================================== */
 
@@ -743,10 +903,10 @@ body {
 }
 
 /* ==========================================================================
-   13. VENTANAS (EDITAR HÁBITO Y META)
+   14. VENTANAS (EDITAR HÁBITO, META Y PERFIL; AVISOS)
    Las ventanas <dialog> que se abren encima de la pantalla: editar un
-   hábito y crear o editar una meta. Los círculos de los días también se
-   usan en Méntor.
+   hábito, editar una meta, el perfil y los avisos de Ergon (en lugar de
+   alert y confirm). Los círculos de los días también se usan en Méntor.
    ========================================================================== */
 
 /* La ventana: mármol con marco de bronce, centrada encima de todo. Si no
@@ -802,6 +962,42 @@ body {
   font-size: 0.8rem;
   font-style: italic;
   color: var(--bronce);
+}
+
+/* Lo que falta («Elige al menos un día.»), en terracota. Vacío, no se ve */
+.ventana-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--terracota);
+}
+
+.ventana-error:empty {
+  display: none;
+}
+
+/* La ventana de aviso: más estrecha, con una raya dorada arriba */
+.ventana-aviso {
+  max-width: 380px;
+  border-top: 3px solid var(--oro);
+}
+
+.form-aviso {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+}
+
+/* El mensaje del aviso (recibe el foco al abrirse: sin contorno) */
+#aviso-texto {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  outline: none;
+}
+
+.ventana-aviso .ventana-botones {
+  justify-content: flex-end;
 }
 
 /* Botones de abajo: «Eliminar» a la izquierda; «Cancelar» y «Guardar», a la
@@ -977,7 +1173,7 @@ body {
 }
 
 /* ==========================================================================
-   14. MÉNTOR · CONVERSACIÓN
+   15. MÉNTOR · CONVERSACIÓN
    Burbujas como en un chat: Méntor a la izquierda, mis respuestas a la
    derecha y, debajo de la última pregunta, la forma de responder.
    ========================================================================== */
@@ -1154,7 +1350,8 @@ body {
   width: 100%;
 }
 
-.mentor-escribir input {
+.mentor-escribir input,
+.mentor-escribir textarea {
   flex: 1;
   min-width: 0;
   padding: 10px 14px;
@@ -1166,6 +1363,19 @@ body {
   border-radius: 18px;
 }
 
+/* El párrafo (revisión semanal): un cuadro de varias líneas, con las
+   esquinas menos redondas, que solo se estira hacia abajo. El botón,
+   abajo a la derecha */
+.mentor-escribir textarea {
+  border-radius: 12px;
+  resize: vertical;
+}
+
+.mentor-parrafo {
+  align-items: flex-end;
+}
+
+.mentor-escribir textarea:focus,
 .mentor-escribir input:focus {
   outline: none;
   border-color: var(--terracota);
@@ -1243,9 +1453,45 @@ body {
   color: var(--tinta);
 }
 
-/* «Crear hábito», de lado a lado */
-.mentor-resumen + .boton-principal {
+/* Los botones del resumen («Crear hábito», «Empezar sin hábitos»…), de
+   lado a lado. ~ elige a los hermanos que van después de la tarjeta */
+.mentor-resumen ~ .boton-principal,
+.mentor-resumen ~ .boton-secundario {
   align-self: stretch;
+}
+
+/* Las líneas del resumen y mis burbujas respetan los saltos de línea (los
+   pasos de una meta van uno por línea) */
+.mentor-resumen p,
+.burbuja-mia {
+  white-space: pre-line;
+}
+
+/* La lista que se va llenando (los pasos de una meta), numerada, con la ×
+   de quitar al final de cada paso */
+.mentor-lista {
+  align-self: stretch;
+  margin: 0;
+  padding: 8px 12px 8px 34px;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 6px;
+}
+
+.mentor-lista li {
+  padding: 3px 0;
+}
+
+.mentor-quitar {
+  margin-left: 8px;
+  padding: 0 4px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* «Añadir» (el botón de la lista), redondo como el campo */
+.mentor-escribir .boton-secundario {
+  border-radius: 18px;
 }
 
 /* Con «reducir movimiento», las burbujas y los puntos no se mueven */
@@ -1257,10 +1503,10 @@ body {
 }
 
 /* ==========================================================================
-   15. MOSAICO DEL MES
+   16. MOSAICO DEL MES
    Un pergamino que ocupa la pantalla, con una tesela por día. Su color
    depende de lo cumplido. Al cambiar de mes, la hoja se enrolla y se
-   desenrolla (la animación está en script.js, bloque 7).
+   desenrolla (la animación está en script.js, bloque 16).
    ========================================================================== */
 
 /* El pergamino: color crema, manchas suaves y líneas finas con degradados.
@@ -1438,7 +1684,7 @@ body {
 }
 
 /* ==========================================================================
-   16. METAS · TARJETAS
+   17. METAS · TARJETAS
    Cada meta pendiente: área, título, barra de progreso, hábito y pasos.
    ========================================================================== */
 
@@ -1528,6 +1774,12 @@ body {
   color: var(--bronce);
 }
 
+/* Meta recién creada por Méntor: el mismo brillo dorado que los hábitos
+   (la animación «brillar» está en el bloque 10) */
+.meta.recien-creada {
+  animation: brillar 1.6s ease-out;
+}
+
 /* El lápiz de editar, en la esquina de la tarjeta (el resto de su estilo
    está en el bloque 5, Botones) */
 .meta-editar {
@@ -1550,7 +1802,7 @@ body {
 }
 
 /* ==========================================================================
-   17. METAS · LAURELES (METAS CUMPLIDAS)
+   18. METAS · LAURELES (METAS CUMPLIDAS)
    Las metas cumplidas cambian de aspecto: marco de oro, corona de laurel,
    el día de la victoria y los pasos escondidos en «Ver los pasos».
    ========================================================================== */
@@ -1620,7 +1872,97 @@ body {
 }
 
 /* ==========================================================================
-   18. ARCHIVO · COPIA DE SEGURIDAD
+   19. ARCHIVO · PERFIL Y REVISIONES
+   Los datos del perfil, el historial del peso y las revisiones semanales.
+   ========================================================================== */
+
+/* Cada sección, con un hueco debajo */
+.perfil,
+.revisiones {
+  margin-bottom: 32px;
+}
+
+/* Sus títulos, como el de la copia de seguridad */
+.perfil h2,
+.revisiones h2 {
+  font-family: "Cinzel", serif;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--bronce);
+}
+
+/* Cada dato: el nombre a la izquierda y el valor a la derecha */
+.perfil-fila {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--piedra);
+}
+
+.perfil-fila strong {
+  font-weight: 500;
+}
+
+/* El mensaje de perfil vacío, centrado */
+.perfil .pie-texto {
+  text-align: center;
+}
+
+.perfil .pie-botones {
+  margin-top: 14px;
+}
+
+/* «Historial del peso» */
+.perfil-subtitulo {
+  margin: 16px 0 4px;
+  font-size: 0.85rem;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--bronce);
+}
+
+.historial-peso ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.historial-peso li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.perfil-borrar {
+  padding: 2px 6px;
+  font-size: 1.1rem;
+}
+
+/* Cada revisión: una caja que se abre al tocar su título */
+.revision {
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 4px;
+}
+
+.revision summary {
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.revision-linea {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  white-space: pre-line;
+}
+
+/* ==========================================================================
+   20. ARCHIVO · COPIA DE SEGURIDAD
    ========================================================================== */
 
 /* La sección de la copia, centrada */
@@ -1674,8 +2016,9 @@ body {
 }
 
 /* ==========================================================================
-   19. NAVEGACIÓN INFERIOR
-   La barra fija de abajo: Hoy · Mosaico · Metas · Archivo.
+   21. NAVEGACIÓN
+   La barra fija de abajo: Hoy · Mosaico · Metas · Archivo. En el PC pasa a
+   la izquierda (bloque 22).
    ========================================================================== */
 
 /* Fija abajo, con cuatro botones iguales. El padding de abajo deja sitio a la
@@ -1717,4 +2060,155 @@ body {
    «conversando» en el body) */
 body.conversando .navegacion {
   display: none;
+}
+
+/* ==========================================================================
+   22. ESCRITORIO (PANTALLAS ANCHAS)
+   Desde 900px de ancho (el PC), la barra de navegación pasa a ser una
+   columna fija a la izquierda y el contenido aprovecha el ancho. En el
+   móvil no cambia nada.
+   ========================================================================== */
+
+/* En el móvil no se ve la marca (laurel y «Ergon») de la barra lateral */
+.navegacion-marca {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  /* Deja a la izquierda el sitio de la barra lateral (220px) */
+  body {
+    padding-left: 220px;
+  }
+
+  /* La barra: de arriba abajo, a la izquierda, con los botones en columna.
+     box-sizing: border-box mete el borde dentro de los 220px */
+  .navegacion {
+    box-sizing: border-box;
+    top: 0;
+    right: auto;
+    width: 220px;
+    max-width: none;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 0;
+    border-top: none;
+    border-right: 1px solid var(--bronce);
+    box-shadow: 4px 0 12px rgba(43, 37, 34, 0.06);
+  }
+
+  /* En el PC se ve también durante una conversación con Méntor (no hay
+     teclado del móvil que tapar) */
+  body.conversando .navegacion {
+    display: flex;
+  }
+
+  /* El laurel grande y «Ergon», arriba de la barra */
+  .navegacion-marca {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 28px;
+    font-family: "Cinzel", serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.2em;
+    color: var(--tinta);
+  }
+
+  .navegacion-marca .emblema {
+    width: 72px;
+    height: 72px;
+  }
+
+  /* Cada botón: alineado a la izquierda; el activo, con una raya terracota */
+  .navegacion button {
+    padding: 14px 32px;
+    text-align: left;
+    font-size: 0.95rem;
+    border-left: 3px solid transparent;
+  }
+
+  .navegacion button.activa {
+    border-left-color: var(--terracota);
+  }
+
+  /* El laurel de la barra de arriba ya está en la lateral */
+  .barra-superior .emblema {
+    display: none;
+  }
+
+  /* Más ancho para el contenido */
+  .barra-dentro,
+  .contenedor {
+    max-width: 980px;
+  }
+
+  .barra-dentro {
+    padding: 14px 32px;
+  }
+
+  .contenedor {
+    padding: 28px 32px 48px;
+  }
+
+  /* Hoy: dos columnas. Hábitos a la izquierda; semana y constancia, a la
+     derecha */
+  .hoy-columnas {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .lista-habitos {
+    margin-top: 0;
+  }
+
+  .hoy-lateral .historial h2 {
+    margin-top: 0;
+  }
+
+  /* Metas: las tarjetas en dos columnas */
+  #lista-metas,
+  #lista-cumplidas {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .meta {
+    margin-bottom: 0;
+  }
+
+  .sin-metas {
+    grid-column: 1 / -1;
+  }
+
+  /* Mosaico, Méntor y Archivo: centrados y sin estirarse demasiado. El
+     pergamino ocupa el alto de la pantalla menos la barra de arriba
+     (unos 57px), los márgenes de la página (28px + 48px) y su propio
+     relleno (32px) */
+  .mosaico-seccion {
+    max-width: 760px;
+    margin: 0 auto;
+    min-height: calc(100vh - 166px);
+    min-height: calc(100dvh - 166px);
+  }
+
+  .mosaico-dias,
+  .mosaico {
+    max-width: 560px;
+  }
+
+  .conversacion {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  [data-pantalla="archivo"] {
+    max-width: 640px;
+    margin: 0 auto;
+  }
 }
