@@ -32,6 +32,7 @@
          DIBUJOS SVG
          Se definen una vez aquí y se usan con <use href="#nombre">.
          rama: media corona · laurel: las dos ramas · llama: la de Prometeo
+         icono-…: los diez iconos de los hábitos · editar: el lápiz
          ============================================================ -->
     <svg class="simbolos" aria-hidden="true">
       <symbol id="rama" viewBox="0 0 100 100">
@@ -118,6 +119,165 @@
           d="M12 15c1 3 5 5 5 9a5 5 0 0 1-10 0c0-3 2-4 3-6 1 1 1 2 1 3 1-2 1-4 1-6z"
         />
       </symbol>
+
+      <!-- ICONOS DE LOS HÁBITOS. Se dibujan con líneas (el trazo y el color
+           los pone style.css); lo que lleva fill="currentColor" va relleno.
+           Una hoja de olivo, que usan la corona y la rama -->
+      <defs>
+        <path
+          id="hoja-olivo"
+          d="M0 0c1.3-1.2 1.3-3 0-4.2c-1.3 1.2-1.3 3 0 4.2z"
+        />
+      </defs>
+
+      <!-- Corona de olivo: deporte y victorias -->
+      <symbol id="icono-corona" viewBox="0 0 24 24">
+        <path d="M11 20.5C5.5 19.5 3 12 6.5 4.5" />
+        <path d="M13 20.5C18.5 19.5 21 12 17.5 4.5" />
+        <g fill="currentColor" stroke="none">
+          <use href="#hoja-olivo" transform="translate(7.4 18.6) rotate(-55)" />
+          <use href="#hoja-olivo" transform="translate(16.6 18.6) rotate(55)" />
+          <use href="#hoja-olivo" transform="translate(5.3 15.2) rotate(-35)" />
+          <use href="#hoja-olivo" transform="translate(18.7 15.2) rotate(35)" />
+          <use href="#hoja-olivo" transform="translate(4.4 11.2) rotate(-18)" />
+          <use href="#hoja-olivo" transform="translate(19.6 11.2) rotate(18)" />
+          <use href="#hoja-olivo" transform="translate(4.9 7.4) rotate(-5)" />
+          <use href="#hoja-olivo" transform="translate(19.1 7.4) rotate(5)" />
+          <use href="#hoja-olivo" transform="translate(8.2 18.2) rotate(25)" />
+          <use
+            href="#hoja-olivo"
+            transform="translate(15.8 18.2) rotate(-25)"
+          />
+          <use href="#hoja-olivo" transform="translate(6.3 14.4) rotate(35)" />
+          <use
+            href="#hoja-olivo"
+            transform="translate(17.7 14.4) rotate(-35)"
+          />
+          <use href="#hoja-olivo" transform="translate(5.7 10.3) rotate(40)" />
+          <use
+            href="#hoja-olivo"
+            transform="translate(18.3 10.3) rotate(-40)"
+          />
+        </g>
+      </symbol>
+
+      <!-- Pergamino: leer y estudiar -->
+      <symbol id="icono-pergamino" viewBox="0 0 24 24">
+        <path d="M6 7V5.5a2 2 0 0 1 2-2h11a2 2 0 0 1 0 4h-2" />
+        <path d="M17 5.5V18.5a2 2 0 0 1-2 2H5a2 2 0 0 1 0-4h2V5.5" />
+        <path d="M5 20.5a2 2 0 0 0 2-2" />
+        <path d="M10 9.5h4.5M10 12.5h4.5M10 15.5h3" />
+      </symbol>
+
+      <!-- Ánfora: agua, comida y bebida -->
+      <symbol id="icono-anfora" viewBox="0 0 24 24">
+        <path d="M9 3.5h6" />
+        <path d="M10 3.5v3M14 3.5v3" />
+        <path
+          d="M10 6.5C6 8 5.5 13 8.5 17L11 19.5h2L15.5 17C18.5 13 18 8 14 6.5"
+        />
+        <path d="M10.5 19.5L10 21h4l-0.5-1.5" />
+        <path d="M10 5.2C6.5 4.5 5.5 7.5 7.6 9.4" />
+        <path d="M14 5.2C17.5 4.5 18.5 7.5 16.4 9.4" />
+        <path d="M7.2 12h9.6" />
+      </symbol>
+
+      <!-- Lira: música y arte -->
+      <symbol id="icono-lira" viewBox="0 0 24 24">
+        <path d="M8.5 16.5C5 14 4.5 9 6 6C6.6 4.8 5.8 3.6 4.6 3.6" />
+        <path d="M15.5 16.5C19 14 19.5 9 18 6C17.4 4.8 18.2 3.6 19.4 3.6" />
+        <path d="M5.6 7.5h12.8" />
+        <path d="M10 7.5v9M12 7.5v9M14 7.5v9" />
+        <path d="M8 16.5h8l-1 3.5h-6z" />
+      </symbol>
+
+      <!-- Búho de Atenea: meditar, reflexionar y pensar -->
+      <symbol id="icono-buho" viewBox="0 0 24 24">
+        <path d="M6 4l3 2.6q3-1.2 6 0L18 4v9.5a6 6 0 0 1-12 0z" />
+        <circle cx="9.4" cy="10.4" r="2.1" />
+        <circle cx="14.6" cy="10.4" r="2.1" />
+        <g fill="currentColor" stroke="none">
+          <circle cx="9.4" cy="10.4" r="0.8" />
+          <circle cx="14.6" cy="10.4" r="0.8" />
+        </g>
+        <path d="M11.2 13l0.8 1.6l0.8-1.6" />
+        <path d="M9.5 16.5q2.5 1.5 5 0" />
+        <path d="M10 21.5v-1.5M14 21.5v-1.5" />
+      </symbol>
+
+      <!-- Rama de olivo: paz y templanza (dejar algo) -->
+      <symbol id="icono-rama" viewBox="0 0 24 24">
+        <path d="M4 20C8 16 12 11 19.5 4" />
+        <g fill="currentColor" stroke="none">
+          <use
+            href="#hoja-olivo"
+            transform="translate(7.4 16.6) rotate(-10) scale(1.4)"
+          />
+          <use
+            href="#hoja-olivo"
+            transform="translate(7.6 16.4) rotate(100) scale(1.4)"
+          />
+          <use
+            href="#hoja-olivo"
+            transform="translate(11.6 12) rotate(-5) scale(1.4)"
+          />
+          <use
+            href="#hoja-olivo"
+            transform="translate(11.8 11.8) rotate(105) scale(1.4)"
+          />
+          <use
+            href="#hoja-olivo"
+            transform="translate(15.8 7.6) rotate(0) scale(1.4)"
+          />
+          <use
+            href="#hoja-olivo"
+            transform="translate(16 7.4) rotate(110) scale(1.4)"
+          />
+          <circle cx="9" cy="18.6" r="1.3" />
+          <circle cx="13.6" cy="14.2" r="1.3" />
+        </g>
+      </symbol>
+
+      <!-- Luna: dormir y descansar -->
+      <symbol id="icono-luna" viewBox="0 0 24 24">
+        <path d="M15.5 3.5A8.5 8.5 0 1 0 20.5 17A7 7 0 0 1 15.5 3.5z" />
+        <g fill="currentColor" stroke="none">
+          <circle cx="18.5" cy="6" r="0.9" />
+          <circle cx="15.6" cy="10.4" r="0.6" />
+        </g>
+      </symbol>
+
+      <!-- Dracma (con la Δ): dinero y ahorro -->
+      <symbol id="icono-dracma" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="6.3" stroke-dasharray="0.1 1.9" />
+        <path d="M12 8.2L8.8 15h6.4z" />
+      </symbol>
+
+      <!-- Pluma y tintero: escribir, el diario y programar -->
+      <symbol id="icono-pluma" viewBox="0 0 24 24">
+        <path d="M5 16h6l-0.6 4.5H5.6z" />
+        <path d="M6 16v-1.5h4V16" />
+        <path d="M9 15C11 9.5 15.5 5 20.5 3C19.5 8 15.5 12 10.5 13.6" />
+        <path d="M9 15l7-8.2" />
+      </symbol>
+
+      <!-- Columna: constancia (el icono por defecto) -->
+      <symbol id="icono-columna" viewBox="0 0 24 24">
+        <path d="M4.5 4h15" />
+        <path d="M6 6.5h12" />
+        <path d="M6.5 4v2.5M17.5 4v2.5" />
+        <path d="M8 6.5v12.5M12 6.5v12.5M16 6.5v12.5" />
+        <path d="M6.5 19h11M5 21h14" />
+      </symbol>
+
+      <!-- Lápiz: el botón de editar de hábitos y metas -->
+      <symbol id="editar" viewBox="0 0 24 24">
+        <path
+          d="M4.5 19.5l1-4.2L15.8 5a1.8 1.8 0 0 1 2.5 0l0.7 0.7a1.8 1.8 0 0 1 0 2.5L8.7 18.5z"
+        />
+        <path d="M14 6.8l3.2 3.2" />
+      </symbol>
     </svg>
 
     <!-- ============================================================
@@ -140,13 +300,15 @@
 
     <!-- ============================================================
          CONTENIDO
-         Las cuatro pantallas. Solo se ve una a la vez: script.js quita
-         el atributo hidden a la que toca.
+         Las cuatro pantallas de la barra de abajo y la conversación con
+         Méntor. Solo se ve una a la vez: script.js quita el atributo
+         hidden a la que toca.
          ============================================================ -->
     <main class="contenedor">
       <!-- ============================================================
            PANTALLA HOY
-           Cita del día, hábitos, formulario de hábito nuevo y semana.
+           Cita del día, aviso de copia, hábitos, botón de hábito nuevo,
+           semana y constancia.
            ============================================================ -->
       <div class="pantalla" data-pantalla="hoy">
         <!-- Cita del día: la rellena script.js con citas.json -->
@@ -155,86 +317,33 @@
           <span id="cita-autor" class="autor"></span>
         </blockquote>
 
+        <!-- Aviso de copia: sale si hace 7 días o más que no se hace una -->
+        <div id="aviso-copia" class="aviso-copia" hidden>
+          <p id="aviso-copia-texto"></p>
+          <button id="aviso-copia-boton" type="button">
+            Hacer copia ahora
+          </button>
+        </div>
+
         <!-- Lista de hábitos: script.js crea una ficha por hábito -->
         <ul id="lista-habitos" class="lista-habitos"></ul>
 
-        <!-- Formulario de hábito nuevo -->
-        <form id="form-habito" class="form-habito">
-          <input
-            type="text"
-            id="habito-nombre"
-            placeholder="Nuevo hábito"
-            required
-          />
-          <!-- ¿Cuándo toca? -->
-          <select id="habito-frecuencia">
-            <option value="diario">Todos los días</option>
-            <option value="dias">Días concretos</option>
-            <option value="semanal">Unas veces por semana</option>
-          </select>
-          <!-- Días concretos: el value es el número de getDay() (0 = domingo) -->
-          <fieldset id="habito-dias" class="habito-dias" hidden>
-            <legend>¿Qué días?</legend>
-            <label><input type="checkbox" value="1" />L</label>
-            <label><input type="checkbox" value="2" />M</label>
-            <label><input type="checkbox" value="3" />X</label>
-            <label><input type="checkbox" value="4" />J</label>
-            <label><input type="checkbox" value="5" />V</label>
-            <label><input type="checkbox" value="6" />S</label>
-            <label><input type="checkbox" value="0" />D</label>
-          </fieldset>
-          <!-- Unas veces por semana: cuántas (de 1 a 6; 7 sería «todos los días») -->
-          <fieldset id="habito-semanal" class="habito-semanal" hidden>
-            <legend>¿Cuántas veces por semana?</legend>
-            <input
-              type="number"
-              id="habito-veces"
-              min="1"
-              max="6"
-              inputmode="numeric"
-              value="3"
-            />
-          </fieldset>
-          <!-- ¿Cómo se cumple? -->
-          <select id="habito-medida">
-            <option value="casilla">Se marca como hecho</option>
-            <option value="cantidad">Se cumple con una cantidad</option>
-            <option value="abstencion">
-              Es algo que quiero dejar (templanza)
-            </option>
-          </select>
-          <!-- Cantidad: al menos o como mucho, objetivo de cada día y unidad -->
-          <fieldset id="habito-cantidad" class="habito-cantidad" hidden>
-            <legend>Objetivo de cada día</legend>
-            <select id="habito-limite">
-              <option value="minimo">Al menos</option>
-              <option value="maximo">Como mucho</option>
-            </select>
-            <input
-              type="number"
-              id="habito-objetivo"
-              min="1"
-              inputmode="numeric"
-              placeholder="10000"
-            />
-            <input
-              type="text"
-              id="habito-unidad"
-              placeholder="pasos, páginas, minutos…"
-            />
-          </fieldset>
-          <!-- Templanza: desde qué día se cuenta -->
-          <fieldset id="habito-templanza" class="habito-templanza" hidden>
-            <legend>¿Desde cuándo lo cuento?</legend>
-            <input type="date" id="habito-inicio" />
-          </fieldset>
-          <button type="submit">Añadir hábito</button>
-        </form>
+        <!-- Hábito nuevo: abre la conversación con Méntor -->
+        <button id="boton-nuevo-habito" class="boton-nuevo" type="button">
+          + Nuevo hábito
+        </button>
 
         <!-- Semana: la rellena script.js -->
         <section class="historial">
           <h2>Semana</h2>
           <div id="semana" class="semana"></div>
+        </section>
+
+        <!-- Constancia de los últimos 30 días: la rellena script.js -->
+        <section id="seccion-constancia" class="constancia">
+          <h2>Constancia</h2>
+          <p class="constancia-intro">Últimos 30 días</p>
+          <ul id="lista-constancia" class="lista-constancia"></ul>
         </section>
       </div>
 
@@ -278,44 +387,16 @@
 
       <!-- ============================================================
            PANTALLA METAS
-           Metas pendientes, formulario de meta nueva y Laureles (metas cumplidas).
+           Metas pendientes, botón de meta nueva y Laureles (metas cumplidas).
            ============================================================ -->
       <div class="pantalla" data-pantalla="metas" hidden>
         <section class="metas">
           <!-- Metas pendientes: las crea script.js -->
           <div id="lista-metas"></div>
-          <!-- Formulario de meta nueva -->
-          <form id="form-meta" class="form-meta">
-            <h3>Agregar meta</h3>
-
-            <input
-              type="text"
-              id="meta-titulo"
-              placeholder="¿Qué quieres conseguir?"
-              required
-            />
-
-            <select id="meta-area">
-              <option>Hábitos</option>
-              <option>Salud</option>
-              <option>Carrera</option>
-              <option>Finanzas</option>
-              <option>Hobbies</option>
-              <option>Social</option>
-            </select>
-
-            <select id="meta-habito">
-              <option value="">Sin hábito vinculado</option>
-            </select>
-
-            <textarea
-              id="meta-pasos"
-              placeholder="Escribe los pasos para conseguir tu meta (un paso por cada línea)"
-              required
-            ></textarea>
-
-            <button type="submit">Agregar meta</button>
-          </form>
+          <!-- Meta nueva: abre la ventana de meta -->
+          <button id="boton-nueva-meta" class="boton-nuevo" type="button">
+            + Nueva meta
+          </button>
 
           <!-- Laureles: metas cumplidas (se oculta si no hay ninguna) -->
           <section id="seccion-cumplidas" class="cumplidas">
@@ -343,9 +424,165 @@
               <input type="file" id="archivo-importar" accept=".json" hidden />
             </label>
           </div>
+          <!-- «Última copia: hace N días»: lo pone script.js -->
+          <p id="ultima-copia" class="ultima-copia"></p>
         </footer>
       </div>
+
+      <!-- ============================================================
+           PANTALLA MÉNTOR
+           Conversación para crear un hábito. Méntor pregunta y yo
+           respondo; script.js dibuja las burbujas. No tiene botón en la
+           barra de abajo: se abre con «Nuevo hábito».
+           ============================================================ -->
+      <div class="pantalla" data-pantalla="mentor" hidden>
+        <div id="conversacion" class="conversacion"></div>
+      </div>
     </main>
+
+    <!-- ============================================================
+         VENTANA DE EDITAR HÁBITO
+         Un <dialog>: una ventana que se abre encima de la pantalla.
+         script.js la rellena con el hábito que se toca.
+         ============================================================ -->
+    <dialog id="ventana-habito" class="ventana">
+      <form id="form-habito" class="form-habito">
+        <!-- autofocus en el título: al abrir, el foco va aquí y no al nombre
+             (en el iPhone, eso abriría el teclado sin querer) -->
+        <h2 tabindex="-1" autofocus>Editar hábito</h2>
+        <label class="etiqueta-campo" for="habito-nombre">Nombre</label>
+        <input type="text" id="habito-nombre" maxlength="40" required />
+        <!-- Icono: los diez botones los pone script.js -->
+        <fieldset id="habito-icono" class="selector-iconos">
+          <legend>Símbolo</legend>
+        </fieldset>
+        <!-- ¿Cuándo toca? -->
+        <label class="etiqueta-campo" for="habito-frecuencia"
+          >Cuándo toca</label
+        >
+        <select id="habito-frecuencia">
+          <option value="diario">Todos los días</option>
+          <option value="dias">Días concretos</option>
+          <option value="semanal">Unas veces por semana</option>
+        </select>
+        <!-- Días concretos: el value es el número de getDay() (0 = domingo) -->
+        <fieldset id="habito-dias" class="habito-dias" hidden>
+          <legend>¿Qué días?</legend>
+          <label><input type="checkbox" value="1" />L</label>
+          <label><input type="checkbox" value="2" />M</label>
+          <label><input type="checkbox" value="3" />X</label>
+          <label><input type="checkbox" value="4" />J</label>
+          <label><input type="checkbox" value="5" />V</label>
+          <label><input type="checkbox" value="6" />S</label>
+          <label><input type="checkbox" value="0" />D</label>
+        </fieldset>
+        <!-- Unas veces por semana: cuántas (de 1 a 6; 7 sería «todos los días») -->
+        <fieldset id="habito-semanal" class="habito-semanal" hidden>
+          <legend>¿Cuántas veces por semana?</legend>
+          <input
+            type="number"
+            id="habito-veces"
+            min="1"
+            max="6"
+            inputmode="numeric"
+          />
+        </fieldset>
+        <!-- Cantidad: al menos o como mucho, objetivo de cada día y unidad -->
+        <fieldset id="habito-cantidad" class="habito-cantidad" hidden>
+          <legend>Objetivo de cada día</legend>
+          <select id="habito-limite">
+            <option value="minimo">Al menos</option>
+            <option value="maximo">Como mucho</option>
+          </select>
+          <input
+            type="number"
+            id="habito-objetivo"
+            min="1"
+            inputmode="numeric"
+          />
+          <input
+            type="text"
+            id="habito-unidad"
+            placeholder="pasos, páginas, minutos…"
+          />
+        </fieldset>
+        <!-- Templanza: desde qué día se cuenta -->
+        <fieldset id="habito-templanza" class="habito-templanza" hidden>
+          <legend>¿Desde cuándo lo cuento?</legend>
+          <input type="date" id="habito-inicio" />
+        </fieldset>
+        <!-- Comodín: un día libre por semana que no rompe la racha -->
+        <label id="caja-comodin" class="habito-comodin">
+          <input type="checkbox" id="habito-comodin" />
+          Comodín: un día libre por semana que no rompe la racha
+        </label>
+        <p class="ventana-nota">
+          Los cambios cuentan desde hoy: los días pasados y la racha se quedan
+          como estaban.
+        </p>
+        <div class="ventana-botones">
+          <button type="button" id="habito-eliminar" class="boton-eliminar">
+            Eliminar
+          </button>
+          <button type="button" id="habito-cancelar" class="boton-secundario">
+            Cancelar
+          </button>
+          <button type="submit" class="boton-principal">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============================================================
+         VENTANA DE META
+         La misma ventana sirve para crear una meta y para editarla.
+         ============================================================ -->
+    <dialog id="ventana-meta" class="ventana">
+      <form id="form-meta" class="form-meta">
+        <h2 id="ventana-meta-titulo" tabindex="-1" autofocus>Nueva meta</h2>
+
+        <input
+          type="text"
+          id="meta-titulo"
+          placeholder="¿Qué quieres conseguir?"
+          required
+        />
+
+        <select id="meta-area">
+          <option>Hábitos</option>
+          <option>Salud</option>
+          <option>Carrera</option>
+          <option>Finanzas</option>
+          <option>Hobbies</option>
+          <option>Social</option>
+        </select>
+
+        <select id="meta-habito">
+          <option value="">Sin hábito vinculado</option>
+        </select>
+
+        <textarea
+          id="meta-pasos"
+          placeholder="Escribe los pasos para conseguir tu meta (un paso por cada línea)"
+          required
+        ></textarea>
+
+        <p id="meta-nota" class="ventana-nota">
+          Los pasos que dejes igual conservan si ya estaban hechos.
+        </p>
+
+        <div class="ventana-botones">
+          <button type="button" id="meta-eliminar" class="boton-eliminar">
+            Eliminar
+          </button>
+          <button type="button" id="meta-cancelar" class="boton-secundario">
+            Cancelar
+          </button>
+          <button type="submit" id="meta-guardar" class="boton-principal">
+            Agregar meta
+          </button>
+        </div>
+      </form>
+    </dialog>
 
     <!-- ============================================================
          NAVEGACIÓN INFERIOR

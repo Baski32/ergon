@@ -8,17 +8,21 @@
     2. Base de la página
     3. Barra superior
     4. Títulos de sección
-    5. Hoy · Cita del día
-    6. Hoy · Lista de hábitos
-    7. Hoy · Llama de Prometeo
-    8. Hoy · Formulario de hábito nuevo
-    9. Hoy · Semana
-   10. Mosaico del mes
-   11. Metas · Tarjetas
-   12. Metas · Formulario de meta nueva
-   13. Metas · Laureles (metas cumplidas)
-   14. Archivo · Copia de seguridad
-   15. Navegación inferior
+    5. Botones
+    6. Iconos
+    7. Hoy · Cita del día
+    8. Hoy · Aviso de copia
+    9. Hoy · Lista de hábitos
+   10. Hoy · Llama de Prometeo
+   11. Hoy · Semana
+   12. Hoy · Constancia
+   13. Ventanas (editar hábito y meta)
+   14. Méntor · Conversación
+   15. Mosaico del mes
+   16. Metas · Tarjetas
+   17. Metas · Laureles (metas cumplidas)
+   18. Archivo · Copia de seguridad
+   19. Navegación inferior
    ========================================================================== */
 
 /* ==========================================================================
@@ -129,10 +133,11 @@ body {
 
 /* ==========================================================================
    4. TÍTULOS DE SECCIÓN
-   Semana y Laureles comparten el mismo estilo.
+   Semana, Constancia y Laureles comparten el mismo estilo.
    ========================================================================== */
 
 .historial h2,
+.constancia h2,
 .metas h2 {
   font-family: "Cinzel", serif;
   font-size: 1.1rem;
@@ -143,7 +148,191 @@ body {
 }
 
 /* ==========================================================================
-   5. HOY · CITA DEL DÍA
+   5. BOTONES
+   Los que se repiten en varias pantallas y ventanas.
+   ========================================================================== */
+
+/* Botón principal (Guardar, Crear hábito, Enviar…): terracota */
+.boton-principal {
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--marmol);
+  background-color: var(--terracota);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.boton-principal:hover {
+  opacity: 0.85;
+}
+
+/* Botón secundario (Cancelar): solo el marco */
+.boton-secundario {
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--bronce);
+  background: none;
+  border: 1px solid var(--bronce);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.boton-secundario:hover {
+  background-color: var(--piedra);
+}
+
+/* Botón de eliminar: texto terracota subrayado, sin marco */
+.boton-eliminar {
+  padding: 10px 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--terracota);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* «+ Nuevo hábito» y «+ Nueva meta»: todo el ancho y marco discontinuo */
+.boton-nuevo {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  font-family: "Cinzel", serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--terracota);
+  background: none;
+  border: 1px dashed var(--bronce);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.boton-nuevo:hover {
+  background-color: rgba(164, 69, 44, 0.06);
+}
+
+/* El lápiz para editar hábitos y metas: discreto hasta pasar por encima.
+   align-self: stretch lo estira a todo el alto de la ficha (más fácil de
+   tocar con el dedo) */
+.boton-editar {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 12px 0 6px;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.boton-editar svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.boton-editar:hover {
+  opacity: 1;
+  color: var(--terracota);
+}
+
+/* ==========================================================================
+   6. ICONOS
+   Los diez iconos clásicos de los hábitos, en bronce, y el selector para
+   elegirlos (en la ventana de editar y en Méntor).
+   ========================================================================== */
+
+/* Un icono: líneas finas del color del texto (currentColor). Las partes
+   rellenas (hojas, ojos del búho…) llevan fill="currentColor" en index.html */
+.icono {
+  display: inline-flex;
+  flex: none;
+  color: var(--bronce);
+}
+
+.icono svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* El selector: cinco columnas, dos filas. Sin el borde del fieldset */
+.selector-iconos {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.selector-iconos legend {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: var(--bronce);
+}
+
+/* Cada opción: el icono con su nombre debajo */
+.icono-opcion {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0 6px;
+  font-size: 0.7rem;
+  color: var(--bronce);
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.icono-opcion .icono svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* El botón redondo de verdad, invisible: solo se ve la opción */
+.icono-opcion input {
+  position: absolute;
+  opacity: 0;
+}
+
+/* La elegida: en terracota */
+.icono-opcion:has(input:checked) {
+  color: var(--terracota);
+  background-color: rgba(164, 69, 44, 0.07);
+  border-color: var(--terracota);
+}
+
+.icono-opcion:has(input:checked) .icono {
+  color: var(--terracota);
+}
+
+/* Con el teclado del PC: un contorno en la opción en la que se está */
+.icono-opcion:has(input:focus-visible) {
+  outline: 2px solid var(--bronce);
+  outline-offset: 1px;
+}
+
+/* ==========================================================================
+   7. HOY · CITA DEL DÍA
    ========================================================================== */
 
 /* La cita, en cursiva y con una línea de bronce debajo (la de arriba ya la
@@ -170,9 +359,51 @@ body {
 }
 
 /* ==========================================================================
-   6. HOY · LISTA DE HÁBITOS
+   8. HOY · AVISO DE COPIA
+   Sale arriba si hace 7 días o más que no se descarga una copia.
+   ========================================================================== */
+
+/* El aviso, en terracota suave, con el texto y el botón en fila */
+.aviso-copia {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  background-color: #f6e9e4;
+  border: 1px solid var(--terracota);
+  border-radius: 4px;
+}
+
+/* Hace falta porque display: flex ganaría al atributo hidden */
+.aviso-copia[hidden] {
+  display: none;
+}
+
+.aviso-copia p {
+  flex: 1;
+  margin: 0;
+}
+
+/* «Hacer copia ahora» */
+.aviso-copia button {
+  flex: none;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--marmol);
+  background-color: var(--terracota);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   9. HOY · LISTA DE HÁBITOS
    Una ficha por hábito. Los de casilla llevan la casilla a la izquierda; los
-   de cantidad, el campo a la derecha.
+   de cantidad, el campo a la derecha. El icono va justo antes del nombre y
+   el lápiz de editar, al final.
    ========================================================================== */
 
 /* La lista es una columna flexible: así se puede usar «order» */
@@ -212,18 +443,46 @@ body {
   background-color: #f6e9e4;
 }
 
-/* Contenido de la ficha en fila. flex: 1 hace que ocupe todo menos el botón × */
+/* El icono toma el color de la ficha: oliva si está cumplida, terracota si
+   ya no tiene remedio */
+.lista-habitos li.hecho .icono {
+  color: var(--oliva);
+}
+
+.lista-habitos li.fallado .icono {
+  color: var(--terracota);
+}
+
+/* Ficha recién creada por Méntor: un brillo dorado que se apaga */
+.lista-habitos li.recien-creado {
+  animation: brillar 1.6s ease-out;
+}
+
+@keyframes brillar {
+  from {
+    box-shadow: 0 0 0 3px var(--oro);
+  }
+  to {
+    box-shadow: 0 0 0 3px rgba(168, 135, 58, 0);
+  }
+}
+
+/* Contenido de la ficha en fila. flex: 1 hace que ocupe todo menos los
+   botones de la derecha; min-width: 0 le deja estrecharse para que quepan */
 .lista-habitos label {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 16px 12px 16px 16px;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
 }
 
-/* Casilla de los hábitos que se marcan como hechos */
+/* Casilla de los hábitos que se marcan como hechos. flex: none: que no
+   encoja cuando la ficha va justa de sitio */
 .lista-habitos input[type="checkbox"] {
+  flex: none;
   width: 22px;
   height: 22px;
   accent-color: var(--oliva);
@@ -242,8 +501,15 @@ body {
   margin-left: auto;
   font-size: 0.85rem;
   font-variant: small-caps;
+  text-align: right;
   color: var(--bronce);
   white-space: nowrap;
+}
+
+/* En los de templanza, con el botón «Recaída» al lado, va justa de sitio:
+   ahí la racha puede pasar a dos líneas */
+.lista-habitos li:has(.habito-recaida) .racha {
+  white-space: normal;
 }
 
 /* Campo de los hábitos por cantidad: sin cuadro, solo una línea baja.
@@ -290,22 +556,6 @@ body {
   cursor: pointer;
 }
 
-/* Botón × para borrar un hábito: discreto hasta pasar por encima */
-.habito-eliminar {
-  padding: 0 14px;
-  background: none;
-  border: none;
-  font-size: 1.3rem;
-  color: var(--bronce);
-  opacity: 0.5;
-  cursor: pointer;
-}
-
-.habito-eliminar:hover {
-  opacity: 1;
-  color: var(--terracota);
-}
-
 /* Mensaje cuando aún no hay ningún hábito */
 .sin-habitos {
   justify-content: center;
@@ -314,8 +564,25 @@ body {
   color: var(--bronce);
 }
 
+/* En móviles estrechos (como el iPhone SE), menos relleno, la racha puede ir
+   en dos líneas y el campo de cantidad es algo más corto: así caben el
+   icono, el nombre, la racha y el lápiz */
+@media (max-width: 380px) {
+  .lista-habitos label {
+    padding: 14px 8px 14px 12px;
+  }
+
+  .racha {
+    white-space: normal;
+  }
+
+  .habito-campo {
+    width: 56px;
+  }
+}
+
 /* ==========================================================================
-   7. HOY · LLAMA DE PROMETEO
+   10. HOY · LLAMA DE PROMETEO
    Aparece en la racha a partir de 7 días seguidos; a partir de 30, más grande
    y con brillo dorado.
    ========================================================================== */
@@ -355,27 +622,202 @@ body {
   }
 }
 
-/* Si el móvil tiene activado «reducir movimiento», la llama se queda quieta */
+/* Si el móvil tiene activado «reducir movimiento», la llama se queda quieta
+   (y tampoco brilla la ficha nueva) */
 @media (prefers-reduced-motion: reduce) {
-  .llama svg {
+  .llama svg,
+  .lista-habitos li.recien-creado {
     animation: none;
   }
 }
 
 /* ==========================================================================
-   8. HOY · FORMULARIO DE HÁBITO NUEVO
-   Nombre, cuándo toca (todos los días o días concretos) y cómo se cumple
-   (casilla o cantidad).
+   11. HOY · SEMANA
+   Los siete días de esta semana, con el símbolo de su dios.
    ========================================================================== */
 
-/* Una pieza debajo de otra */
-.form-habito {
-  display: flex;
-  gap: 8px;
-  flex-direction: column;
+/* Siete columnas iguales */
+.semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
 }
 
-/* Campos: nombre, desplegables, objetivo y unidad */
+/* Cada día: símbolo, nombre y cumplidos, uno debajo de otro */
+.dia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+/* Símbolo del dios (☽ ♂ ☿ ♃ ♀ ♄ ☉). Su color se pone desde script.js */
+.simbolo-dia {
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols", "DejaVu Sans", serif;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--oro);
+}
+
+.nombre-dia {
+  font-variant: small-caps;
+  color: var(--bronce);
+}
+
+/* Día con todo cumplido: verde.
+   Va antes que .dia.hoy para que hoy mantenga su borde terracota */
+.dia.cumplido {
+  background-color: #eef0e4;
+  border-color: var(--oliva);
+}
+
+.dia.hoy {
+  border-color: var(--terracota);
+}
+
+.dia.futuro {
+  opacity: 0.5;
+}
+
+/* ==========================================================================
+   12. HOY · CONSTANCIA
+   Una fila por hábito: icono, nombre, «26 de 30 días» y una barra.
+   ========================================================================== */
+
+/* «Últimos 30 días», debajo del título */
+.constancia-intro {
+  margin-top: -8px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--bronce);
+}
+
+.lista-constancia {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada fila es una rejilla: el icono ocupa las dos filas; arriba, el nombre
+   y la cifra; abajo, la barra */
+.lista-constancia li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--piedra);
+}
+
+.lista-constancia .icono {
+  grid-row: span 2;
+}
+
+/* El nombre, en una línea (si no cabe, acaba en «…») */
+.constancia-nombre {
+  overflow: hidden;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* «26 de 30 días» */
+.constancia-cifra {
+  font-size: 0.85rem;
+  font-variant: small-caps;
+  white-space: nowrap;
+  color: var(--bronce);
+}
+
+/* La barra (la misma de las metas), más fina y de lado a lado */
+.lista-constancia .barra {
+  grid-column: 2 / 4;
+  height: 6px;
+}
+
+/* ==========================================================================
+   13. VENTANAS (EDITAR HÁBITO Y META)
+   Las ventanas <dialog> que se abren encima de la pantalla: editar un
+   hábito y crear o editar una meta. Los círculos de los días también se
+   usan en Méntor.
+   ========================================================================== */
+
+/* La ventana: mármol con marco de bronce, centrada encima de todo. Si no
+   cabe en la pantalla, se puede bajar dentro de ella (max-height) */
+.ventana {
+  width: calc(100% - 32px);
+  max-width: 460px;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  color: var(--tinta);
+  background-color: var(--marmol);
+  border: 1px solid var(--bronce);
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(43, 37, 34, 0.3);
+}
+
+/* El fondo oscuro que queda detrás de la ventana */
+.ventana::backdrop {
+  background-color: rgba(43, 37, 34, 0.45);
+}
+
+/* Título de la ventana: «Editar hábito», «Nueva meta»… Al abrir la ventana
+   recibe el foco (autofocus): outline: none quita el contorno que saldría */
+.ventana h2 {
+  margin: 0 0 4px;
+  font-family: "Cinzel", serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: var(--terracota);
+  outline: none;
+}
+
+/* Los dos formularios: una pieza debajo de otra */
+.form-habito,
+.form-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+}
+
+/* Nombre de un campo («Nombre», «Cuándo toca»), pegado a su campo */
+.etiqueta-campo {
+  margin-bottom: -4px;
+  font-size: 0.9rem;
+  color: var(--bronce);
+}
+
+/* Nota pequeña en cursiva («Los cambios cuentan desde hoy…») */
+.ventana-nota {
+  margin: 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--bronce);
+}
+
+/* Botones de abajo: «Eliminar» a la izquierda; «Cancelar» y «Guardar», a la
+   derecha (margin-left: auto empuja «Cancelar» y lo que va detrás) */
+.ventana-botones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ventana-botones .boton-secundario {
+  margin-left: auto;
+}
+
+/* Campos del hábito: nombre, desplegables, objetivo, unidad y fecha */
 .form-habito input[type="text"],
 .form-habito input[type="number"],
 .form-habito select,
@@ -397,20 +839,9 @@ body {
   border-color: var(--bronce);
 }
 
-/* Botón «Añadir hábito» */
-.form-habito button {
-  padding: 10px 16px;
-  font-family: inherit;
-  font-size: 1rem;
-  color: var(--marmol);
-  background-color: var(--terracota);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.form-habito button:hover {
-  opacity: 0.85;
+/* El desplegable de frecuencia, apagado en los de «unas veces por semana» */
+.form-habito select:disabled {
+  opacity: 0.6;
 }
 
 /* Caja de los días (L M X J V S D): sin el borde que trae el fieldset */
@@ -498,61 +929,335 @@ body {
   border: none;
 }
 
-/* ==========================================================================
-   9. HOY · SEMANA
-   Los siete días de esta semana, con el símbolo de su dios.
-   ========================================================================== */
-
-/* Siete columnas iguales */
-.semana {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+/* Comodín: la casilla y su explicación en fila */
+.habito-comodin {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
 
-/* Cada día: símbolo, nombre y cumplidos, uno debajo de otro */
-.dia {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 0;
+.habito-comodin[hidden] {
+  display: none;
+}
+
+.habito-comodin input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--oliva);
+}
+
+/* Campos de la meta: título, área, hábito y pasos */
+.form-meta input,
+.form-meta select,
+.form-meta textarea {
+  padding: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--tinta);
   background-color: #fffdf8;
   border: 1px solid var(--piedra);
   border-radius: 4px;
-  font-size: 0.85rem;
 }
 
-/* Símbolo del dios (☽ ♂ ☿ ♃ ♀ ♄ ☉). Su color se pone desde script.js */
-.simbolo-dia {
-  font-family: "Segoe UI Symbol", "Noto Sans Symbols", "DejaVu Sans", serif;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--oro);
+/* La caja de los pasos: más alta, y solo se estira hacia abajo */
+.form-meta textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
-.nombre-dia {
-  font-variant: small-caps;
-  color: var(--bronce);
-}
-
-/* Día con todo cumplido: verde.
-   Va antes que .dia.hoy para que hoy mantenga su borde terracota */
-.dia.cumplido {
-  background-color: #eef0e4;
-  border-color: var(--oliva);
-}
-
-.dia.hoy {
-  border-color: var(--terracota);
-}
-
-.dia.futuro {
-  opacity: 0.5;
+.form-meta input:focus,
+.form-meta select:focus,
+.form-meta textarea:focus {
+  outline: none;
+  border-color: var(--bronce);
 }
 
 /* ==========================================================================
-   10. MOSAICO DEL MES
+   14. MÉNTOR · CONVERSACIÓN
+   Burbujas como en un chat: Méntor a la izquierda, mis respuestas a la
+   derecha y, debajo de la última pregunta, la forma de responder.
+   ========================================================================== */
+
+/* La conversación: una columna de burbujas */
+.conversacion {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 24px;
+}
+
+/* Cada burbuja: aparece subiendo un poco (animación «aparecer») */
+.burbuja {
+  max-width: 82%;
+  margin: 0;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.35;
+  border-radius: 16px;
+  animation: aparecer 0.2s ease-out;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Méntor: a la izquierda, en mármol blanco. margin-left deja sitio a su
+   inicial griega (Μ, «mi»), que se dibuja con ::before */
+.burbuja-mentor {
+  position: relative;
+  align-self: flex-start;
+  margin-left: 38px;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-bottom-left-radius: 4px;
+}
+
+.burbuja-mentor::before {
+  content: "Μ";
+  position: absolute;
+  left: -38px;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "EB Garamond", serif;
+  font-size: 1rem;
+  color: var(--marmol);
+  background-color: var(--bronce);
+  border-radius: 50%;
+}
+
+/* Si Méntor dice dos cosas seguidas, su inicial solo sale en la última */
+.burbuja-mentor:has(+ .burbuja-mentor)::before {
+  visibility: hidden;
+}
+
+/* Mis respuestas: a la derecha, en terracota. Son botones: al tocarlas se
+   pueden cambiar */
+.burbuja-mia {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  color: var(--marmol);
+  background-color: var(--terracota);
+  border: none;
+  border-bottom-right-radius: 4px;
+  cursor: pointer;
+}
+
+.burbuja-mia:hover {
+  opacity: 0.9;
+}
+
+.burbuja-mia .icono {
+  color: var(--marmol);
+}
+
+/* «Méntor está escribiendo…»: tres puntos que suben y bajan */
+.escribiendo {
+  display: flex;
+  gap: 4px;
+  padding: 15px 16px;
+}
+
+.escribiendo span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--bronce);
+  animation: punto 0.5s ease-in-out infinite alternate;
+}
+
+.escribiendo span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.escribiendo span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes punto {
+  from {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Mi zona para responder: a la derecha, como mis burbujas */
+.mentor-respuesta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Días, iconos y resumen ocupan todo el ancho */
+.mentor-respuesta .habito-dias,
+.mentor-respuesta .selector-iconos,
+.mentor-resumen {
+  width: 100%;
+}
+
+/* Botones de las opciones: píldoras con borde terracota. La que ya estaba
+   elegida (al cambiar una respuesta), rellena */
+.mentor-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.mentor-opciones button {
+  padding: 9px 14px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--terracota);
+  background-color: #fffdf8;
+  border: 1px solid var(--terracota);
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+.mentor-opciones button:hover,
+.mentor-opciones button.elegida {
+  color: var(--marmol);
+  background-color: var(--terracota);
+}
+
+/* La burbuja para escribir: el campo y «Enviar» en fila. font-size de
+   1rem (16px) para que el iPhone no haga zoom al tocarla */
+.mentor-escribir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mentor-escribir input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--tinta);
+  background-color: #fffdf8;
+  border: 1px solid var(--bronce);
+  border-radius: 18px;
+}
+
+.mentor-escribir input:focus {
+  outline: none;
+  border-color: var(--terracota);
+}
+
+.mentor-escribir .boton-principal {
+  border-radius: 18px;
+}
+
+/* La unidad detrás del número: «10000 pasos» */
+.mentor-unidad {
+  font-size: 0.95rem;
+  color: var(--bronce);
+}
+
+/* El fallo («Necesito un número mayor que 0.»). Vacío, no ocupa sitio */
+.mentor-error {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--terracota);
+}
+
+.mentor-error:empty {
+  display: none;
+}
+
+/* «‹ Atrás» y «Salir»: texto pequeño en bronce */
+.mentor-acciones {
+  display: flex;
+  gap: 18px;
+}
+
+.mentor-acciones button {
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.mentor-acciones button:hover {
+  color: var(--terracota);
+}
+
+/* El resumen final: una tarjeta con doble marco dorado, como los laureles.
+   box-sizing: border-box hace que el relleno y el borde quepan dentro de su
+   width: 100% (si no, se saldría por la izquierda) */
+.mentor-resumen {
+  box-sizing: border-box;
+  padding: 14px 16px;
+  background-color: #fffdf8;
+  border: 1px solid var(--oro);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 3px #fffdf8,
+    inset 0 0 0 4px var(--oro);
+}
+
+.mentor-resumen p {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  color: var(--bronce);
+}
+
+/* El nombre del hábito, con su icono, arriba */
+.mentor-resumen .mentor-resumen-nombre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-family: "Cinzel", serif;
+  font-size: 1.05rem;
+  color: var(--tinta);
+}
+
+/* «Crear hábito», de lado a lado */
+.mentor-resumen + .boton-principal {
+  align-self: stretch;
+}
+
+/* Con «reducir movimiento», las burbujas y los puntos no se mueven */
+@media (prefers-reduced-motion: reduce) {
+  .burbuja,
+  .escribiendo span {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   15. MOSAICO DEL MES
    Un pergamino que ocupa la pantalla, con una tesela por día. Su color
    depende de lo cumplido. Al cambiar de mes, la hoja se enrolla y se
    desenrolla (la animación está en script.js, bloque 7).
@@ -733,11 +1438,11 @@ body {
 }
 
 /* ==========================================================================
-   11. METAS · TARJETAS
+   16. METAS · TARJETAS
    Cada meta pendiente: área, título, barra de progreso, hábito y pasos.
    ========================================================================== */
 
-/* La tarjeta. position: relative sirve para colocar el botón × en su esquina */
+/* La tarjeta. position: relative sirve para colocar el lápiz en su esquina */
 .meta {
   position: relative;
   background-color: #fffdf8;
@@ -755,16 +1460,12 @@ body {
   color: var(--bronce);
 }
 
-/* Título de cada meta y de «Agregar meta» */
-.meta h3,
-.form-meta h3 {
+/* Título de cada meta. padding-right deja sitio al lápiz */
+.meta h3 {
   font-family: "Cinzel", serif;
   font-size: 1.05rem;
   margin: 4px 0 12px;
-}
-
-.meta h3 {
-  padding-right: 24px; /* Espacio para el botón de eliminar */
+  padding-right: 24px;
 }
 
 /* Barra de progreso: el fondo es de piedra y el relleno, oliva */
@@ -827,21 +1528,13 @@ body {
   color: var(--bronce);
 }
 
-/* Botón × para borrar una meta, en la esquina de la tarjeta */
-.meta-eliminar {
+/* El lápiz de editar, en la esquina de la tarjeta (el resto de su estilo
+   está en el bloque 5, Botones) */
+.meta-editar {
   position: absolute;
-  top: 6px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  line-height: 1;
-  color: var(--bronce);
-  cursor: pointer;
-}
-
-.meta-eliminar:hover {
-  color: var(--terracota);
+  top: 4px;
+  right: 2px;
+  padding: 8px 10px;
 }
 
 /* Mensaje cuando no hay metas (o están todas cumplidas) */
@@ -851,67 +1544,15 @@ body {
   color: var(--bronce);
 }
 
-/* ==========================================================================
-   12. METAS · FORMULARIO DE META NUEVA
-   ========================================================================== */
-
-/* El formulario, dentro de un marco de línea discontinua */
-.form-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 24px;
-  padding: 16px;
-  border: 1px dashed var(--bronce);
-  border-radius: 4px;
-}
-
-/* Campos: título, área, hábito y pasos */
-.form-meta input,
-.form-meta select,
-.form-meta textarea {
-  padding: 10px;
-  font-family: inherit;
-  font-size: 1rem;
-  color: var(--tinta);
-  background-color: #fffdf8;
-  border: 1px solid var(--piedra);
-  border-radius: 4px;
-}
-
-/* La caja de los pasos: más alta, y solo se estira hacia abajo */
-.form-meta textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.form-meta input:focus,
-.form-meta select:focus,
-.form-meta textarea:focus {
-  outline: none;
-  border-color: var(--bronce);
-}
-
-/* Botón «Agregar meta» */
-.form-meta button {
-  padding: 10px;
-  font-family: inherit;
-  letter-spacing: 0.1em;
-  color: var(--marmol);
-  background-color: var(--terracota);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.form-meta button:hover {
-  opacity: 0.85;
+/* «+ Nueva meta», separado de las tarjetas */
+.metas .boton-nuevo {
+  margin-top: 16px;
 }
 
 /* ==========================================================================
-   13. METAS · LAURELES (METAS CUMPLIDAS)
-   Las metas cumplidas cambian de aspecto: marco de oro, corona de laurel y
-   los pasos escondidos en «Ver los pasos».
+   17. METAS · LAURELES (METAS CUMPLIDAS)
+   Las metas cumplidas cambian de aspecto: marco de oro, corona de laurel,
+   el día de la victoria y los pasos escondidos en «Ver los pasos».
    ========================================================================== */
 
 /* «Metas cumplidas», debajo del título «Laureles» */
@@ -939,6 +1580,15 @@ body {
   height: 72px;
   color: var(--oro);
   fill: var(--oro);
+}
+
+/* El día de la victoria, bajo la corona, en versalitas doradas */
+.meta-victoria {
+  margin: -4px 0 6px;
+  font-size: 0.85rem;
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  color: var(--oro);
 }
 
 .meta.cumplida h3 {
@@ -970,7 +1620,7 @@ body {
 }
 
 /* ==========================================================================
-   14. ARCHIVO · COPIA DE SEGURIDAD
+   18. ARCHIVO · COPIA DE SEGURIDAD
    ========================================================================== */
 
 /* La sección de la copia, centrada */
@@ -1016,8 +1666,15 @@ body {
   background-color: var(--piedra);
 }
 
+/* «Última copia: hace N días» */
+.ultima-copia {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--bronce);
+}
+
 /* ==========================================================================
-   15. NAVEGACIÓN INFERIOR
+   19. NAVEGACIÓN INFERIOR
    La barra fija de abajo: Hoy · Mosaico · Metas · Archivo.
    ========================================================================== */
 
@@ -1054,4 +1711,10 @@ body {
   color: var(--terracota);
   font-weight: 600;
   background-color: rgba(164, 69, 44, 0.06);
+}
+
+/* Mientras se habla con Méntor, la barra se esconde (script.js pone la clase
+   «conversando» en el body) */
+body.conversando .navegacion {
+  display: none;
 }
