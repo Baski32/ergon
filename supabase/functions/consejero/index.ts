@@ -12,10 +12,11 @@
 // y la app solo habla con esta función.
 //
 // Qué hace, según la «accion» que le llega (siempre con el pase del usuario):
-//  - "hablar": recibe la conversación, comprueba que quien pregunta es un
-//              usuario de Ergon y que no ha pasado del límite de hoy, se la
-//              manda a Claude con las instrucciones del consejero y devuelve
-//              su respuesta.
+//  - "hablar": recibe la conversación (y el resumen de sus datos de Ergon,
+//              si los comparte), comprueba que quien pregunta es un usuario
+//              de Ergon y que no ha pasado del límite de hoy, se la manda a
+//              Claude con las instrucciones del consejero y devuelve su
+//              respuesta.
 //  - "uso":    cómo va el día (mensajes, límite y lo gastado) y si la clave
 //              de Claude está puesta.
 //
@@ -65,6 +66,10 @@ const maxMensajes = 20;
 
 // Letras como mucho en cada mensaje.
 const maxLetras = 2000;
+
+// Letras como mucho en el resumen de los datos (lo que pase de aquí se
+// corta: con muchos hábitos, el final).
+const maxContexto = 8000;
 
 // El día del contador, con la hora de España: se reinicia a medianoche.
 const zonaDelContador = "Europe/Madrid";
@@ -119,7 +124,9 @@ const consejeros = {
     precio: { entrada: 2, salida: 10 },
     instrucciones: `Eres Méntor, el consejero de Ergon, una app de hábitos, metas y reflexión con estética de la antigua Grecia y Roma. Tomas el nombre del amigo de Odiseo cuya figura adoptó Atenea para guiar a Telémaco: acompañas, no mandas.
 
-Hablas con la persona que usa Ergon para construir buenos hábitos, avanzar hacia sus metas y tener rumbo en la vida. Te escribe desde el móvil o desde el ordenador. Por ahora no ves sus datos de Ergon (hábitos, rachas, metas): si te hacen falta, pregúntale.
+Hablas con la persona que usa Ergon para construir buenos hábitos, avanzar hacia sus metas y tener rumbo en la vida. Te escribe desde el móvil o desde el ordenador.
+
+Sus datos: con cada mensaje te llega, al final de estas instrucciones, un resumen de sus datos de Ergon (la fecha y la hora, sus hábitos con sus rachas y cómo van hoy, sus metas, la intención del día y su última revisión semanal). Lo calcula la app, así que es fiable. Úsalo como un buen amigo que se acuerda de las cosas: no lo recites ni hagas de contable; sácalo cuando ayude (una racha que merece reconocimiento, un hábito que cuesta, una meta parada, la hora que es). Si algo no está en el resumen, o no te llega ninguno, pregúntale.
 
 Cómo hablas:
 - En español de España, tuteando, con calidez y serenidad. Frases claras, sin jerga.
@@ -336,9 +343,26 @@ function explicarFallo(estado, mensaje) {
   return "Claude no ha aceptado la petición (" + estado + ": " + mensaje + ").";
 }
 
+// Las instrucciones que recibe Claude: las del consejero y, al final, el
+// resumen de los datos (si llega).
+function instruccionesCon(consejero, contexto) {
+  if (!contexto) {
+    return (
+      consejero.instrucciones +
+      "\n\nEsta vez no te llega ningún resumen de sus datos de Ergon."
+    );
+  }
+  return (
+    consejero.instrucciones +
+    "\n\nResumen de sus datos de Ergon, ahora mismo:\n\n" +
+    contexto
+  );
+}
+
 // Manda la conversación a Claude. Devuelve { texto, entrada, salida }
 // (texto: su respuesta; entrada y salida: los tokens que cobra).
-async function preguntarAClaude(consejero, mensajes) {
+// contexto: el resumen de los datos ("" si no se comparten).
+async function preguntarAClaude(consejero, mensajes, contexto) {
   const respuesta = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -349,7 +373,7 @@ async function preguntarAClaude(consejero, mensajes) {
     body: JSON.stringify({
       model: consejero.motor,
       max_tokens: consejero.maxTokens,
-      system: consejero.instrucciones,
+      system: instruccionesCon(consejero, contexto),
       messages: mensajes,
       output_config: { effort: consejero.esfuerzo },
     }),
@@ -396,6 +420,12 @@ async function hablar(usuario, cuerpo) {
 
   const mensajes = prepararMensajes(cuerpo.mensajes);
 
+  // El resumen de los datos: texto, y no más largo de la cuenta
+  let contexto = "";
+  if (typeof cuerpo.contexto === "string") {
+    contexto = cuerpo.contexto.trim().slice(0, maxContexto);
+  }
+
   const antes = await usoDeHoy(usuario);
   if (antes.mensajes >= limiteDiario) {
     throw fallo(
@@ -406,7 +436,7 @@ async function hablar(usuario, cuerpo) {
     );
   }
 
-  const respuesta = await preguntarAClaude(consejero, mensajes);
+  const respuesta = await preguntarAClaude(consejero, mensajes, contexto);
 
   // Lo que ha costado: tokens × precio por millón
   const coste =

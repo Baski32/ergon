@@ -527,6 +527,9 @@ body {
    un botón: al tocarla se puede cambiar */
 .recordatorio {
   display: block;
+  /* border-box: el relleno y la raya dorada caben dentro del 100 % (si no,
+     la línea se sale por la derecha en el móvil) */
+  box-sizing: border-box;
   width: 100%;
   margin: 0;
   padding: 6px 12px;
@@ -1621,16 +1624,80 @@ button.recordatorio {
   cursor: default;
 }
 
-/* Cuántos mensajes van hoy, debajo del campo */
-.charla-uso {
-  margin: 8px 0 0;
-  text-align: center;
+/* Debajo del campo: cuántos mensajes van hoy · «Lo que ve Méntor» */
+.charla-pie {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 8px;
   font-size: 0.8rem;
   color: var(--bronce);
 }
 
-.charla-uso:empty {
+.charla-pie[hidden] {
   display: none;
+}
+
+/* El punto que los separa, solo si hay cuenta de mensajes */
+#charla-uso:not(:empty)::after {
+  content: " ·";
+}
+
+.charla-ve {
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.charla-ve:hover {
+  color: var(--terracota);
+}
+
+/* La ventana «Lo que ve Méntor»: la explicación, la casilla y el resumen
+   (en un cuadro que se desplaza si es largo; pre-wrap respeta sus líneas) */
+.contexto-explicacion {
+  margin: 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--bronce);
+}
+
+.contexto-compartir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.contexto-compartir input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--oliva);
+}
+
+.contexto-texto {
+  max-height: 45vh;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 4px;
+}
+
+.form-contexto .ventana-botones {
+  justify-content: flex-end;
 }
 
 /* Sin cuenta: el aviso y «Ir a Archivo», centrados */

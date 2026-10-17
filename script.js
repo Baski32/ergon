@@ -1,7 +1,7 @@
 // ==========================================================================
 // ERGON — script.js
 // Toda la lógica de la app. Los datos se guardan en este dispositivo y, con
-// la cuenta abierta, también en la nube (Supabase, bloques 21 a 25).
+// la cuenta abierta, también en la nube (Supabase, bloques 21 a 26).
 //
 // ÍNDICE
 //  1. Datos guardados
@@ -29,9 +29,10 @@
 // 23. Recordatorios
 // 24. Consejeros · Conexión
 // 25. Consejeros · Charla con Méntor
-// 26. Barra superior y navegación
-// 27. App instalable (service worker)
-// 28. Inicio
+// 26. Consejeros · Lo que ven de mí
+// 27. Barra superior y navegación
+// 28. App instalable (service worker)
+// 29. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -82,6 +83,11 @@ const recordatorios =
 const conversaciones =
   JSON.parse(localStorage.getItem("ergon-conversaciones")) || {};
 
+// Ajustes de los consejeros (bloque 26): { compartir } (si ven mis datos;
+// sin ajustar, sí). Los mismos en todos los dispositivos.
+const ajustesConsejeros =
+  JSON.parse(localStorage.getItem("ergon-consejeros")) || {};
+
 // Guarda la lista de hábitos.
 function guardarHabitos() {
   localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
@@ -124,6 +130,12 @@ function guardarRevisiones(lunes) {
 function guardarRecordatorios() {
   localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
   apuntarCambio("ergon-recordatorios");
+}
+
+// Guarda los ajustes de los consejeros.
+function guardarAjustesConsejeros() {
+  localStorage.setItem("ergon-consejeros", JSON.stringify(ajustesConsejeros));
+  apuntarCambio("ergon-consejeros");
 }
 
 // Guarda las conversaciones. id: la que ha cambiado (o se ha borrado).
@@ -4084,7 +4096,8 @@ const claves = [
 
 // El día de la última copia se guarda aparte, en «ergon-ultima-copia»: no
 // va dentro de la copia porque es de este dispositivo. Los recordatorios
-// tampoco van: son ajustes, no datos (y ya los guarda la nube).
+// tampoco van, ni los de los consejeros: son ajustes, no datos (y ya los
+// guarda la nube).
 
 // Junta los datos en un archivo .json y lo descarga.
 function descargarCopia() {
@@ -4526,7 +4539,8 @@ function mostrarCuenta() {
 // 22. NUBE · SINCRONIZAR
 // Cómo se mantienen iguales los datos del móvil y del ordenador.
 // - En la nube, cada dato es una fila con su «clave»: "ergon-habitos",
-//   "ergon-metas", "ergon-perfil", "ergon-recordatorios", "ritual:2026-10-16",
+//   "ergon-metas", "ergon-perfil", "ergon-recordatorios", "ergon-consejeros",
+//   "ritual:2026-10-16",
 //   "revision:2026-10-12", "conversacion:c1760700000000" (una por
 //   conversación con Méntor) y, del registro, una fila por hábito y día:
 //   "registro:2026-10-16:h123".
@@ -4613,6 +4627,9 @@ function valorLocal(clave) {
   if (clave === "ergon-recordatorios") {
     return recordatorios;
   }
+  if (clave === "ergon-consejeros") {
+    return ajustesConsejeros;
+  }
   return null;
 }
 
@@ -4680,6 +4697,8 @@ function aplicarFila(fila) {
     reemplazarObjeto(perfil, fila.valor || {});
   } else if (fila.clave === "ergon-recordatorios") {
     reemplazarObjeto(recordatorios, fila.valor || {});
+  } else if (fila.clave === "ergon-consejeros") {
+    reemplazarObjeto(ajustesConsejeros, fila.valor || {});
   }
 }
 
@@ -4694,6 +4713,7 @@ function guardarLoBajado() {
   localStorage.setItem("ergon-revisiones", JSON.stringify(revisiones));
   localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
   localStorage.setItem("ergon-conversaciones", JSON.stringify(conversaciones));
+  localStorage.setItem("ergon-consejeros", JSON.stringify(ajustesConsejeros));
 }
 
 // Un valor convertido en texto con las propiedades en orden alfabético. La
@@ -4818,6 +4838,7 @@ function apuntarTodo() {
   pendientes["ergon-metas"] = ahora;
   pendientes["ergon-perfil"] = ahora;
   pendientes["ergon-recordatorios"] = ahora;
+  pendientes["ergon-consejeros"] = ahora;
   Object.keys(registro).forEach(function (fecha) {
     Object.keys(registro[fecha]).forEach(function (id) {
       pendientes["registro:" + fecha + ":" + id] = ahora;
@@ -4901,6 +4922,7 @@ async function primeraSincronizacion() {
   reemplazarObjeto(revisiones, {});
   reemplazarObjeto(recordatorios, {});
   reemplazarObjeto(conversaciones, {});
+  reemplazarObjeto(ajustesConsejeros, {});
 
   let ultima = filas[0].subido;
   filas.forEach(function (fila) {
@@ -5469,13 +5491,15 @@ async function llamarConsejero(cuerpo) {
 }
 
 // Manda una conversación a un consejero ("mentor") y devuelve su respuesta.
-// mensajes: [{ de: "yo" o "consejero", texto }]. Lo usa la charla con
+// mensajes: [{ de: "yo" o "consejero", texto }]. contexto: el resumen de
+// mis datos (bloque 26), o "" si no se comparten. Lo usa la charla con
 // Méntor (bloque 25).
-async function hablarConConsejero(consejero, mensajes) {
+async function hablarConConsejero(consejero, mensajes, contexto) {
   const respuesta = await llamarConsejero({
     accion: "hablar",
     consejero: consejero,
     mensajes: mensajes,
+    contexto: contexto || "",
   });
   usoConsejeros = respuesta.uso;
   return respuesta.texto;
@@ -5831,7 +5855,7 @@ function mostrarCharla() {
   document.getElementById("lista-charlas").hidden = !conCuenta || !viendoLista;
   document.getElementById("charla").hidden = !conCuenta || viendoLista;
   document.getElementById("form-charla").hidden = !conCuenta || viendoLista;
-  document.getElementById("charla-uso").hidden = !conCuenta || viendoLista;
+  document.getElementById("charla-pie").hidden = !conCuenta || viendoLista;
   if (!conCuenta) {
     return;
   }
@@ -5916,7 +5940,12 @@ async function pedirRespuesta(id) {
     const mensajes = conversaciones[id].mensajes.map(function (mensaje) {
       return { de: mensaje.de, texto: mensaje.texto };
     });
-    const texto = await hablarConConsejero("mentor", mensajes);
+    // Con el resumen de mis datos, si los comparto (bloque 26)
+    let contexto = "";
+    if (compartirDatos()) {
+      contexto = resumenParaConsejeros();
+    }
+    const texto = await hablarConConsejero("mentor", mensajes, contexto);
 
     // Puede que se haya borrado mientras tanto
     const conversacion = conversaciones[id];
@@ -6028,7 +6057,403 @@ document
   });
 
 // ==========================================================================
-// 26. BARRA SUPERIOR Y NAVEGACIÓN
+// 26. CONSEJEROS · LO QUE VEN DE MÍ
+// Para que Méntor aconseje sabiendo cómo voy, cada mensaje lleva un resumen
+// de mis datos de Ergon escrito en texto: el día y la hora, mi nombre y mi
+// edad, los hábitos (con sus reglas, su racha, su constancia y cómo van
+// hoy), las metas, los rituales de hoy y la última revisión semanal. El
+// peso no va: será cosa de Prometheus. Lo calcula la app en el momento, con
+// las mismas funciones que dibujan las pantallas. Se puede ver tal cual
+// («Lo que ve Méntor», en su pestaña) y dejar de compartir.
+// ==========================================================================
+
+// Los días de la semana en plural, por getDay() (0 = domingo): «los
+// lunes, miércoles y viernes».
+const diasEnPlural = [
+  "domingos",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábados",
+];
+
+// ¿Ven los consejeros mis datos? (si no se ha tocado el ajuste, sí)
+function compartirDatos() {
+  return ajustesConsejeros.compartir !== false;
+}
+
+// Una lista en una frase: ["a", "b", "c"] → «a, b y c».
+function enFrase(lista) {
+  if (lista.length <= 1) {
+    return lista.join("");
+  }
+  return lista.slice(0, -1).join(", ") + " y " + lista[lista.length - 1];
+}
+
+// Un número con sus puntos de miles: 10000 → «10.000».
+function numero(cantidad) {
+  return cantidad.toLocaleString("es-ES");
+}
+
+// Las reglas de un hábito en palabras: «al menos 10.000 pasos, todos los
+// días», «los lunes, miércoles y viernes, con comodín»…
+function reglasEnTexto(habito) {
+  const partes = [];
+
+  if (habito.medida === "cantidad") {
+    let limite = "al menos ";
+    if (habito.limite === "maximo") {
+      limite = "como mucho ";
+    }
+    partes.push(
+      (limite + numero(habito.objetivo) + " " + (habito.unidad || "")).trim(),
+    );
+  } else if (habito.medida === "abstencion") {
+    partes.push("templanza: algo que quiere dejar");
+  }
+
+  if (habito.frecuencia === "dias") {
+    // Ordenados empezando por el lunes
+    const dias = (habito.dias || [])
+      .slice()
+      .sort(function (a, b) {
+        return ((a + 6) % 7) - ((b + 6) % 7);
+      })
+      .map(function (dia) {
+        return diasEnPlural[dia];
+      });
+    partes.push("los " + enFrase(dias));
+  } else if (habito.frecuencia === "semanal") {
+    if (habito.vecesSemana === 1) {
+      partes.push("1 vez por semana");
+    } else {
+      partes.push(habito.vecesSemana + " veces por semana");
+    }
+  } else if (habito.medida !== "abstencion") {
+    partes.push("todos los días");
+  }
+
+  if (habito.comodin) {
+    partes.push("con comodín: un fallo a la semana no rompe la racha");
+  }
+  return partes.join(", ");
+}
+
+// Cómo va hoy un hábito: «hoy hecho», «hoy descansa», «hoy: 4.000 de
+// 10.000 pasos»…
+function hoyEnTexto(habito) {
+  const valor = habitosHoy[habito.id];
+
+  if (habito.medida === "abstencion") {
+    if (valor === "recaida") {
+      return "hoy ha recaído";
+    }
+    return "hoy, de momento, sin recaer";
+  }
+  if (habito.frecuencia !== "semanal" && !tocaEn(habito, new Date())) {
+    return "hoy descansa";
+  }
+  if (habito.medida === "cantidad") {
+    if (valor === undefined) {
+      return "hoy aún no ha apuntado nada";
+    }
+    const unidad = habito.unidad ? " " + habito.unidad : "";
+    if (habito.limite === "maximo") {
+      if (valor > habito.objetivo) {
+        return "hoy: " + numero(valor) + unidad + ", se ha pasado del máximo";
+      }
+      return "hoy: " + numero(valor) + unidad + ", dentro del máximo";
+    }
+    if (valor >= habito.objetivo) {
+      return "hoy: " + numero(valor) + unidad + ", cumplido";
+    }
+    return "hoy: " + numero(valor) + " de " + numero(habito.objetivo) + unidad;
+  }
+  if (estaCumplido(habito, habitosHoy)) {
+    return "hoy hecho";
+  }
+  return "hoy aún sin hacer";
+}
+
+// Una línea por hábito: nombre, reglas, racha, constancia y cómo va hoy.
+function habitoEnTexto(habito) {
+  const partes = [];
+
+  if (inicioDe(habito) > hoy) {
+    return (
+      "- " +
+      habito.nombre +
+      " (" +
+      reglasEnTexto(habito) +
+      "): empieza el " +
+      fechaLarga(inicioDe(habito))
+    );
+  }
+
+  if (habito.medida === "abstencion") {
+    const datos = mejorRachaYTotal(habito);
+    partes.push(
+      "lleva " +
+        textoDias(calcularRacha(habito.id)) +
+        " seguidos sin recaer (su mejor racha: " +
+        textoDias(datos.mejor) +
+        "; en total, " +
+        textoDias(datos.total) +
+        " sin recaer)",
+    );
+  } else if (habito.frecuencia === "semanal") {
+    const racha = calcularRacha(habito.id);
+    let semanas = racha + " semanas";
+    if (racha === 1) {
+      semanas = "1 semana";
+    }
+    partes.push("racha: " + semanas);
+    partes.push(
+      "esta semana: " +
+        vecesEnSemana(habito, new Date()) +
+        " de " +
+        habito.vecesSemana,
+    );
+  } else {
+    partes.push("racha: " + textoDias(calcularRacha(habito.id)));
+  }
+
+  // La constancia (como en Hoy): de los últimos 30 días (o 4 semanas)
+  if (habito.medida !== "abstencion") {
+    const datos = constancia(habito);
+    if (datos.posibles > 0) {
+      let periodo = "últimos 30 días que tocaba: ";
+      if (datos.enSemanas) {
+        periodo = "últimas 4 semanas: ";
+      }
+      partes.push(periodo + datos.cumplidos + " de " + datos.posibles);
+    }
+  }
+
+  if (habito.comodin && comodinGastado(habito)) {
+    partes.push("comodín ya gastado esta semana");
+  }
+  partes.push(hoyEnTexto(habito));
+
+  return (
+    "- " +
+    habito.nombre +
+    " (" +
+    reglasEnTexto(habito) +
+    "): " +
+    partes.join("; ")
+  );
+}
+
+// Una línea por meta pendiente (pasos hechos, el siguiente y el hábito que
+// la impulsa) y, al final, las últimas cumplidas.
+function metasEnTexto() {
+  const lineas = [];
+  const pendientes = metas.filter(function (meta) {
+    return !metaCumplida(meta);
+  });
+  const cumplidas = metas.filter(metaCumplida);
+
+  pendientes.forEach(function (meta) {
+    const hechos = meta.pasos.filter(function (paso) {
+      return paso.completado;
+    }).length;
+    const siguiente = meta.pasos.find(function (paso) {
+      return !paso.completado;
+    });
+
+    let linea = "- «" + meta.titulo + "»";
+    if (meta.area) {
+      linea = linea + " (" + meta.area + ")";
+    }
+    linea = linea + ": " + hechos + " de " + meta.pasos.length + " pasos";
+    if (siguiente) {
+      linea = linea + "; siguiente paso: «" + siguiente.texto + "»";
+    }
+    if (meta.habito) {
+      linea =
+        linea + "; la impulsa el hábito «" + nombreHabito(meta.habito) + "»";
+    }
+    lineas.push(linea);
+  });
+
+  // Las cumplidas: las 5 más recientes (las que no tienen fecha, al final)
+  cumplidas
+    .sort(function (a, b) {
+      return (b.victoria || "").localeCompare(a.victoria || "");
+    })
+    .slice(0, 5)
+    .forEach(function (meta) {
+      let linea = "- Cumplida: «" + meta.titulo + "»";
+      if (meta.victoria) {
+        linea = linea + ", el " + fechaLarga(meta.victoria);
+      }
+      lineas.push(linea);
+    });
+
+  return lineas;
+}
+
+// El resumen entero, en texto, tal como le llega a Méntor.
+function resumenParaConsejeros() {
+  const ahora = new Date();
+  const lineas = [];
+
+  lineas.push(
+    "Ahora: " +
+      ahora.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }) +
+      ", " +
+      ahora.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }) +
+      ".",
+  );
+
+  // Quién es (sin el peso)
+  const quien = [];
+  if (perfil.nombre) {
+    quien.push("Se llama " + perfil.nombre);
+  }
+  if (perfil.nacimiento) {
+    quien.push("tiene " + edadDe(perfil.nacimiento) + " años");
+  }
+  if (quien.length > 0) {
+    lineas.push(enFrase(quien) + ".");
+  }
+
+  // Los hábitos y cómo va el día
+  lineas.push("");
+  if (habitos.length === 0) {
+    lineas.push("Hábitos: aún no tiene ninguno.");
+  } else {
+    const dia = resumenDelDia(ahora);
+    lineas.push(
+      "Hábitos (de los " +
+        dia.tocan +
+        " que tocan hoy, lleva hechos " +
+        dia.cumplidos +
+        "):",
+    );
+    habitos.forEach(function (habito) {
+      lineas.push(habitoEnTexto(habito));
+    });
+
+    // Días perfectos (todos los hábitos que tocaban) de los últimos 30
+    let perfectos = 0;
+    const fecha = new Date();
+    for (let i = 0; i < 30; i++) {
+      fecha.setDate(fecha.getDate() - 1);
+      if (nivelDelDia(fecha) === 3) {
+        perfectos++;
+      }
+    }
+    lineas.push("Días perfectos en los últimos 30 días: " + perfectos + ".");
+  }
+
+  // Las metas
+  lineas.push("");
+  const lineasMetas = metasEnTexto();
+  if (lineasMetas.length === 0) {
+    lineas.push("Metas: aún no tiene ninguna.");
+  } else {
+    lineas.push("Metas:");
+    lineasMetas.forEach(function (linea) {
+      lineas.push(linea);
+    });
+  }
+
+  // Los rituales de hoy (la intención; de noche, también el examen)
+  lineas.push("");
+  const ritual = rituales[diaDelRitual()] || {};
+  if (ritual.intencion === undefined) {
+    lineas.push("Intención del día: aún no la ha escrito.");
+  } else if (ritual.intencion === "") {
+    lineas.push("Intención del día: hoy ha preferido no escribirla.");
+  } else {
+    lineas.push("Intención del día: «" + ritual.intencion + "».");
+  }
+  if (esDeNoche()) {
+    if (ritual.examen) {
+      lineas.push(
+        "Examen de la noche (las preguntas de Séneca, en su diario de papel): ya lo ha hecho.",
+      );
+    } else {
+      lineas.push(
+        "Examen de la noche (las preguntas de Séneca, en su diario de papel): aún no.",
+      );
+    }
+  }
+
+  // La última revisión semanal
+  const semanas = Object.keys(revisiones).sort();
+  if (semanas.length > 0) {
+    const lunes = semanas[semanas.length - 1];
+    const revision = revisiones[lunes];
+    lineas.push("");
+    lineas.push(
+      "Última revisión semanal (" + nombreSemana(lunes).toLowerCase() + "):",
+    );
+    if (revision.cumplido) {
+      lineas.push("- ¿Cumplió el propósito anterior? " + revision.cumplido);
+    }
+    if (revision.bien) {
+      lineas.push("- Lo que fue bien: «" + revision.bien + "»");
+    }
+    if (revision.costado) {
+      lineas.push("- Lo que costó: «" + revision.costado + "»");
+    }
+    if (revision.proposito) {
+      lineas.push(
+        "- Su propósito para la semana siguiente: «" + revision.proposito + "»",
+      );
+    }
+  }
+
+  return lineas.join("\n");
+}
+
+// La ventana «Lo que ve Méntor»: el resumen tal cual y la casilla para
+// compartirlo o no.
+const ventanaContexto = document.getElementById("ventana-contexto");
+const casillaCompartir = document.getElementById("compartir-datos");
+
+// Pone en la ventana el resumen (o que no se comparte nada).
+function mostrarContexto() {
+  casillaCompartir.checked = compartirDatos();
+  const texto = document.getElementById("contexto-texto");
+  if (compartirDatos()) {
+    texto.textContent = resumenParaConsejeros();
+  } else {
+    texto.textContent =
+      "No compartes tus datos: Méntor solo ve lo que le escribes.";
+  }
+}
+
+document
+  .getElementById("boton-lo-que-ve")
+  .addEventListener("click", function () {
+    mostrarContexto();
+    ventanaContexto.showModal();
+  });
+
+casillaCompartir.addEventListener("change", function () {
+  ajustesConsejeros.compartir = casillaCompartir.checked;
+  guardarAjustesConsejeros();
+  mostrarContexto();
+});
+
+cerrarAlTocarFuera(ventanaContexto);
+
+// ==========================================================================
+// 27. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
 // Hoy · Mosaico · Méntor · Metas · Archivo.
 // ==========================================================================
@@ -6110,7 +6535,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 27. APP INSTALABLE (SERVICE WORKER)
+// 28. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -6119,7 +6544,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 28. INICIO
+// 29. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 

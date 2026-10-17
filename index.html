@@ -499,7 +499,14 @@
           ></textarea>
           <button type="submit" class="boton-principal">Enviar</button>
         </form>
-        <p id="charla-uso" class="charla-uso"></p>
+        <!-- Debajo: cuántos mensajes van hoy y «Lo que ve Méntor» (el
+             resumen de mis datos que recibe con cada mensaje) -->
+        <div id="charla-pie" class="charla-pie">
+          <span id="charla-uso"></span>
+          <button id="boton-lo-que-ve" type="button" class="charla-ve">
+            Lo que ve Méntor
+          </button>
+        </div>
       </div>
 
       <!-- ============================================================
@@ -858,6 +865,29 @@
             Cancelar
           </button>
           <button type="submit" class="boton-principal">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============================================================
+         VENTANA «LO QUE VE MÉNTOR»
+         El resumen de mis datos que Méntor recibe con cada mensaje (lo
+         escribe script.js, bloque 26) y la casilla para compartirlo o no.
+         ============================================================ -->
+    <dialog id="ventana-contexto" class="ventana">
+      <form method="dialog" class="form-habito form-contexto">
+        <h2 tabindex="-1" autofocus>Lo que ve Méntor</h2>
+        <p class="contexto-explicacion">
+          Con cada mensaje, Méntor recibe este resumen de tus datos de Ergon. Lo
+          prepara la app en el momento; no ve nada más.
+        </p>
+        <label class="contexto-compartir">
+          <input type="checkbox" id="compartir-datos" />
+          Compartir mis datos con Méntor
+        </label>
+        <p id="contexto-texto" class="contexto-texto"></p>
+        <div class="ventana-botones">
+          <button type="submit" class="boton-principal">Cerrar</button>
         </div>
       </form>
     </dialog>
