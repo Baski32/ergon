@@ -22,7 +22,7 @@
    16. Mosaico del mes
    17. Metas · Tarjetas
    18. Metas · Laureles (metas cumplidas)
-   19. Archivo · Perfil y revisiones
+   19. Archivo · Cuenta, recordatorios, perfil y revisiones
    20. Archivo · Copia de seguridad
    21. Navegación
    22. Escritorio (pantallas anchas)
@@ -74,7 +74,8 @@ body {
 
 /* ==========================================================================
    3. BARRA SUPERIOR
-   Laurel, nombre de la pantalla y fecha, fija arriba en todas las pantallas.
+   Laurel, nombre de la pantalla, fecha y el puntito de la nube, fija arriba
+   en todas las pantallas.
    ========================================================================== */
 
 /* La barra: se queda pegada arriba al bajar (sticky), con fondo de mármol y
@@ -123,6 +124,28 @@ body {
   font-size: 1.25rem;
   letter-spacing: 0.08em;
   color: var(--tinta);
+}
+
+/* El puntito de la nube, junto a la fecha: oliva si todo está subido,
+   bronce si hay cambios esperando y terracota si algo falla */
+.estado-nube {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--oliva);
+}
+
+.estado-nube.esperando {
+  background-color: var(--bronce);
+}
+
+.estado-nube.con-error {
+  background-color: var(--terracota);
+}
+
+.estado-nube[hidden] {
+  display: none;
 }
 
 /* Fecha de hoy. margin-left: auto la empuja a la derecha */
@@ -205,7 +228,8 @@ body {
 .ritual-hoy-no,
 .mentor-saltar,
 .mentor-quitar,
-.perfil-borrar {
+.perfil-borrar,
+.cuenta-apartados {
   padding: 4px 0;
   font-family: inherit;
   font-size: 0.9rem;
@@ -218,7 +242,8 @@ body {
 .ritual-hoy-no:hover,
 .mentor-saltar:hover,
 .mentor-quitar:hover,
-.perfil-borrar:hover {
+.perfil-borrar:hover,
+.cuenta-apartados:hover {
   color: var(--terracota);
 }
 
@@ -1869,17 +1894,22 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   19. ARCHIVO · PERFIL Y REVISIONES
-   Los datos del perfil, el historial del peso y las revisiones semanales.
+   19. ARCHIVO · CUENTA, RECORDATORIOS, PERFIL Y REVISIONES
+   La cuenta de la nube, los recordatorios, los datos del perfil, el
+   historial del peso y las revisiones semanales.
    ========================================================================== */
 
 /* Cada sección, con un hueco debajo */
+.cuenta,
+.recordatorios,
 .perfil,
 .revisiones {
   margin-bottom: 32px;
 }
 
 /* Sus títulos, como el de la copia de seguridad */
+.cuenta h2,
+.recordatorios h2,
 .perfil h2,
 .revisiones h2 {
   font-family: "Cinzel", serif;
@@ -1887,6 +1917,149 @@ button.recordatorio {
   letter-spacing: 0.1em;
   text-align: center;
   color: var(--bronce);
+}
+
+/* El formulario para entrar: una pieza debajo de otra. Campos de 1rem
+   (16px) para que el iPhone no haga zoom */
+.form-entrar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Hace falta porque display: flex ganaría al atributo hidden */
+.form-entrar[hidden] {
+  display: none;
+}
+
+.form-entrar .pie-texto {
+  margin: 0;
+  text-align: center;
+}
+
+.form-entrar input {
+  padding: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--tinta);
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 4px;
+}
+
+.form-entrar input:focus {
+  outline: none;
+  border-color: var(--bronce);
+}
+
+/* Con la cuenta abierta: el email y cómo va la sincronización */
+.cuenta-email {
+  margin: 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.cuenta-estado {
+  margin: 4px 0 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--bronce);
+}
+
+/* «Descargar los datos que había antes aquí», centrado */
+.cuenta-apartados {
+  display: block;
+  margin: 10px auto 0;
+}
+
+.cuenta-apartados[hidden] {
+  display: none;
+}
+
+/* Recordatorios: el texto de arriba, centrado */
+.recordatorios .pie-texto {
+  margin-top: 0;
+  text-align: center;
+}
+
+/* Cada recordatorio: la casilla con su nombre a la izquierda y la hora a
+   la derecha, con una línea debajo (como las filas del perfil) */
+.recordatorio-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--piedra);
+}
+
+.recordatorio-fila label {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.recordatorio-fila input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--oliva);
+}
+
+/* El nombre y, debajo, cuándo avisa */
+.recordatorio-nombre,
+.recordatorio-cuando {
+  display: block;
+}
+
+.recordatorio-cuando {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--bronce);
+}
+
+/* La hora. 1rem (16px) para que el iPhone no haga zoom. Apagada, se ve
+   más clara */
+.recordatorio-fila input[type="time"] {
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--tinta);
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 4px;
+}
+
+.recordatorio-fila input[type="time"]:focus {
+  outline: none;
+  border-color: var(--bronce);
+}
+
+.recordatorio-fila input[type="time"]:disabled {
+  opacity: 0.45;
+}
+
+/* La nota cuando aquí no se puede (iPhone sin instalar, permiso
+   bloqueado): una caja con una raya terracota a la izquierda */
+.recordatorios-nota {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  background-color: #fffdf8;
+  border-left: 3px solid var(--terracota);
+  border-radius: 4px;
+}
+
+.recordatorios-nota[hidden] {
+  display: none;
+}
+
+/* Los botones pueden bajar a otra línea si no caben */
+.recordatorios .pie-botones {
+  flex-wrap: wrap;
 }
 
 /* Cada dato: el nombre a la izquierda y el valor a la derecha */

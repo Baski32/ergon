@@ -1,6 +1,7 @@
 // ==========================================================================
 // ERGON — script.js
-// Toda la lógica de la app. Los datos se guardan solo en este dispositivo.
+// Toda la lógica de la app. Los datos se guardan en este dispositivo y, con
+// la cuenta abierta, también en la nube (Supabase, bloques 21 a 23).
 //
 // ÍNDICE
 //  1. Datos guardados
@@ -23,15 +24,20 @@
 // 18. Metas · Ventana de editar meta
 // 19. Perfil
 // 20. Copia de seguridad
-// 21. Barra superior y navegación
-// 22. App instalable (service worker)
-// 23. Inicio
+// 21. Nube · Cuenta
+// 22. Nube · Sincronizar
+// 23. Recordatorios
+// 24. Barra superior y navegación
+// 25. App instalable (service worker)
+// 26. Inicio
 // ==========================================================================
 
 // ==========================================================================
 // 1. DATOS GUARDADOS
 // Lo que Ergon guarda en el navegador (localStorage) y las funciones que lo
-// guardan. Cada dispositivo (PC, iPhone) tiene sus propios datos.
+// guardan. Cada dispositivo (PC, iPhone) tiene sus propios datos; si se ha
+// entrado en la cuenta, cada cambio se apunta también para subirlo a la
+// nube (apuntarCambio, bloque 22).
 // ==========================================================================
 
 // Fecha de hoy como texto, p. ej. "2026-10-12". Es la clave de cada día.
@@ -62,35 +68,54 @@ const rituales = JSON.parse(localStorage.getItem("ergon-rituales")) || {};
 // { "2026-10-12": { fecha, cumplido, bien, costado, proposito, perfectos, vividos } }
 const revisiones = JSON.parse(localStorage.getItem("ergon-revisiones")) || {};
 
+// Recordatorios (bloque 23), los mismos en todos los dispositivos de la
+// cuenta: { manana: { activo, hora }, habitos, noche, domingo, zona }. Vacío
+// hasta que se activan o se cambian por primera vez.
+const recordatorios =
+  JSON.parse(localStorage.getItem("ergon-recordatorios")) || {};
+
 // Guarda la lista de hábitos.
 function guardarHabitos() {
   localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
+  apuntarCambio("ergon-habitos");
 }
 
-// Guarda lo apuntado hoy dentro del registro.
-function guardarRegistro() {
+// Guarda lo apuntado hoy dentro del registro. id: el hábito que ha cambiado
+// (en la nube, cada hábito de cada día va en su propia fila).
+function guardarRegistro(id) {
   registro[hoy] = habitosHoy;
   localStorage.setItem("ergon-registro", JSON.stringify(registro));
+  apuntarCambio("registro:" + hoy + ":" + id);
 }
 
 // Guarda la lista de metas.
 function guardarMetas() {
   localStorage.setItem("ergon-metas", JSON.stringify(metas));
+  apuntarCambio("ergon-metas");
 }
 
 // Guarda el perfil.
 function guardarPerfil() {
   localStorage.setItem("ergon-perfil", JSON.stringify(perfil));
+  apuntarCambio("ergon-perfil");
 }
 
-// Guarda los rituales.
-function guardarRituales() {
+// Guarda los rituales. dia: el día que ha cambiado.
+function guardarRituales(dia) {
   localStorage.setItem("ergon-rituales", JSON.stringify(rituales));
+  apuntarCambio("ritual:" + dia);
 }
 
-// Guarda las revisiones semanales.
-function guardarRevisiones() {
+// Guarda las revisiones semanales. lunes: la semana que ha cambiado.
+function guardarRevisiones(lunes) {
   localStorage.setItem("ergon-revisiones", JSON.stringify(revisiones));
+  apuntarCambio("revision:" + lunes);
+}
+
+// Guarda los ajustes de los recordatorios.
+function guardarRecordatorios() {
+  localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
+  apuntarCambio("ergon-recordatorios");
 }
 
 // ==========================================================================
@@ -754,7 +779,7 @@ function mostrarHabitos() {
         } else {
           habitosHoy[habito.id] = Number(control.value);
         }
-        guardarRegistro();
+        guardarRegistro(habito.id);
         actualizarTodo();
       });
     } else if (habito.medida === "abstencion") {
@@ -774,7 +799,7 @@ function mostrarHabitos() {
         } else {
           habitosHoy[habito.id] = "recaida";
         }
-        guardarRegistro();
+        guardarRegistro(habito.id);
         actualizarTodo();
       });
     } else {
@@ -784,7 +809,7 @@ function mostrarHabitos() {
 
       control.addEventListener("change", function () {
         habitosHoy[habito.id] = control.checked;
-        guardarRegistro();
+        guardarRegistro(habito.id);
         actualizarTodo();
       });
     }
@@ -2439,10 +2464,18 @@ function resumenBienvenida() {
 
 // La conversación de bienvenida (qué es cada cosa: bloque 8).
 const conversacionBienvenida = {
-  saludo: [
-    "Salve. Soy Méntor, y te acompañaré en Ergon.",
-    "Ergon viene del griego ἔργον, «la obra»: lo que uno construye con su trabajo de cada día. Aquí irás levantando la tuya con hábitos, metas y un poco de filosofía.",
-  ],
+  saludo: function () {
+    const frases = [
+      "Salve. Soy Méntor, y te acompañaré en Ergon.",
+      "Ergon viene del griego ἔργον, «la obra»: lo que uno construye con su trabajo de cada día. Aquí irás levantando la tuya con hábitos, metas y un poco de filosofía.",
+    ];
+    if (hayNube()) {
+      frases.push(
+        "¿Ya usas Ergon en otro dispositivo? Pulsa «Salir» y entra en tu cuenta, en Archivo: tus datos llegarán solos.",
+      );
+    }
+    return frases;
+  },
   preguntas: preguntasBienvenida,
   cierre:
     "Todo listo. Puedes cambiarlo cuando quieras en Archivo, en tu perfil. ¿Construimos tu primer hábito?",
@@ -2635,7 +2668,7 @@ function tarjetaNoche(ritual, dia) {
 // Guarda el ritual del día y vuelve a dibujar los rituales.
 function guardarRitual(ritual) {
   rituales[diaDelRitual()] = ritual;
-  guardarRituales();
+  guardarRituales(diaDelRitual());
   mostrarRituales();
 }
 
@@ -2963,7 +2996,7 @@ function guardarRevision() {
     perfectos: datos.perfectos,
     vividos: datos.vividos,
   };
-  guardarRevisiones();
+  guardarRevisiones(semanaRevisada);
 
   respuestas = {};
   mostrarPantalla("hoy");
@@ -4035,7 +4068,8 @@ const claves = [
 ];
 
 // El día de la última copia se guarda aparte, en «ergon-ultima-copia»: no
-// va dentro de la copia porque es de este dispositivo.
+// va dentro de la copia porque es de este dispositivo. Los recordatorios
+// tampoco van: son ajustes, no datos (y ya los guarda la nube).
 
 // Junta los datos en un archivo .json y lo descarga.
 function descargarCopia() {
@@ -4154,6 +4188,12 @@ document
       // Los datos ahora son los de esa copia: su día pasa a ser la última copia
       localStorage.setItem("ergon-ultima-copia", copia.fecha);
 
+      // Con la cuenta unida, la copia sustituirá también lo de la nube
+      // (bloque 22, sustituirNube)
+      if (localStorage.getItem("ergon-usuario-nube")) {
+        localStorage.setItem("ergon-sustituir-nube", "sí");
+      }
+
       location.reload();
     } catch (error) {
       avisar("El archivo no es una copia válida de Ergon.");
@@ -4161,7 +4201,1194 @@ document
   });
 
 // ==========================================================================
-// 21. BARRA SUPERIOR Y NAVEGACIÓN
+// 21. NUBE · CUENTA
+// Entrar en la cuenta de Supabase con email y contraseña. Supabase es el
+// servidor: guarda los datos en una base de datos (tabla «datos») y solo
+// deja ver a cada usuario sus propias filas. Aquí se habla con él con
+// fetch, sin librerías.
+// ==========================================================================
+
+// La dirección del proyecto y su clave publicable. No son secretos: la
+// clave solo identifica el proyecto; lo que protege los datos es la
+// contraseña y la seguridad por filas de la tabla.
+const nube = {
+  url: "https://drommbeoqtffrhrtlywo.supabase.co",
+  clave: "sb_publishable_aR0M4Xp1c_UQzO1jJ274PQ_TdUQUjMa",
+};
+
+// La sesión de este dispositivo (null si no se ha entrado):
+// { acceso, renovar, caduca, usuario, email }. «acceso» es el pase que se
+// enseña al servidor en cada petición; dura una hora y se renueva solo con
+// «renovar». Es de este dispositivo: no va en la copia de seguridad.
+let sesion = JSON.parse(localStorage.getItem("ergon-sesion")) || null;
+
+// ¿Está la nube configurada (con dirección y clave)?
+function hayNube() {
+  return nube.url !== "" && nube.clave !== "";
+}
+
+// Guarda (o borra, si es null) la sesión.
+function guardarSesion(nueva) {
+  sesion = nueva;
+  if (nueva) {
+    localStorage.setItem("ergon-sesion", JSON.stringify(nueva));
+  } else {
+    localStorage.removeItem("ergon-sesion");
+  }
+}
+
+// Convierte la respuesta de Supabase al entrar o renovar en nuestra sesión.
+// expires_in: los segundos que dura el pase.
+function sesionDe(respuesta) {
+  return {
+    acceso: respuesta.access_token,
+    renovar: respuesta.refresh_token,
+    caduca: Date.now() + respuesta.expires_in * 1000,
+    usuario: respuesta.user.id,
+    email: respuesta.user.email,
+  };
+}
+
+// Pide un pase nuevo a Supabase. tipo: "password" (entrar con email y
+// contraseña) o "refresh_token" (renovar). Devuelve la respuesta ya leída.
+async function pedirPase(tipo, datos) {
+  const respuesta = await fetch(
+    nube.url + "/auth/v1/token?grant_type=" + tipo,
+    {
+      method: "POST",
+      headers: { apikey: nube.clave, "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    },
+  );
+  const cuerpo = await respuesta.json();
+  if (!respuesta.ok) {
+    // Error con su código (400: email o contraseña mal; caducado…)
+    const error = new Error(cuerpo.error_description || cuerpo.msg || "");
+    error.estado = respuesta.status;
+    throw error;
+  }
+  return cuerpo;
+}
+
+// La renovación que está en marcha (null si no hay ninguna).
+let renovacion = null;
+
+// Si el pase está a punto de caducar (queda menos de un minuto), lo renueva.
+// Si dos peticiones lo ven caducado a la vez (p. ej., sincronizar y probar
+// un aviso), se renueva una sola vez y las dos esperan a esa renovación: el
+// pase para renovar solo vale una vez.
+async function renovarSiHaceFalta() {
+  if (Date.now() < sesion.caduca - 60000) {
+    return;
+  }
+  if (!renovacion) {
+    // finally: al terminar (bien o mal), ya no hay renovación en marcha
+    renovacion = renovarPase().finally(function () {
+      renovacion = null;
+    });
+  }
+  await renovacion;
+}
+
+// Pide un pase nuevo con el de renovar. Si ya no se puede renovar, la
+// sesión se cierra.
+async function renovarPase() {
+  try {
+    guardarSesion(
+      sesionDe(
+        await pedirPase("refresh_token", { refresh_token: sesion.renovar }),
+      ),
+    );
+  } catch (error) {
+    // Sin conexión: se deja como está y se vuelve a intentar más tarde
+    if (error.estado === undefined) {
+      throw error;
+    }
+    // El servidor dice que no: hay que volver a entrar (lo pendiente se
+    // guarda y se subirá al volver)
+    cerrarSesionAqui(false);
+    throw new Error("sesion");
+  }
+}
+
+// Una petición a la base de datos (ruta: "/rest/v1/datos?…"), con la clave
+// del proyecto (apikey) y el pase de la sesión (Authorization). Devuelve lo
+// que conteste el servidor (o null si no contesta nada). Si el servidor
+// dice que el pase ya no vale (401), lo renueva y lo intenta otra vez.
+async function peticion(metodo, ruta, cuerpo, cabecerasExtra, esReintento) {
+  await renovarSiHaceFalta();
+
+  const cabeceras = {
+    apikey: nube.clave,
+    Authorization: "Bearer " + sesion.acceso,
+    "Content-Type": "application/json",
+  };
+  Object.assign(cabeceras, cabecerasExtra || {});
+
+  const opciones = { method: metodo, headers: cabeceras };
+  if (cuerpo !== undefined) {
+    opciones.body = JSON.stringify(cuerpo);
+  }
+
+  const respuesta = await fetch(nube.url + ruta, opciones);
+  if (respuesta.status === 401 && !esReintento) {
+    // Se marca el pase como caducado: renovarSiHaceFalta pedirá uno nuevo
+    sesion.caduca = 0;
+    return peticion(metodo, ruta, cuerpo, cabecerasExtra, true);
+  }
+  if (respuesta.status === 401) {
+    cerrarSesionAqui(false);
+    throw new Error("sesion");
+  }
+  if (!respuesta.ok) {
+    throw new Error(
+      "servidor " + respuesta.status + ": " + (await respuesta.text()),
+    );
+  }
+
+  const texto = await respuesta.text();
+  if (texto === "") {
+    return null;
+  }
+  return JSON.parse(texto);
+}
+
+// Cierra la sesión en este dispositivo (los datos se quedan aquí).
+// olvidar: true al pulsar «Salir»: se olvida también lo pendiente de subir
+// y la cuenta con la que se sincronizaba (al volver a entrar se empieza
+// como la primera vez). false si la sesión ha caducado: lo pendiente se
+// sigue apuntando y se sube al volver a entrar.
+function cerrarSesionAqui(olvidar) {
+  guardarSesion(null);
+  if (olvidar) {
+    pendientes = {};
+    guardarPendientes();
+    localStorage.removeItem("ergon-ultima-bajada");
+    localStorage.removeItem("ergon-usuario-nube");
+  }
+  mostrarCuenta();
+}
+
+// Piezas de la sección Cuenta (en Archivo).
+const formEntrar = document.getElementById("form-entrar");
+const errorEntrar = document.getElementById("entrar-error");
+
+// Al pulsar «Entrar»: pide el pase con el email y la contraseña y, si va
+// bien, hace la primera sincronización.
+formEntrar.addEventListener("submit", async function (evento) {
+  evento.preventDefault();
+  const email = document.getElementById("entrar-email").value.trim();
+  const contrasena = document.getElementById("entrar-contrasena").value;
+
+  if (email === "" || contrasena === "") {
+    errorEntrar.textContent = "Escribe tu email y tu contraseña.";
+    return;
+  }
+
+  errorEntrar.textContent = "Entrando…";
+  try {
+    guardarSesion(
+      sesionDe(
+        await pedirPase("password", { email: email, password: contrasena }),
+      ),
+    );
+  } catch (error) {
+    if (error.estado === 400) {
+      errorEntrar.textContent = "El email o la contraseña no son correctos.";
+    } else if (error.estado === undefined) {
+      errorEntrar.textContent =
+        "Sin conexión. Prueba otra vez cuando tengas internet.";
+    } else {
+      errorEntrar.textContent =
+        "No se ha podido entrar (" + error.message + ").";
+    }
+    return;
+  }
+
+  errorEntrar.textContent = "";
+  formEntrar.reset();
+  mostrarCuenta();
+  // Después de sincronizar, lo de los recordatorios (bloque 23)
+  sincronizar().then(revisarAvisos);
+});
+
+// «Salir»: pregunta, quita los avisos de este dispositivo (si los tenía),
+// avisa al servidor (si hay conexión) y cierra la sesión.
+document
+  .getElementById("boton-salir")
+  .addEventListener("click", async function () {
+    let texto =
+      "¿Salir de tu cuenta en este dispositivo? Tus datos se quedan aquí.";
+    if (Object.keys(pendientes).length > 0) {
+      texto =
+        "Hay cambios que aún no se han subido a la nube y se quedarán solo aquí. ¿Salir de todos modos?";
+    }
+    if (!(await preguntar(texto, "Salir", "Cancelar"))) {
+      return;
+    }
+    try {
+      await quitarAvisosAqui();
+      await peticion("POST", "/auth/v1/logout");
+    } catch (error) {
+      // Sin conexión: da igual, la sesión se cierra aquí igualmente
+    }
+    cerrarSesionAqui(true);
+  });
+
+// «Sincronizar ahora».
+document
+  .getElementById("boton-sincronizar")
+  .addEventListener("click", function () {
+    sincronizar();
+  });
+
+// Dibuja la sección Cuenta: el formulario para entrar o, si ya se ha
+// entrado, el email y cómo va la sincronización. También el puntito de la
+// barra de arriba (verde: todo subido; bronce: hay cambios esperando;
+// terracota: algo ha fallado) y la sección Recordatorios, que solo se ve
+// con la cuenta abierta.
+function mostrarCuenta() {
+  mostrarRecordatorios();
+  const seccion = document.getElementById("seccion-cuenta");
+  const punto = document.getElementById("estado-nube");
+  seccion.hidden = !hayNube();
+  punto.hidden = !hayNube() || !sesion;
+  if (!hayNube()) {
+    return;
+  }
+
+  formEntrar.hidden = sesion !== null;
+  document.getElementById("cuenta-dentro").hidden = sesion === null;
+  document.getElementById("boton-datos-apartados").hidden =
+    localStorage.getItem("ergon-antes-de-la-nube") === null;
+
+  // El estado: sincronizando, error, cambios esperando o todo guardado
+  const estado = document.getElementById("cuenta-estado");
+  if (!sesion) {
+    estado.textContent = "";
+    return;
+  }
+
+  document.getElementById("cuenta-email").textContent = sesion.email;
+  const esperando = Object.keys(pendientes).length;
+  punto.className = "estado-nube";
+
+  if (sincronizando) {
+    estado.textContent = "Sincronizando…";
+  } else if (ultimoError) {
+    estado.textContent = ultimoError;
+    punto.classList.add("con-error");
+  } else if (esperando > 0) {
+    let cambios = " cambios esperan";
+    if (esperando === 1) {
+      cambios = " cambio espera";
+    }
+    estado.textContent = esperando + cambios + " para subir a la nube.";
+    punto.classList.add("esperando");
+  } else {
+    let texto = "Todo guardado en la nube.";
+    const ultima = localStorage.getItem("ergon-ultima-sincronizacion");
+    if (ultima) {
+      texto =
+        texto +
+        " Última vez: " +
+        new Date(ultima).toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }) +
+        ".";
+    }
+    estado.textContent = texto;
+  }
+  punto.title = estado.textContent;
+}
+
+// ==========================================================================
+// 22. NUBE · SINCRONIZAR
+// Cómo se mantienen iguales los datos del móvil y del ordenador.
+// - En la nube, cada dato es una fila con su «clave»: "ergon-habitos",
+//   "ergon-metas", "ergon-perfil", "ergon-recordatorios", "ritual:2026-10-16",
+//   "revision:2026-10-12" y, del registro, una fila por hábito y día:
+//   "registro:2026-10-16:h123".
+//   Así, marcar hábitos distintos en dos dispositivos no se pisa.
+// - Cada cambio de aquí se apunta en «pendientes» con su hora. Se sube en
+//   cuanto se puede; sin conexión, espera (también si se cierra la app).
+// - Al sincronizar, primero se baja lo nuevo de la nube (lo que el servidor
+//   recibió después de la última bajada) y luego se sube lo pendiente. Si
+//   un mismo dato ha cambiado en los dos sitios, gana el cambio más nuevo.
+// ==========================================================================
+
+// Lo pendiente de subir: { clave: hora del cambio (texto ISO) }
+let pendientes = JSON.parse(localStorage.getItem("ergon-pendientes")) || {};
+
+// ¿Se está sincronizando ahora? ¿Hay que repetir al terminar?
+let sincronizando = false;
+let repetirSincronizacion = false;
+
+// El último fallo, para mostrarlo en Cuenta ("" si todo fue bien).
+let ultimoError = "";
+
+// Temporizador para subir los cambios un momento después de hacerlos.
+let temporizadorSubida = null;
+
+// Guarda la lista de pendientes.
+function guardarPendientes() {
+  localStorage.setItem("ergon-pendientes", JSON.stringify(pendientes));
+}
+
+// Apunta que un dato ha cambiado aquí (lo llaman las funciones de guardar
+// del bloque 1). Solo si este dispositivo está unido a una cuenta.
+function apuntarCambio(clave) {
+  if (localStorage.getItem("ergon-usuario-nube") === null) {
+    return;
+  }
+  pendientes[clave] = new Date().toISOString();
+  guardarPendientes();
+  programarSubida();
+}
+
+// Sincroniza dos segundos después del último cambio (si se marcan varios
+// hábitos seguidos, se suben todos de una vez).
+function programarSubida() {
+  clearTimeout(temporizadorSubida);
+  temporizadorSubida = setTimeout(sincronizar, 2000);
+  mostrarCuenta();
+}
+
+// Una hora en texto convertida en milisegundos, para poder compararlas
+// (el servidor y el navegador las escriben de forma distinta).
+function momento(texto) {
+  return new Date(texto).getTime();
+}
+
+// El valor que tiene aquí un dato, por su clave (null si no existe).
+function valorLocal(clave) {
+  const partes = clave.split(":");
+
+  if (partes[0] === "registro") {
+    const dia = registro[partes[1]] || {};
+    if (dia[partes[2]] === undefined) {
+      return null;
+    }
+    return dia[partes[2]];
+  }
+  if (partes[0] === "ritual") {
+    return rituales[partes[1]] || null;
+  }
+  if (partes[0] === "revision") {
+    return revisiones[partes[1]] || null;
+  }
+  if (clave === "ergon-habitos") {
+    return habitos;
+  }
+  if (clave === "ergon-metas") {
+    return metas;
+  }
+  if (clave === "ergon-perfil") {
+    return perfil;
+  }
+  if (clave === "ergon-recordatorios") {
+    return recordatorios;
+  }
+  return null;
+}
+
+// Cambia el contenido de una lista sin cambiar la lista (habitos y metas
+// son const: se vacían y se rellenan).
+function reemplazarLista(lista, nueva) {
+  lista.length = 0;
+  nueva.forEach(function (elemento) {
+    lista.push(elemento);
+  });
+}
+
+// Lo mismo para un objeto: borra sus propiedades y le pone las nuevas.
+function reemplazarObjeto(objeto, nuevo) {
+  Object.keys(objeto).forEach(function (clave) {
+    delete objeto[clave];
+  });
+  Object.assign(objeto, nuevo);
+}
+
+// Pone aquí un dato que llega de la nube. Del registro, el de hoy va a
+// habitosHoy (el objeto que usan las fichas de Hoy).
+function aplicarFila(fila) {
+  const partes = fila.clave.split(":");
+
+  if (partes[0] === "registro") {
+    let dia;
+    if (partes[1] === hoy) {
+      registro[hoy] = habitosHoy;
+      dia = habitosHoy;
+    } else {
+      if (!registro[partes[1]]) {
+        registro[partes[1]] = {};
+      }
+      dia = registro[partes[1]];
+    }
+    if (fila.valor === null) {
+      delete dia[partes[2]];
+    } else {
+      dia[partes[2]] = fila.valor;
+    }
+  } else if (partes[0] === "ritual") {
+    if (fila.valor === null) {
+      delete rituales[partes[1]];
+    } else {
+      rituales[partes[1]] = fila.valor;
+    }
+  } else if (partes[0] === "revision") {
+    if (fila.valor === null) {
+      delete revisiones[partes[1]];
+    } else {
+      revisiones[partes[1]] = fila.valor;
+    }
+  } else if (fila.clave === "ergon-habitos") {
+    reemplazarLista(habitos, fila.valor || []);
+  } else if (fila.clave === "ergon-metas") {
+    reemplazarLista(metas, fila.valor || []);
+  } else if (fila.clave === "ergon-perfil") {
+    reemplazarObjeto(perfil, fila.valor || {});
+  } else if (fila.clave === "ergon-recordatorios") {
+    reemplazarObjeto(recordatorios, fila.valor || {});
+  }
+}
+
+// Guarda en este dispositivo todo lo que ha llegado de la nube (sin
+// apuntarlo como cambio: ya está en la nube).
+function guardarLoBajado() {
+  localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
+  localStorage.setItem("ergon-registro", JSON.stringify(registro));
+  localStorage.setItem("ergon-metas", JSON.stringify(metas));
+  localStorage.setItem("ergon-perfil", JSON.stringify(perfil));
+  localStorage.setItem("ergon-rituales", JSON.stringify(rituales));
+  localStorage.setItem("ergon-revisiones", JSON.stringify(revisiones));
+  localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
+}
+
+// Un valor convertido en texto con las propiedades en orden alfabético. La
+// base de datos guarda las propiedades en otro orden, así que para saber si
+// dos valores son iguales se comparan así.
+function textoOrdenado(valor) {
+  if (Array.isArray(valor)) {
+    return "[" + valor.map(textoOrdenado).join(",") + "]";
+  }
+  if (valor !== null && typeof valor === "object") {
+    const claves = Object.keys(valor).sort();
+    return (
+      "{" +
+      claves
+        .map(function (clave) {
+          return JSON.stringify(clave) + ":" + textoOrdenado(valor[clave]);
+        })
+        .join(",") +
+      "}"
+    );
+  }
+  return JSON.stringify(valor);
+}
+
+// Lee de la nube las filas que el servidor recibió después de «desde», de
+// 1000 en 1000 (es lo máximo que da de una vez), en orden de llegada.
+async function leerFilas(desde) {
+  const filas = [];
+  let saltar = 0;
+  while (true) {
+    const pagina = await peticion(
+      "GET",
+      "/rest/v1/datos?select=clave,valor,actualizado,subido&subido=gt." +
+        encodeURIComponent(desde) +
+        "&order=subido.asc&limit=1000&offset=" +
+        saltar,
+    );
+    pagina.forEach(function (fila) {
+      filas.push(fila);
+    });
+    if (pagina.length < 1000) {
+      return filas;
+    }
+    saltar += 1000;
+  }
+}
+
+// Baja lo nuevo de la nube y lo pone aquí, salvo lo que haya cambiado aquí
+// después (eso se queda y se subirá). Devuelve true si algo ha cambiado.
+async function bajarCambios() {
+  const desde = localStorage.getItem("ergon-ultima-bajada");
+  // Un minuto de margen hacia atrás, por si algo llegó al servidor justo
+  // mientras se bajaba la vez anterior (lo repetido no cambia nada)
+  const conMargen = new Date(momento(desde) - 60000).toISOString();
+  const filas = await leerFilas(conMargen);
+
+  let hayCambios = false;
+  let ultima = desde;
+
+  filas.forEach(function (fila) {
+    if (momento(fila.subido) > momento(ultima)) {
+      ultima = fila.subido;
+    }
+
+    // Si aquí hay un cambio más nuevo, gana el de aquí
+    const cambioAqui = pendientes[fila.clave];
+    if (cambioAqui && momento(cambioAqui) >= momento(fila.actualizado)) {
+      return;
+    }
+    delete pendientes[fila.clave];
+
+    // Si ya es igual, no hace falta tocar nada
+    if (textoOrdenado(valorLocal(fila.clave)) === textoOrdenado(fila.valor)) {
+      return;
+    }
+    aplicarFila(fila);
+    hayCambios = true;
+  });
+
+  if (hayCambios) {
+    guardarLoBajado();
+  }
+  guardarPendientes();
+  localStorage.setItem("ergon-ultima-bajada", ultima);
+  return hayCambios;
+}
+
+// Sube lo pendiente (de 500 en 500). «Prefer: resolution=merge-duplicates»
+// le dice al servidor que, si la fila ya existe, la sustituya (upsert).
+async function subirCambios() {
+  const claves = Object.keys(pendientes);
+  for (let i = 0; i < claves.length; i += 500) {
+    const trozo = claves.slice(i, i + 500);
+    const filas = trozo.map(function (clave) {
+      return {
+        usuario: sesion.usuario,
+        clave: clave,
+        valor: valorLocal(clave),
+        actualizado: pendientes[clave],
+      };
+    });
+
+    await peticion("POST", "/rest/v1/datos", filas, {
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    });
+
+    // Fuera de pendientes, salvo lo que haya vuelto a cambiar mientras subía
+    filas.forEach(function (fila) {
+      if (pendientes[fila.clave] === fila.actualizado) {
+        delete pendientes[fila.clave];
+      }
+    });
+    guardarPendientes();
+  }
+}
+
+// Apunta como pendiente todo lo que hay en este dispositivo (para subirlo
+// entero a la nube).
+function apuntarTodo() {
+  const ahora = new Date().toISOString();
+  pendientes["ergon-habitos"] = ahora;
+  pendientes["ergon-metas"] = ahora;
+  pendientes["ergon-perfil"] = ahora;
+  pendientes["ergon-recordatorios"] = ahora;
+  Object.keys(registro).forEach(function (fecha) {
+    Object.keys(registro[fecha]).forEach(function (id) {
+      pendientes["registro:" + fecha + ":" + id] = ahora;
+    });
+  });
+  Object.keys(rituales).forEach(function (dia) {
+    pendientes["ritual:" + dia] = ahora;
+  });
+  Object.keys(revisiones).forEach(function (lunes) {
+    pendientes["revision:" + lunes] = ahora;
+  });
+  guardarPendientes();
+}
+
+// Guarda aparte los datos de este dispositivo (antes de sustituirlos por
+// los de la nube), por si acaso. Se pueden descargar desde Cuenta.
+function apartarDatosLocales() {
+  const copia = { app: "Ergon", fecha: hoy, datos: {} };
+  claves.forEach(function (clave) {
+    copia.datos[clave] = JSON.parse(localStorage.getItem(clave));
+  });
+  localStorage.setItem("ergon-antes-de-la-nube", JSON.stringify(copia));
+}
+
+// La primera vez que este dispositivo se une a la cuenta:
+// - si la nube está vacía, se sube todo lo de aquí;
+// - si la nube ya tiene datos (de otro dispositivo) y aquí no hay, se traen;
+// - si hay en los dos sitios, se pregunta con cuáles quedarse. Si son los
+//   de la cuenta, los de aquí se guardan aparte, por si acaso.
+async function primeraSincronizacion() {
+  const filas = await leerFilas("1970-01-01T00:00:00Z");
+
+  if (filas.length === 0) {
+    localStorage.setItem("ergon-usuario-nube", sesion.usuario);
+    apuntarTodo();
+    await subirCambios();
+    // La próxima bajada empieza desde el principio: así no depende de la
+    // hora de este dispositivo (lo repetido no cambia nada)
+    localStorage.setItem("ergon-ultima-bajada", "1970-01-01T00:00:00Z");
+    return false;
+  }
+
+  if (habitos.length > 0 || metas.length > 0) {
+    const traer = await preguntar(
+      "Tu cuenta ya tiene datos de otro dispositivo, y este tiene los suyos. ¿Con cuáles te quedas? Si eliges los de la cuenta, los de aquí se guardan aparte, por si acaso.",
+      "Los de la cuenta",
+      "Los de este dispositivo",
+    );
+
+    if (!traer) {
+      // Segunda pregunta, porque esto borra lo que hay en la cuenta (y así
+      // Escape o tocar fuera nunca lo hace sin querer)
+      const subir = await preguntar(
+        "¿Seguro? Lo que hay en la cuenta se sustituirá por lo de este dispositivo.",
+        "Sí, usar los de este dispositivo",
+        "Cancelar",
+      );
+      if (!subir) {
+        cerrarSesionAqui(true);
+        return false;
+      }
+      localStorage.setItem("ergon-usuario-nube", sesion.usuario);
+      await sustituirNube();
+      localStorage.setItem("ergon-ultima-bajada", "1970-01-01T00:00:00Z");
+      return false;
+    }
+
+    apartarDatosLocales();
+  }
+
+  // Vaciar lo de aquí y poner lo de la nube
+  reemplazarLista(habitos, []);
+  reemplazarLista(metas, []);
+  reemplazarObjeto(registro, {});
+  reemplazarObjeto(habitosHoy, {});
+  reemplazarObjeto(perfil, {});
+  reemplazarObjeto(rituales, {});
+  reemplazarObjeto(revisiones, {});
+  reemplazarObjeto(recordatorios, {});
+
+  let ultima = filas[0].subido;
+  filas.forEach(function (fila) {
+    aplicarFila(fila);
+    if (momento(fila.subido) > momento(ultima)) {
+      ultima = fila.subido;
+    }
+  });
+  guardarLoBajado();
+
+  localStorage.setItem("ergon-usuario-nube", sesion.usuario);
+  localStorage.setItem("ergon-ultima-bajada", ultima);
+  pendientes = {};
+  guardarPendientes();
+  return true;
+}
+
+// Restaurar una copia con la cuenta unida: se borra todo lo de la nube y se
+// sube la copia entera (lo pide la copia de seguridad antes de recargar).
+async function sustituirNube() {
+  await peticion(
+    "DELETE",
+    "/rest/v1/datos?usuario=eq." + encodeURIComponent(sesion.usuario),
+  );
+  localStorage.removeItem("ergon-sustituir-nube");
+  apuntarTodo();
+  await subirCambios();
+}
+
+// Sincroniza: primero baja, luego sube. Si ya se está sincronizando, lo
+// repite al acabar. Si falla (sin conexión), lo pendiente sigue esperando.
+async function sincronizar() {
+  if (!hayNube() || !sesion) {
+    return;
+  }
+  if (sincronizando) {
+    repetirSincronizacion = true;
+    return;
+  }
+
+  sincronizando = true;
+  clearTimeout(temporizadorSubida);
+  mostrarCuenta();
+
+  try {
+    let hayCambios = false;
+    const unido = localStorage.getItem("ergon-usuario-nube");
+
+    if (unido !== sesion.usuario) {
+      hayCambios = await primeraSincronizacion();
+    } else if (localStorage.getItem("ergon-sustituir-nube")) {
+      await sustituirNube();
+    } else {
+      hayCambios = await bajarCambios();
+      await subirCambios();
+    }
+
+    localStorage.setItem(
+      "ergon-ultima-sincronizacion",
+      new Date().toISOString(),
+    );
+    ultimoError = "";
+    if (hayCambios) {
+      actualizarTodo();
+    }
+  } catch (error) {
+    if (error.message === "sesion") {
+      ultimoError = "";
+      errorEntrar.textContent =
+        "Tu sesión ha caducado: vuelve a entrar. Lo que hayas cambiado se subirá entonces.";
+    } else if (error instanceof TypeError) {
+      // fetch da TypeError cuando no hay conexión
+      ultimoError = "Sin conexión: los cambios se subirán cuando vuelva.";
+    } else {
+      ultimoError = "No se ha podido sincronizar (" + error.message + ").";
+    }
+  }
+
+  sincronizando = false;
+  mostrarCuenta();
+
+  if (repetirSincronizacion) {
+    repetirSincronizacion = false;
+    sincronizar();
+  }
+}
+
+// Volver a sincronizar al recuperar la conexión.
+window.addEventListener("online", sincronizar);
+
+// «Descargar los datos de antes» (los que se guardaron aparte al traer los
+// de la cuenta).
+document
+  .getElementById("boton-datos-apartados")
+  .addEventListener("click", function () {
+    const archivo = new Blob([localStorage.getItem("ergon-antes-de-la-nube")], {
+      type: "application/json",
+    });
+    const enlace = document.createElement("a");
+    enlace.href = URL.createObjectURL(archivo);
+    enlace.download = "ergon-antes-de-la-nube.json";
+    enlace.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(enlace.href);
+    }, 1000);
+  });
+
+// ==========================================================================
+// 23. RECORDATORIOS
+// Avisos en el móvil a la hora elegida, aunque Ergon esté cerrada. No los
+// envía la app sino el servidor (la función «recordatorios» de Supabase, en
+// supabase/functions): por eso hace falta la cuenta.
+// - Al pulsar «Activar avisos», el navegador pide permiso y da una
+//   «suscripción»: la dirección a la que el servicio de avisos (el de Apple,
+//   en el iPhone) entrega los avisos de este dispositivo. Se guarda en la
+//   tabla «suscripciones» de la nube.
+// - Los ajustes (cuáles y a qué hora) son un dato más, «ergon-recordatorios»,
+//   y se sincronizan: son los mismos en todos los dispositivos.
+// - Cada 5 minutos, el servidor mira si toca alguno y si hace falta (p. ej.,
+//   si quedan hábitos sin marcar) y lo envía. sw.js lo enseña.
+// ==========================================================================
+
+// Los cuatro recordatorios, en el orden en que se ven: su nombre en los
+// ajustes, su título, cuándo avisa y la hora de siempre.
+const tiposRecordatorio = [
+  {
+    tipo: "manana",
+    nombre: "Intención de la mañana",
+    cuando: "Si aún no la has escrito.",
+    hora: "08:00",
+  },
+  {
+    tipo: "habitos",
+    nombre: "Hábitos sin marcar",
+    cuando: "Los que te queden por hoy.",
+    hora: "21:00",
+  },
+  {
+    tipo: "noche",
+    nombre: "Examen de la noche",
+    cuando: "Si aún no lo has hecho.",
+    hora: "22:30",
+  },
+  {
+    tipo: "domingo",
+    nombre: "Revisión del domingo",
+    cuando: "Si aún no has repasado la semana.",
+    hora: "18:00",
+  },
+];
+
+// Lo que se está haciendo o lo que acaba de pasar («Activando…»,
+// «Enviado…»). "" si nada.
+let mensajeAvisos = "";
+
+// ¿Puede este navegador recibir avisos? En el iPhone, solo si Ergon se ha
+// abierto desde la pantalla de inicio (y con iOS 16.4 o posterior).
+function puedeAvisar() {
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+}
+
+// ¿Es un iPhone o un iPad?
+function esIphone() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+
+// La zona horaria de este dispositivo, p. ej. "Europe/Madrid". El servidor
+// la necesita para saber qué hora es aquí.
+function zonaDeAqui() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+// Rellena lo que falte de los ajustes con lo de siempre y pone la zona
+// horaria de aquí. Se llama antes de guardarlos: el servidor solo envía
+// los recordatorios que están en los ajustes.
+function completarRecordatorios() {
+  tiposRecordatorio.forEach(function (tipo) {
+    if (!recordatorios[tipo.tipo]) {
+      recordatorios[tipo.tipo] = { activo: true, hora: tipo.hora };
+    }
+  });
+  recordatorios.zona = zonaDeAqui();
+}
+
+// La clave pública de los avisos (llega en base64url: letras, números, «-»
+// y «_») convertida en bytes, que es como la pide el navegador. atob
+// convierte el base64 normal (con «+» y «/») en texto, una letra por byte.
+function bytesDeClave(texto) {
+  const base64 = texto.replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(base64), function (letra) {
+    return letra.charCodeAt(0);
+  });
+}
+
+// Llama a la función «recordatorios» del servidor, con el pase de la sesión.
+function llamarFuncion(cuerpo) {
+  return peticion("POST", "/functions/v1/recordatorios", cuerpo);
+}
+
+// La clave pública de los avisos. Se pide al servidor una vez y se guarda:
+// así, al pulsar «Activar avisos» no hay que esperarla (el iPhone quiere
+// que todo pase justo después de pulsar).
+async function claveDeAvisos() {
+  let clave = localStorage.getItem("ergon-clave-avisos");
+  if (!clave) {
+    clave = (await llamarFuncion({ accion: "clave" })).clave;
+    localStorage.setItem("ergon-clave-avisos", clave);
+  }
+  return clave;
+}
+
+// Da la suscripción de este dispositivo al servidor y la recuerda aquí (en
+// «ergon-avisos-aqui», solo su dirección: es de este dispositivo).
+async function guardarSuscripcion(suscripcion) {
+  // toJSON la convierte en { endpoint, keys: { p256dh, auth } }
+  const datos = suscripcion.toJSON();
+  await peticion(
+    "POST",
+    "/rest/v1/suscripciones",
+    {
+      usuario: sesion.usuario,
+      endpoint: datos.endpoint,
+      p256dh: datos.keys.p256dh,
+      auth: datos.keys.auth,
+    },
+    { Prefer: "resolution=merge-duplicates,return=minimal" },
+  );
+  localStorage.setItem("ergon-avisos-aqui", datos.endpoint);
+}
+
+// Borra del servidor la suscripción de una dirección.
+function borrarSuscripcion(endpoint) {
+  return peticion(
+    "DELETE",
+    "/rest/v1/suscripciones?endpoint=eq." + encodeURIComponent(endpoint),
+  );
+}
+
+// Un error convertido en mensaje. inicio: lo que no se ha podido hacer.
+function textoDeError(error, inicio) {
+  if (error.message === "sesion") {
+    return "Tu sesión ha caducado: vuelve a entrar.";
+  }
+  if (error instanceof TypeError) {
+    return "Sin conexión. Prueba otra vez cuando tengas internet.";
+  }
+  return inicio + " (" + error.message + ").";
+}
+
+// «Activar avisos en este dispositivo»: el permiso, la suscripción y los
+// ajustes.
+async function activarAvisos() {
+  mensajeAvisos = "Activando…";
+  mostrarRecordatorios();
+
+  try {
+    // 1. El permiso: el navegador pregunta «¿Permitir notificaciones?»
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") {
+      mensajeAvisos = "";
+      mostrarRecordatorios();
+      return;
+    }
+
+    // 2. La suscripción, con la clave pública del servidor. Si ya había una
+    // (de otra vez), se quita antes: podría ser de otra clave
+    const clave = await claveDeAvisos();
+    const trabajador = await navigator.serviceWorker.ready;
+    const anterior = await trabajador.pushManager.getSubscription();
+    if (anterior) {
+      await anterior.unsubscribe();
+    }
+    const suscripcion = await trabajador.pushManager.subscribe({
+      // Cada aviso se enseña (el iPhone no deja avisos «invisibles»)
+      userVisibleOnly: true,
+      applicationServerKey: bytesDeClave(clave),
+    });
+
+    // 3. Al servidor, con los ajustes (y la zona horaria de aquí)
+    await guardarSuscripcion(suscripcion);
+    completarRecordatorios();
+    guardarRecordatorios();
+    mensajeAvisos =
+      "Avisos activados. Pulsa «Probar aviso» para ver cómo llegan.";
+  } catch (error) {
+    mensajeAvisos = textoDeError(error, "No se han podido activar los avisos");
+  }
+  mostrarRecordatorios();
+}
+
+// Quita los avisos de este dispositivo: la suscripción se borra del
+// navegador y del servidor. Lo usan «Quitar de este dispositivo» y «Salir».
+async function quitarAvisosAqui() {
+  const endpoint = localStorage.getItem("ergon-avisos-aqui");
+  if (!endpoint) {
+    return;
+  }
+  localStorage.removeItem("ergon-avisos-aqui");
+
+  const trabajador = await navigator.serviceWorker.ready;
+  const suscripcion = await trabajador.pushManager.getSubscription();
+  if (suscripcion) {
+    await suscripcion.unsubscribe();
+  }
+  // Sin conexión, esto falla; da igual: la suscripción ya no existe y el
+  // servidor la borrará al ver que el aviso no llega
+  await borrarSuscripcion(endpoint);
+}
+
+// «Probar aviso»: el servidor envía uno solo a este dispositivo.
+async function probarAviso() {
+  mensajeAvisos = "Enviando un aviso de prueba…";
+  mostrarRecordatorios();
+
+  try {
+    const respuesta = await llamarFuncion({
+      accion: "prueba",
+      endpoint: localStorage.getItem("ergon-avisos-aqui"),
+    });
+    if (respuesta.enviados > 0) {
+      mensajeAvisos = "Enviado: te llegará en unos segundos.";
+    } else {
+      mensajeAvisos =
+        "El aviso no ha llegado a este dispositivo. Prueba a quitar los avisos y a activarlos otra vez.";
+    }
+  } catch (error) {
+    mensajeAvisos = textoDeError(
+      error,
+      "No se ha podido enviar el aviso de prueba",
+    );
+  }
+  mostrarRecordatorios();
+}
+
+// Al abrir la app con la cuenta abierta (después de sincronizar):
+// - si este dispositivo tiene los avisos activados, comprueba que su
+//   suscripción sigue viva (el navegador a veces la cambia) y se la vuelve a
+//   dar al servidor. Si se ha perdido (p. ej., se quitó el permiso en los
+//   ajustes), se dan por quitados. Si se ha cambiado de zona horaria (de
+//   viaje), se actualiza;
+// - si no, deja preparada la clave pública para activarlos al momento.
+async function revisarAvisos() {
+  if (!hayNube() || !sesion || !puedeAvisar()) {
+    return;
+  }
+
+  try {
+    const endpoint = localStorage.getItem("ergon-avisos-aqui");
+    if (!endpoint) {
+      await claveDeAvisos();
+      return;
+    }
+
+    const trabajador = await navigator.serviceWorker.ready;
+    const suscripcion = await trabajador.pushManager.getSubscription();
+    if (!suscripcion || Notification.permission !== "granted") {
+      await quitarAvisosAqui();
+    } else {
+      if (suscripcion.endpoint !== endpoint) {
+        await borrarSuscripcion(endpoint);
+      }
+      await guardarSuscripcion(suscripcion);
+      if (recordatorios.zona && recordatorios.zona !== zonaDeAqui()) {
+        completarRecordatorios();
+        guardarRecordatorios();
+      }
+    }
+  } catch (error) {
+    // Sin conexión: ya se hará la próxima vez
+  }
+  mostrarRecordatorios();
+}
+
+// Cambia un recordatorio (cambio: { activo } o { hora }) y lo guarda.
+function cambiarRecordatorio(tipo, cambio) {
+  completarRecordatorios();
+  Object.assign(recordatorios[tipo], cambio);
+  guardarRecordatorios();
+  dibujarListaRecordatorios();
+}
+
+// Una fila de la lista: la casilla con el nombre y cuándo avisa y, a la
+// derecha, la hora. tipo: uno de tiposRecordatorio.
+function crearFilaRecordatorio(tipo) {
+  const fila = document.createElement("div");
+  fila.classList.add("recordatorio-fila");
+  fila.dataset.tipo = tipo.tipo;
+
+  const casilla = document.createElement("input");
+  casilla.type = "checkbox";
+  casilla.addEventListener("change", function () {
+    cambiarRecordatorio(tipo.tipo, { activo: casilla.checked });
+  });
+
+  const nombre = document.createElement("span");
+  nombre.classList.add("recordatorio-nombre");
+  nombre.textContent = tipo.nombre;
+  const cuando = document.createElement("span");
+  cuando.classList.add("recordatorio-cuando");
+  cuando.textContent = tipo.cuando;
+  const textos = document.createElement("span");
+  textos.append(nombre, cuando);
+
+  // La etiqueta envuelve la casilla y los textos: tocar el nombre también
+  // la marca
+  const etiqueta = document.createElement("label");
+  etiqueta.append(casilla, textos);
+
+  const hora = document.createElement("input");
+  hora.type = "time";
+  hora.setAttribute("aria-label", "Hora: " + tipo.nombre);
+  hora.addEventListener("change", function () {
+    // En el iPhone se puede borrar la hora: entonces se deja la que había
+    if (hora.value === "") {
+      hora.value = (recordatorios[tipo.tipo] || tipo).hora;
+      return;
+    }
+    cambiarRecordatorio(tipo.tipo, { hora: hora.value });
+  });
+
+  fila.append(etiqueta, hora);
+  return fila;
+}
+
+// Pone al día las cuatro filas. Se crean la primera vez; después solo se
+// cambian sus valores (si se volvieran a crear al sincronizar mientras se
+// elige una hora, el selector se cerraría).
+function dibujarListaRecordatorios() {
+  const caja = document.getElementById("lista-recordatorios");
+  if (caja.children.length === 0) {
+    tiposRecordatorio.forEach(function (tipo) {
+      caja.append(crearFilaRecordatorio(tipo));
+    });
+  }
+
+  tiposRecordatorio.forEach(function (tipo) {
+    const fila = caja.querySelector('[data-tipo="' + tipo.tipo + '"]');
+    const casilla = fila.querySelector('input[type="checkbox"]');
+    const hora = fila.querySelector('input[type="time"]');
+    // Sin ajustes todavía, los de siempre
+    const ajuste = recordatorios[tipo.tipo] || {
+      activo: true,
+      hora: tipo.hora,
+    };
+
+    casilla.checked = ajuste.activo;
+    if (document.activeElement !== hora) {
+      hora.value = ajuste.hora;
+    }
+    hora.disabled = !ajuste.activo;
+  });
+}
+
+// Dibuja la sección Recordatorios (en Archivo), solo con la cuenta abierta:
+// la lista, la nota si aquí no se puede (iPhone sin instalar, permiso
+// bloqueado), cómo está este dispositivo y sus botones.
+function mostrarRecordatorios() {
+  const seccion = document.getElementById("seccion-recordatorios");
+  seccion.hidden = !hayNube() || !sesion;
+  if (seccion.hidden) {
+    return;
+  }
+
+  const activados = localStorage.getItem("ergon-avisos-aqui") !== null;
+  const nota = document.getElementById("avisos-nota");
+
+  nota.textContent = "";
+  if (!puedeAvisar()) {
+    if (esIphone()) {
+      nota.textContent =
+        "En el iPhone, los avisos solo llegan con Ergon en la pantalla de inicio: en Safari, pulsa Compartir → «Añadir a pantalla de inicio» y abre Ergon desde allí (hace falta iOS 16.4 o posterior). Desde aquí puedes elegir los recordatorios igualmente.";
+    } else {
+      nota.textContent =
+        "Este navegador no puede recibir avisos. Desde aquí puedes elegir los recordatorios igualmente.";
+    }
+  } else if (Notification.permission === "denied") {
+    nota.textContent =
+      "Los avisos están bloqueados para Ergon. Para activarlos, permite las notificaciones en los ajustes (en el iPhone: Ajustes → Notificaciones → Ergon).";
+  }
+  nota.hidden = nota.textContent === "";
+
+  // Los botones: activar o, si ya está, probar y quitar
+  const sePuede = puedeAvisar() && Notification.permission !== "denied";
+  document.getElementById("boton-activar-avisos").hidden =
+    !sePuede || activados;
+  document.getElementById("boton-probar-aviso").hidden = !sePuede || !activados;
+  document.getElementById("boton-quitar-avisos").hidden = !activados;
+
+  let estado = mensajeAvisos;
+  if (estado === "" && activados) {
+    estado = "Avisos activados en este dispositivo.";
+  }
+  document.getElementById("avisos-estado").textContent = estado;
+
+  dibujarListaRecordatorios();
+}
+
+// Los botones de la sección.
+document
+  .getElementById("boton-activar-avisos")
+  .addEventListener("click", activarAvisos);
+document
+  .getElementById("boton-probar-aviso")
+  .addEventListener("click", probarAviso);
+document
+  .getElementById("boton-quitar-avisos")
+  .addEventListener("click", async function () {
+    try {
+      await quitarAvisosAqui();
+    } catch (error) {
+      // Sin conexión: aquí ya están quitados (ver quitarAvisosAqui)
+    }
+    mensajeAvisos = "Avisos quitados de este dispositivo.";
+    mostrarRecordatorios();
+  });
+
+// ==========================================================================
+// 24. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
 // Hoy · Mosaico · Metas · Archivo.
 // ==========================================================================
@@ -4234,7 +5461,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 22. APP INSTALABLE (SERVICE WORKER)
+// 25. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -4243,12 +5470,13 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 23. INICIO
+// 26. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 
 // Vuelve a dibujar todo. Se llama cada vez que cambia algo.
 function actualizarTodo() {
+  mostrarCuenta();
   mostrarRituales();
   mostrarRevisionEnHoy();
   mostrarHabitos();
@@ -4273,10 +5501,14 @@ if (tocaBienvenida()) {
   mostrarPantalla(localStorage.getItem("ergon-pantalla") || "hoy");
 }
 
+// Con la cuenta abierta, sincronizar nada más abrir y, después, revisar los
+// avisos de este dispositivo (bloque 23).
+sincronizar().then(revisarAvisos);
+
 // En el iPhone, la app puede quedarse abierta de fondo y volver horas
 // después. Al volver (visibilitychange): si ya es otro día, se recarga para
 // que «hoy» sea hoy; si es el mismo, se vuelven a dibujar los rituales (por
-// si ha llegado la noche).
+// si ha llegado la noche) y se sincroniza.
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState !== "visible") {
     return;
@@ -4286,5 +5518,7 @@ document.addEventListener("visibilitychange", function () {
   } else {
     mostrarRituales();
     mostrarRevisionEnHoy();
+    // Por si se ha cambiado algo en otro dispositivo mientras tanto
+    sincronizar();
   }
 });

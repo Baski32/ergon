@@ -348,6 +348,9 @@
         <h1 id="titulo-pantalla">Hoy</h1>
         <!-- Fecha de hoy: la pone script.js -->
         <span id="fecha-hoy" class="fecha-hoy"></span>
+        <!-- Puntito de la nube (solo con la cuenta abierta): verde si todo
+             está subido, bronce si hay cambios esperando, terracota si falla -->
+        <span id="estado-nube" class="estado-nube" hidden></span>
       </div>
     </header>
 
@@ -476,9 +479,82 @@
 
       <!-- ============================================================
            PANTALLA ARCHIVO
-           Perfil, revisiones semanales y copia de seguridad.
+           Cuenta, perfil, revisiones semanales y copia de seguridad.
            ============================================================ -->
       <div class="pantalla" data-pantalla="archivo" hidden>
+        <!-- Cuenta: entrar para tener los datos en la nube y en todos los
+             dispositivos. script.js enseña el formulario o, si ya se ha
+             entrado, cómo va la sincronización -->
+        <section id="seccion-cuenta" class="cuenta" hidden>
+          <h2>Cuenta</h2>
+          <form id="form-entrar" class="form-entrar" novalidate>
+            <p class="pie-texto">
+              Entra en tu cuenta para guardar tus datos en la nube y tenerlos
+              iguales en el móvil y en el ordenador.
+            </p>
+            <input
+              type="email"
+              id="entrar-email"
+              autocomplete="username"
+              placeholder="Email"
+            />
+            <input
+              type="password"
+              id="entrar-contrasena"
+              autocomplete="current-password"
+              placeholder="Contraseña"
+            />
+            <p id="entrar-error" class="ventana-error"></p>
+            <button type="submit" class="boton-principal">Entrar</button>
+          </form>
+          <div id="cuenta-dentro" hidden>
+            <p id="cuenta-email" class="cuenta-email"></p>
+            <p id="cuenta-estado" class="cuenta-estado"></p>
+            <div class="pie-botones">
+              <button id="boton-sincronizar" type="button">
+                Sincronizar ahora
+              </button>
+              <button id="boton-salir" type="button">Salir</button>
+            </div>
+          </div>
+          <!-- Los datos que había en este dispositivo antes de traer los de
+               la cuenta (solo si los hay) -->
+          <button
+            id="boton-datos-apartados"
+            class="cuenta-apartados"
+            type="button"
+            hidden
+          >
+            Descargar los datos que había antes aquí
+          </button>
+        </section>
+
+        <!-- Recordatorios: avisos en el móvil aunque Ergon esté cerrada. Los
+             envía el servidor, así que solo se ven con la cuenta abierta.
+             Las cuatro filas y los mensajes los pone script.js -->
+        <section id="seccion-recordatorios" class="recordatorios" hidden>
+          <h2>Recordatorios</h2>
+          <p class="pie-texto">
+            Ergon te avisa a la hora que elijas, aunque la app esté cerrada. Los
+            recordatorios son los mismos en todos tus dispositivos; los avisos
+            llegan a los que actives.
+          </p>
+          <div id="lista-recordatorios" class="recordatorios-lista"></div>
+          <p id="avisos-nota" class="recordatorios-nota" hidden></p>
+          <p id="avisos-estado" class="cuenta-estado"></p>
+          <div class="pie-botones">
+            <button id="boton-activar-avisos" type="button">
+              Activar avisos en este dispositivo
+            </button>
+            <button id="boton-probar-aviso" type="button" hidden>
+              Probar aviso
+            </button>
+            <button id="boton-quitar-avisos" type="button" hidden>
+              Quitar de este dispositivo
+            </button>
+          </div>
+        </section>
+
         <!-- Perfil: los datos los pone script.js -->
         <section class="perfil">
           <h2>Perfil</h2>

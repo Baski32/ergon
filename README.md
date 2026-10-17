@@ -23,16 +23,20 @@
 - **Laureles**: las metas cumplidas reciben su corona de laurel y la fecha de la victoria.
 - **Cita del día** de filósofos clásicos (Marco Aurelio, Séneca, Epicteto, Aristóteles…), con la obra de la que procede.
 - **Copia de seguridad** para descargar y restaurar los datos, con aviso si hace una semana o más de la última.
+- **Cuenta y sincronización** (opcional): al entrar con email y contraseña, los datos se guardan también en la nube y son los mismos en el móvil y en el ordenador. Sin conexión, los cambios esperan y se suben al volver.
+- **Recordatorios** en el móvil aunque la app esté cerrada: intención de la mañana, hábitos sin marcar, examen de la noche y revisión del domingo, cada uno a su hora y solo si hace falta.
 - **Pestañas** con navegación inferior pensada para el móvil y barra lateral en el ordenador.
 - **Avisos propios** con el estilo de la app, en lugar de los del navegador.
 - **Instalable en el móvil** como una app (PWA) y funciona sin conexión.
 
-Los datos se guardan solo en el navegador de cada dispositivo: no se envían a ningún servidor.
+Sin cuenta, los datos se guardan solo en el navegador de cada dispositivo. Con cuenta, también en la nube, donde cada usuario solo puede ver los suyos.
 
 ## Tecnología
 
 - HTML, CSS y JavaScript, sin librerías.
 - `localStorage` para guardar los datos.
+- [Supabase](https://supabase.com) para la cuenta y la nube, con `fetch` y sin librerías: base de datos Postgres con seguridad por filas (RLS).
+- Recordatorios con Web Push (claves VAPID): una *Edge Function* de Supabase en Deno decide y envía los avisos, y `pg_cron` la llama cada 5 minutos. El SQL y la función están en la carpeta `supabase/`.
 - Dibujos en SVG (laurel, llama, iconos) y animaciones con CSS.
 - Ventanas con el elemento `<dialog>` y avisos con promesas (`async` / `await`).
 - PWA: `manifest.json` y un *service worker* para instalarla y usarla sin conexión.
@@ -55,7 +59,8 @@ Los datos se guardan solo en el navegador de cada dispositivo: no se envían a n
 - [x] Bienvenida y perfil
 - [x] Rituales de mañana y noche y revisión semanal
 - [x] Diseño de escritorio
-- [ ] Sincronización entre dispositivos
+- [x] Sincronización entre dispositivos
+- [x] Recordatorios en el móvil
 - [ ] Consejeros con IA: Méntor (Μέντωρ) y Prometheus (Προμηθεύς)
 
 ## Sobre el proyecto
