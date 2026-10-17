@@ -18,7 +18,7 @@
    12. Hoy · Semana
    13. Hoy · Constancia
    14. Ventanas (editar hábito, meta y perfil; avisos)
-   15. Méntor · Conversación
+   15. Méntor · Conversación y charla
    16. Mosaico del mes
    17. Metas · Tarjetas
    18. Metas · Laureles (metas cumplidas)
@@ -229,7 +229,8 @@ body {
 .mentor-saltar,
 .mentor-quitar,
 .perfil-borrar,
-.cuenta-apartados {
+.cuenta-apartados,
+.charla-reintentar {
   padding: 4px 0;
   font-family: inherit;
   font-size: 0.9rem;
@@ -243,7 +244,8 @@ body {
 .mentor-saltar:hover,
 .mentor-quitar:hover,
 .perfil-borrar:hover,
-.cuenta-apartados:hover {
+.cuenta-apartados:hover,
+.charla-reintentar:hover {
   color: var(--terracota);
 }
 
@@ -1198,9 +1200,10 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   15. MÉNTOR · CONVERSACIÓN
+   15. MÉNTOR · CONVERSACIÓN Y CHARLA
    Burbujas como en un chat: Méntor a la izquierda, mis respuestas a la
-   derecha y, debajo de la última pregunta, la forma de responder.
+   derecha y, debajo de la última pregunta, la forma de responder. Al
+   final, la charla de la pestaña Méntor (que usa las mismas burbujas).
    ========================================================================== */
 
 /* La conversación: una columna de burbujas */
@@ -1514,6 +1517,197 @@ button.recordatorio {
 /* «Añadir» (el botón de la lista), redondo como el campo */
 .mentor-escribir .boton-secundario {
   border-radius: 18px;
+}
+
+/* ---------- La charla (pestaña Méntor) ---------- */
+
+/* Arriba: «‹ Conversaciones» a la izquierda y «+ Nueva» a la derecha */
+.charla-barra {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.charla-barra[hidden] {
+  display: none;
+}
+
+.charla-barra button {
+  padding: 6px 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.charla-barra button:hover {
+  color: var(--terracota);
+}
+
+/* El día en que empezó la conversación, centrado y pequeño */
+.charla-fecha {
+  align-self: center;
+  margin: 0;
+  font-size: 0.85rem;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--bronce);
+}
+
+/* Las respuestas de Méntor pueden tener varios párrafos (pre-line respeta
+   los saltos de línea). Mis mensajes no son botones: no se pueden tocar */
+/* Hace falta porque display: flex (de .conversacion) ganaría al atributo
+   hidden (al ver la lista de conversaciones) */
+.charla[hidden] {
+  display: none;
+}
+
+.charla .burbuja {
+  white-space: pre-line;
+}
+
+.charla .burbuja-mia {
+  cursor: auto;
+}
+
+.charla .burbuja-mia:hover {
+  opacity: 1;
+}
+
+/* La charla se vuelve a dibujar entera al llegar algo nuevo: solo la
+   última burbuja aparece con su animación */
+.charla .burbuja:not(:last-child) {
+  animation: none;
+}
+
+/* Un fallo («Sin conexión…») con «Reintentar», debajo, a la izquierda */
+.charla-fallo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-left: 42px;
+}
+
+.charla-fallo-texto {
+  margin: 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--terracota);
+}
+
+/* El campo para escribir: crece hacia arriba con el texto (lo hace
+   script.js) y el botón se queda abajo */
+.charla-escribir {
+  align-items: flex-end;
+  margin-top: 6px;
+}
+
+.charla-escribir[hidden] {
+  display: none;
+}
+
+.charla-escribir textarea {
+  box-sizing: border-box;
+  max-height: 160px;
+  line-height: 1.35;
+  resize: none;
+}
+
+.charla-escribir .boton-principal:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Cuántos mensajes van hoy, debajo del campo */
+.charla-uso {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--bronce);
+}
+
+.charla-uso:empty {
+  display: none;
+}
+
+/* Sin cuenta: el aviso y «Ir a Archivo», centrados */
+.charla-sin-cuenta {
+  padding-top: 24px;
+  text-align: center;
+}
+
+.charla-sin-cuenta[hidden] {
+  display: none;
+}
+
+/* La lista de conversaciones guardadas: una tarjeta por conversación, con
+   la × de borrar a la derecha */
+.lista-charlas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lista-charlas[hidden] {
+  display: none;
+}
+
+.charla-fila {
+  display: flex;
+  align-items: center;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 6px;
+}
+
+/* min-width: 0 deja que el título largo se corte con «…» */
+.charla-abrir {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  color: var(--tinta);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.charla-titulo {
+  margin: 0;
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.charla-detalle {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--bronce);
+}
+
+.charla-borrar {
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 1.3rem;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.charla-borrar:hover {
+  color: var(--terracota);
+}
+
+.charla-vacia {
+  text-align: center;
+  font-style: italic;
+  color: var(--bronce);
 }
 
 /* Con «reducir movimiento», las burbujas y los puntos no se mueven */
@@ -2221,11 +2415,11 @@ button.recordatorio {
 
 /* ==========================================================================
    21. NAVEGACIÓN
-   La barra fija de abajo: Hoy · Mosaico · Metas · Archivo. En el PC pasa a
-   la izquierda (bloque 22).
+   La barra fija de abajo: Hoy · Mosaico · Méntor · Metas · Archivo. En el
+   PC pasa a la izquierda (bloque 22).
    ========================================================================== */
 
-/* Fija abajo, con cuatro botones iguales. El padding de abajo deja sitio a la
+/* Fija abajo, con cinco botones iguales. El padding de abajo deja sitio a la
    barra de inicio del iPhone (safe-area) */
 .navegacion {
   position: fixed;
@@ -2233,7 +2427,7 @@ button.recordatorio {
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   max-width: 500px;
   margin: 0 auto;
   padding-bottom: env(safe-area-inset-bottom);
@@ -2264,6 +2458,15 @@ button.recordatorio {
    «conversando» en el body) */
 body.conversando .navegacion {
   display: none;
+}
+
+/* En el móvil, mientras se escribe a Méntor, la barra también se esconde:
+   con el teclado abierto, taparía el campo. :has() mira si el campo tiene
+   el foco */
+@media (max-width: 899px) {
+  body:has(#charla-texto:focus) .navegacion {
+    display: none;
+  }
 }
 
 /* ==========================================================================
@@ -2390,7 +2593,7 @@ body.conversando .navegacion {
     grid-column: 1 / -1;
   }
 
-  /* Mosaico, Méntor y Archivo: centrados y sin estirarse demasiado. El
+  /* Mosaico, Méntor (las dos pantallas) y Archivo: centrados y sin estirarse demasiado. El
      pergamino ocupa el alto de la pantalla menos la barra de arriba
      (unos 57px), los márgenes de la página (28px + 48px) y su propio
      relleno (32px) */
@@ -2413,6 +2616,11 @@ body.conversando .navegacion {
 
   [data-pantalla="archivo"] {
     max-width: 640px;
+    margin: 0 auto;
+  }
+
+  [data-pantalla="charla"] {
+    max-width: 680px;
     margin: 0 auto;
   }
 }

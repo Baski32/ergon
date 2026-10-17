@@ -10,7 +10,7 @@
 
 - **Hábitos** diarios, de días concretos (por ejemplo, L-X-V), de unas veces por semana (por ejemplo, 3 veces, con la racha en semanas) o por cantidad (por ejemplo, al menos 10.000 pasos o como mucho 300 minutos), con rachas que respetan los días de descanso y la llama de Prometeo.
 - **Iconos clásicos** en SVG para cada hábito (corona de olivo, pergamino, ánfora, lira, búho, rama de olivo, luna, dracma, pluma y tintero, columna). Se eligen solos por el nombre del hábito y se pueden cambiar a mano.
-- **Méntor**: los hábitos y las metas nuevos se crean conversando con Méntor, que pregunta paso a paso (solo lo que toca) y muestra un resumen antes de crearlos. La primera vez da la bienvenida y pregunta lo básico para el perfil. Por ahora sin IA.
+- **Méntor**: los hábitos y las metas nuevos se crean conversando con Méntor, que pregunta paso a paso (solo lo que toca) y muestra un resumen antes de crearlos. La primera vez da la bienvenida y pregunta lo básico para el perfil. Y en su pestaña se puede hablar con él con tus palabras: contesta con la IA de Claude, y las conversaciones se guardan y se sincronizan.
 - **Rituales**: por la mañana, la intención del día; por la noche, el examen de Séneca (sus tres preguntas, para responderlas en el diario).
 - **Revisión semanal** el domingo con Méntor: los datos de la semana, tres preguntas y un propósito que se recuerda toda la semana siguiente.
 - **Perfil** opcional (nombre, edad, altura y peso con su historial).
@@ -62,7 +62,8 @@ Sin cuenta, los datos se guardan solo en el navegador de cada dispositivo. Con c
 - [x] Diseño de escritorio
 - [x] Sincronización entre dispositivos
 - [x] Recordatorios en el móvil
-- [ ] Consejeros con IA: Méntor (Μέντωρ) y Prometheus (Προμηθεύς)
+- [x] Hablar con Méntor (Μέντωρ) con la IA de Claude
+- [ ] Consejeros que leen mis datos y Prometheus (Προμηθεύς)
 
 ## Sobre el proyecto
 

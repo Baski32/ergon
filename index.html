@@ -456,6 +456,53 @@
       </div>
 
       <!-- ============================================================
+           PANTALLA MÉNTOR (pestaña)
+           Hablar con Méntor con mis palabras: contesta con la IA de
+           Claude, a través del servidor. Arriba, «‹ Conversaciones» (las
+           guardadas) y «+ Nueva»; abajo, la conversación abierta y el
+           campo para escribir. Las burbujas las dibuja script.js.
+           ============================================================ -->
+      <div class="pantalla" data-pantalla="charla" hidden>
+        <!-- Sin cuenta: hablar con Méntor necesita el servidor -->
+        <div id="charla-sin-cuenta" class="charla-sin-cuenta" hidden>
+          <p class="pie-texto">
+            Para hablar con Méntor, entra en tu cuenta: sus respuestas llegan a
+            través del servidor.
+          </p>
+          <div class="pie-botones">
+            <button id="charla-ir-a-cuenta" type="button">Ir a Archivo</button>
+          </div>
+        </div>
+
+        <div id="charla-barra" class="charla-barra">
+          <button id="boton-conversaciones" type="button">
+            ‹ Conversaciones
+          </button>
+          <button id="boton-nueva-charla" type="button">+ Nueva</button>
+        </div>
+
+        <!-- Las conversaciones guardadas (al tocar «‹ Conversaciones») -->
+        <div id="lista-charlas" class="lista-charlas" hidden></div>
+
+        <!-- La conversación abierta -->
+        <div id="charla" class="conversacion charla"></div>
+
+        <!-- El campo para escribir, al final (así el iPhone lo deja a la
+             vista sobre el teclado) -->
+        <form id="form-charla" class="mentor-escribir charla-escribir">
+          <textarea
+            id="charla-texto"
+            rows="1"
+            maxlength="2000"
+            placeholder="Escribe a Méntor…"
+            aria-label="Mensaje para Méntor"
+          ></textarea>
+          <button type="submit" class="boton-principal">Enviar</button>
+        </form>
+        <p id="charla-uso" class="charla-uso"></p>
+      </div>
+
+      <!-- ============================================================
            PANTALLA METAS
            Metas pendientes, botón de meta nueva y Laureles (metas cumplidas).
            ============================================================ -->
@@ -479,7 +526,8 @@
 
       <!-- ============================================================
            PANTALLA ARCHIVO
-           Cuenta, perfil, revisiones semanales y copia de seguridad.
+           Cuenta, recordatorios, consejeros, perfil, revisiones semanales y
+           copia de seguridad.
            ============================================================ -->
       <div class="pantalla" data-pantalla="archivo" hidden>
         <!-- Cuenta: entrar para tener los datos en la nube y en todos los
@@ -613,7 +661,7 @@
       </div>
 
       <!-- ============================================================
-           PANTALLA MÉNTOR
+           PANTALLA MÉNTOR (conversaciones guiadas)
            Conversación para crear un hábito. Méntor pregunta y yo
            respondo; script.js dibuja las burbujas. No tiene botón en la
            barra de abajo: se abre con «Nuevo hábito».
@@ -855,6 +903,7 @@
       </div>
       <button type="button" data-destino="hoy">Hoy</button>
       <button type="button" data-destino="mosaico">Mosaico</button>
+      <button type="button" data-destino="charla">Méntor</button>
       <button type="button" data-destino="metas">Metas</button>
       <button type="button" data-destino="archivo">Archivo</button>
     </nav>

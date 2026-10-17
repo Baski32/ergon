@@ -1,7 +1,7 @@
 // ==========================================================================
 // ERGON — script.js
 // Toda la lógica de la app. Los datos se guardan en este dispositivo y, con
-// la cuenta abierta, también en la nube (Supabase, bloques 21 a 24).
+// la cuenta abierta, también en la nube (Supabase, bloques 21 a 25).
 //
 // ÍNDICE
 //  1. Datos guardados
@@ -27,10 +27,11 @@
 // 21. Nube · Cuenta
 // 22. Nube · Sincronizar
 // 23. Recordatorios
-// 24. Consejeros
-// 25. Barra superior y navegación
-// 26. App instalable (service worker)
-// 27. Inicio
+// 24. Consejeros · Conexión
+// 25. Consejeros · Charla con Méntor
+// 26. Barra superior y navegación
+// 27. App instalable (service worker)
+// 28. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -75,6 +76,12 @@ const revisiones = JSON.parse(localStorage.getItem("ergon-revisiones")) || {};
 const recordatorios =
   JSON.parse(localStorage.getItem("ergon-recordatorios")) || {};
 
+// Conversaciones con Méntor (bloque 25), por su id:
+// { "c1760700000000": { id, consejero, creada, actualizada, titulo,
+//   mensajes: [{ de: "yo" o "consejero", texto, hora }] } }
+const conversaciones =
+  JSON.parse(localStorage.getItem("ergon-conversaciones")) || {};
+
 // Guarda la lista de hábitos.
 function guardarHabitos() {
   localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
@@ -117,6 +124,12 @@ function guardarRevisiones(lunes) {
 function guardarRecordatorios() {
   localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
   apuntarCambio("ergon-recordatorios");
+}
+
+// Guarda las conversaciones. id: la que ha cambiado (o se ha borrado).
+function guardarConversacion(id) {
+  localStorage.setItem("ergon-conversaciones", JSON.stringify(conversaciones));
+  apuntarCambio("conversacion:" + id);
 }
 
 // ==========================================================================
@@ -4066,6 +4079,7 @@ const claves = [
   "ergon-perfil",
   "ergon-rituales",
   "ergon-revisiones",
+  "ergon-conversaciones",
 ];
 
 // El día de la última copia se guarda aparte, en «ergon-ultima-copia»: no
@@ -4368,6 +4382,7 @@ function cerrarSesionAqui(olvidar) {
     localStorage.removeItem("ergon-usuario-nube");
   }
   mostrarCuenta();
+  mostrarCharla();
 }
 
 // Piezas de la sección Cuenta (en Archivo).
@@ -4409,6 +4424,7 @@ formEntrar.addEventListener("submit", async function (evento) {
   errorEntrar.textContent = "";
   formEntrar.reset();
   mostrarCuenta();
+  mostrarCharla();
   // Después de sincronizar, lo de los recordatorios y los consejeros
   // (bloques 23 y 24)
   sincronizar().then(revisarAvisos).then(revisarConsejeros);
@@ -4511,7 +4527,8 @@ function mostrarCuenta() {
 // Cómo se mantienen iguales los datos del móvil y del ordenador.
 // - En la nube, cada dato es una fila con su «clave»: "ergon-habitos",
 //   "ergon-metas", "ergon-perfil", "ergon-recordatorios", "ritual:2026-10-16",
-//   "revision:2026-10-12" y, del registro, una fila por hábito y día:
+//   "revision:2026-10-12", "conversacion:c1760700000000" (una por
+//   conversación con Méntor) y, del registro, una fila por hábito y día:
 //   "registro:2026-10-16:h123".
 //   Así, marcar hábitos distintos en dos dispositivos no se pisa.
 // - Cada cambio de aquí se apunta en «pendientes» con su hora. Se sube en
@@ -4581,6 +4598,9 @@ function valorLocal(clave) {
   if (partes[0] === "revision") {
     return revisiones[partes[1]] || null;
   }
+  if (partes[0] === "conversacion") {
+    return conversaciones[partes[1]] || null;
+  }
   if (clave === "ergon-habitos") {
     return habitos;
   }
@@ -4646,6 +4666,12 @@ function aplicarFila(fila) {
     } else {
       revisiones[partes[1]] = fila.valor;
     }
+  } else if (partes[0] === "conversacion") {
+    if (fila.valor === null) {
+      delete conversaciones[partes[1]];
+    } else {
+      conversaciones[partes[1]] = fila.valor;
+    }
   } else if (fila.clave === "ergon-habitos") {
     reemplazarLista(habitos, fila.valor || []);
   } else if (fila.clave === "ergon-metas") {
@@ -4667,6 +4693,7 @@ function guardarLoBajado() {
   localStorage.setItem("ergon-rituales", JSON.stringify(rituales));
   localStorage.setItem("ergon-revisiones", JSON.stringify(revisiones));
   localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
+  localStorage.setItem("ergon-conversaciones", JSON.stringify(conversaciones));
 }
 
 // Un valor convertido en texto con las propiedades en orden alfabético. La
@@ -4802,6 +4829,9 @@ function apuntarTodo() {
   Object.keys(revisiones).forEach(function (lunes) {
     pendientes["revision:" + lunes] = ahora;
   });
+  Object.keys(conversaciones).forEach(function (id) {
+    pendientes["conversacion:" + id] = ahora;
+  });
   guardarPendientes();
 }
 
@@ -4870,6 +4900,7 @@ async function primeraSincronizacion() {
   reemplazarObjeto(rituales, {});
   reemplazarObjeto(revisiones, {});
   reemplazarObjeto(recordatorios, {});
+  reemplazarObjeto(conversaciones, {});
 
   let ultima = filas[0].subido;
   filas.forEach(function (fila) {
@@ -5391,7 +5422,7 @@ document
   });
 
 // ==========================================================================
-// 24. CONSEJEROS
+// 24. CONSEJEROS · CONEXIÓN
 // Méntor (y, más adelante, los demás consejeros) contestará con la IA de
 // Claude. La app no habla con Claude directamente: habla con la función
 // «consejero» del servidor (supabase/functions/consejero), que guarda la
@@ -5438,8 +5469,8 @@ async function llamarConsejero(cuerpo) {
 }
 
 // Manda una conversación a un consejero ("mentor") y devuelve su respuesta.
-// mensajes: [{ de: "yo" o "consejero", texto }]. Lo usarán las lecciones
-// siguientes para hablar con Méntor.
+// mensajes: [{ de: "yo" o "consejero", texto }]. Lo usa la charla con
+// Méntor (bloque 25).
 async function hablarConConsejero(consejero, mensajes) {
   const respuesta = await llamarConsejero({
     accion: "hablar",
@@ -5558,6 +5589,7 @@ function mostrarConsejeros() {
     estado = estado + ".";
   }
   document.getElementById("consejeros-estado").textContent = estado;
+  mostrarUsoCharla();
 
   document.getElementById("boton-probar-consejero").disabled =
     probandoConsejero;
@@ -5576,9 +5608,429 @@ document
   .addEventListener("click", probarConsejero);
 
 // ==========================================================================
-// 25. BARRA SUPERIOR Y NAVEGACIÓN
+// 25. CONSEJEROS · CHARLA CON MÉNTOR
+// La pestaña Méntor: hablar con él con mis palabras. Cada conversación se
+// guarda (en «conversaciones», bloque 1) y se sincroniza, así se puede
+// seguir en el móvil o en el ordenador y releer después. Sus respuestas
+// llegan de Claude a través del servidor (hablarConConsejero, bloque 24).
+// Dos vistas: la conversación abierta (con el campo para escribir) y la
+// lista de las conversaciones guardadas.
+// ==========================================================================
+
+// La conversación abierta (su id), o null si es una nueva aún sin
+// mensajes.
+let charlaAbierta = null;
+
+// ¿Se ha elegido ya una conversación (en la lista, con «+ Nueva» o al
+// escribir)? Mientras no, la pestaña abre la de hoy: si hoy ya se habló
+// con Méntor (aquí o en otro dispositivo, aunque llegue al sincronizar),
+// se sigue esa conversación; si no, se empieza una nueva.
+let charlaElegida = false;
+
+// ¿Se está viendo la lista de conversaciones? (si no, la abierta)
+let viendoLista = false;
+
+// La conversación que espera la respuesta de Méntor (su id), o null.
+let charlaEsperando = null;
+
+// El último fallo al hablar con Méntor: { id, texto } (o null si ninguno).
+let errorCharla = null;
+
+// La conversación de hoy más reciente (su id), o null si hoy no ha habido.
+function conversacionDeHoy() {
+  let reciente = null;
+  Object.values(conversaciones).forEach(function (conversacion) {
+    const dia = new Date(conversacion.actualizada).toLocaleDateString("en-CA");
+    if (
+      dia === hoy &&
+      (!reciente || conversacion.actualizada > reciente.actualizada)
+    ) {
+      reciente = conversacion;
+    }
+  });
+  if (reciente) {
+    return reciente.id;
+  }
+  return null;
+}
+
+// El título de una conversación: el principio de mi primer mensaje
+// (cortado en una palabra, con «…» si sigue).
+function tituloDe(texto) {
+  const limpio = texto.replace(/\s+/g, " ").trim();
+  if (limpio.length <= 40) {
+    return limpio;
+  }
+  const corte = limpio.slice(0, 40).replace(/\s+\S*$/, "");
+  return corte + "…";
+}
+
+// Una burbuja con lo que yo he escrito, a la derecha (como mis respuestas
+// del bloque 8, pero sin poder tocarla para cambiarla).
+function burbujaYo(texto) {
+  const burbuja = document.createElement("p");
+  burbuja.classList.add("burbuja", "burbuja-mia");
+  burbuja.textContent = texto;
+  return burbuja;
+}
+
+// «Méntor está escribiendo…»: su burbuja con tres puntos (como en el
+// bloque 8, pero hasta que llega la respuesta).
+function burbujaEscribiendo() {
+  const burbuja = burbujaMentor("");
+  burbuja.classList.add("escribiendo");
+  burbuja.setAttribute("aria-label", "Méntor está escribiendo");
+  burbuja.insertAdjacentHTML(
+    "beforeend",
+    "<span></span><span></span><span></span>",
+  );
+  return burbuja;
+}
+
+// Un aviso dentro de la conversación (un fallo, o que Méntor no llegó a
+// contestar) con el botón «Reintentar».
+function avisoCharla(texto, id) {
+  const aviso = document.createElement("div");
+  aviso.classList.add("charla-fallo");
+  aviso.append(
+    crearParrafo(texto, "charla-fallo-texto"),
+    crearBoton("Reintentar", "charla-reintentar", function () {
+      pedirRespuesta(id);
+    }),
+  );
+  return aviso;
+}
+
+// Dibuja la conversación abierta: el día, el saludo de Méntor (lo pone la
+// app, no se guarda), los mensajes y, al final, los puntos de «escribiendo»
+// o el aviso de un fallo.
+function dibujarCharla() {
+  const caja = document.getElementById("charla");
+  caja.innerHTML = "";
+  const conversacion = conversaciones[charlaAbierta];
+
+  // El día en que empezó (solo si ya tiene mensajes)
+  if (conversacion) {
+    caja.append(
+      crearParrafo(
+        new Date(conversacion.creada).toLocaleDateString("es-ES", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }),
+        "charla-fecha",
+      ),
+    );
+  }
+
+  caja.append(burbujaMentor(salve() + " ¿De qué quieres hablar?"));
+
+  if (!conversacion) {
+    return;
+  }
+
+  conversacion.mensajes.forEach(function (mensaje) {
+    if (mensaje.de === "yo") {
+      caja.append(burbujaYo(mensaje.texto));
+    } else {
+      caja.append(burbujaMentor(mensaje.texto));
+    }
+  });
+
+  const ultimo = conversacion.mensajes[conversacion.mensajes.length - 1];
+  if (charlaEsperando === conversacion.id) {
+    caja.append(burbujaEscribiendo());
+  } else if (errorCharla && errorCharla.id === conversacion.id) {
+    caja.append(avisoCharla(errorCharla.texto, conversacion.id));
+  } else if (ultimo && ultimo.de === "yo") {
+    // Se cerró la app antes de que contestara (o en otro dispositivo)
+    caja.append(avisoCharla("Méntor no llegó a contestar.", conversacion.id));
+  }
+}
+
+// Dibuja la lista de conversaciones guardadas, de la más reciente a la más
+// antigua: el título, el día y cuántos mensajes; tocar una la abre y la ×
+// la borra.
+function dibujarListaCharlas() {
+  const caja = document.getElementById("lista-charlas");
+  caja.innerHTML = "";
+
+  caja.append(
+    crearBoton("+ Nueva conversación", "boton-nuevo", function () {
+      abrirCharla(null);
+    }),
+  );
+
+  const lista = Object.values(conversaciones).sort(function (a, b) {
+    if (a.actualizada > b.actualizada) {
+      return -1;
+    }
+    return 1;
+  });
+
+  if (lista.length === 0) {
+    caja.append(crearParrafo("Aún no has hablado con Méntor.", "charla-vacia"));
+    return;
+  }
+
+  lista.forEach(function (conversacion) {
+    const fila = document.createElement("div");
+    fila.classList.add("charla-fila");
+
+    const dia = new Date(conversacion.actualizada).toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+    });
+    let mensajes = conversacion.mensajes.length + " mensajes";
+    if (conversacion.mensajes.length === 1) {
+      mensajes = "1 mensaje";
+    }
+
+    const abrir = document.createElement("button");
+    abrir.type = "button";
+    abrir.classList.add("charla-abrir");
+    abrir.append(
+      crearParrafo(conversacion.titulo, "charla-titulo"),
+      crearParrafo(dia + " · " + mensajes, "charla-detalle"),
+    );
+    abrir.addEventListener("click", function () {
+      abrirCharla(conversacion.id);
+    });
+
+    const borrar = crearBoton("×", "charla-borrar", async function () {
+      const seguro = await preguntar(
+        "¿Borrar la conversación «" +
+          conversacion.titulo +
+          "»? Se borrará también en tus otros dispositivos.",
+        "Borrar",
+        "Cancelar",
+      );
+      if (!seguro) {
+        return;
+      }
+      delete conversaciones[conversacion.id];
+      guardarConversacion(conversacion.id);
+      if (charlaAbierta === conversacion.id) {
+        charlaAbierta = null;
+      }
+      mostrarCharla();
+    });
+    borrar.setAttribute("aria-label", "Borrar la conversación");
+
+    fila.append(abrir, borrar);
+    caja.append(fila);
+  });
+}
+
+// Dibuja la pestaña Méntor: sin cuenta, lo que falta; con cuenta, la lista
+// o la conversación abierta con el campo para escribir.
+function mostrarCharla() {
+  const conCuenta = hayNube() && sesion !== null;
+  document.getElementById("charla-sin-cuenta").hidden = conCuenta;
+  document.getElementById("charla-barra").hidden = !conCuenta || viendoLista;
+  document.getElementById("lista-charlas").hidden = !conCuenta || !viendoLista;
+  document.getElementById("charla").hidden = !conCuenta || viendoLista;
+  document.getElementById("form-charla").hidden = !conCuenta || viendoLista;
+  document.getElementById("charla-uso").hidden = !conCuenta || viendoLista;
+  if (!conCuenta) {
+    return;
+  }
+
+  // Si la conversación abierta se ha borrado (aquí o en otro dispositivo)
+  if (charlaAbierta && !conversaciones[charlaAbierta]) {
+    charlaAbierta = null;
+  }
+  if (!charlaElegida) {
+    charlaAbierta = conversacionDeHoy();
+  }
+
+  // «‹ Conversaciones (3)»
+  const cuantas = Object.keys(conversaciones).length;
+  let textoLista = "‹ Conversaciones";
+  if (cuantas > 0) {
+    textoLista = textoLista + " (" + cuantas + ")";
+  }
+  document.getElementById("boton-conversaciones").textContent = textoLista;
+
+  // Mientras Méntor contesta, no se puede enviar otro mensaje
+  document.querySelector("#form-charla button").disabled =
+    charlaEsperando !== null;
+  mostrarUsoCharla();
+
+  if (viendoLista) {
+    dibujarListaCharlas();
+  } else {
+    dibujarCharla();
+  }
+}
+
+// Debajo del campo, cuántos mensajes van hoy (lo dice el servidor; lo
+// llama también mostrarConsejeros, cada vez que cambia).
+function mostrarUsoCharla() {
+  let uso = "";
+  if (usoConsejeros && usoConsejeros.listo) {
+    uso =
+      "Hoy: " +
+      usoConsejeros.hoy +
+      " de " +
+      usoConsejeros.limite +
+      " mensajes.";
+  }
+  document.getElementById("charla-uso").textContent = uso;
+}
+
+// Baja hasta el final de la página al momento (al entrar en la pestaña,
+// sin la animación de bajarAlFinal).
+function irAlFinal() {
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+// Abre una conversación (id) o una nueva (null).
+function abrirCharla(id) {
+  charlaAbierta = id;
+  charlaElegida = true;
+  viendoLista = false;
+  mostrarCharla();
+  irAlFinal();
+  enfocarCampoCharla();
+}
+
+// En el PC, deja el cursor en el campo para escribir (en el móvil no:
+// abriría el teclado sin querer).
+function enfocarCampoCharla() {
+  if (!window.matchMedia("(pointer: coarse)").matches && sesion) {
+    campoCharla.focus({ preventScroll: true });
+  }
+}
+
+// Pide a Méntor la respuesta a la conversación (cuando el último mensaje es
+// mío). Mientras, salen los tres puntos; si falla, el aviso con
+// «Reintentar». Se puede cambiar de pestaña mientras tanto.
+async function pedirRespuesta(id) {
+  charlaEsperando = id;
+  errorCharla = null;
+  mostrarCharla();
+  bajarAlFinal();
+
+  try {
+    const mensajes = conversaciones[id].mensajes.map(function (mensaje) {
+      return { de: mensaje.de, texto: mensaje.texto };
+    });
+    const texto = await hablarConConsejero("mentor", mensajes);
+
+    // Puede que se haya borrado mientras tanto
+    const conversacion = conversaciones[id];
+    if (conversacion) {
+      const ahora = new Date().toISOString();
+      conversacion.mensajes.push({
+        de: "consejero",
+        texto: texto,
+        hora: ahora,
+      });
+      conversacion.actualizada = ahora;
+      guardarConversacion(id);
+    }
+  } catch (error) {
+    errorCharla = { id: id, texto: textoErrorConsejero(error) };
+  }
+
+  charlaEsperando = null;
+  mostrarCharla();
+  mostrarConsejeros();
+  if (charlaAbierta === id && !viendoLista) {
+    bajarAlFinal();
+  }
+}
+
+// Envía lo escrito: se añade a la conversación abierta (o crea una nueva) y
+// se pide la respuesta.
+function enviarACharla(texto) {
+  const ahora = new Date().toISOString();
+  let conversacion = conversaciones[charlaAbierta];
+
+  if (!conversacion) {
+    const id = "c" + Date.now();
+    conversacion = {
+      id: id,
+      consejero: "mentor",
+      creada: ahora,
+      actualizada: ahora,
+      titulo: tituloDe(texto),
+      mensajes: [],
+    };
+    conversaciones[id] = conversacion;
+    charlaAbierta = id;
+    charlaElegida = true;
+  }
+
+  conversacion.mensajes.push({ de: "yo", texto: texto, hora: ahora });
+  conversacion.actualizada = ahora;
+  guardarConversacion(conversacion.id);
+  pedirRespuesta(conversacion.id);
+}
+
+// El campo para escribir: crece con el texto (hasta unas seis líneas). En
+// el PC, Intro envía y Mayúsculas + Intro hace una línea nueva; en el móvil,
+// Intro hace una línea nueva y se envía con el botón.
+const campoCharla = document.getElementById("charla-texto");
+
+function ajustarCampoCharla() {
+  campoCharla.style.height = "auto";
+  // scrollHeight: el alto del texto con su relleno; se le suma el borde
+  const bordes = campoCharla.offsetHeight - campoCharla.clientHeight;
+  campoCharla.style.height =
+    Math.min(campoCharla.scrollHeight + bordes, 160) + "px";
+}
+
+campoCharla.addEventListener("input", ajustarCampoCharla);
+
+campoCharla.addEventListener("keydown", function (evento) {
+  const esMovil = window.matchMedia("(pointer: coarse)").matches;
+  if (evento.key === "Enter" && !evento.shiftKey && !esMovil) {
+    evento.preventDefault();
+    document.getElementById("form-charla").requestSubmit();
+  }
+});
+
+document
+  .getElementById("form-charla")
+  .addEventListener("submit", function (evento) {
+    evento.preventDefault();
+    const texto = campoCharla.value.trim();
+    if (texto === "" || charlaEsperando !== null) {
+      return;
+    }
+    campoCharla.value = "";
+    ajustarCampoCharla();
+    enviarACharla(texto);
+  });
+
+// «‹ Conversaciones» y «+ Nueva».
+document
+  .getElementById("boton-conversaciones")
+  .addEventListener("click", function () {
+    viendoLista = true;
+    mostrarCharla();
+    window.scrollTo(0, 0);
+  });
+
+document
+  .getElementById("boton-nueva-charla")
+  .addEventListener("click", function () {
+    abrirCharla(null);
+  });
+
+// Sin cuenta: «Ir a Archivo» lleva a entrar.
+document
+  .getElementById("charla-ir-a-cuenta")
+  .addEventListener("click", function () {
+    mostrarPantalla("archivo");
+  });
+
+// ==========================================================================
+// 26. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
-// Hoy · Mosaico · Metas · Archivo.
+// Hoy · Mosaico · Méntor · Metas · Archivo.
 // ==========================================================================
 
 const pantallas = document.querySelectorAll(".pantalla");
@@ -5625,7 +6077,16 @@ function mostrarPantalla(nombre) {
   if (nombre !== "mentor") {
     localStorage.setItem("ergon-pantalla", nombre);
   }
-  window.scrollTo(0, 0);
+
+  // La pestaña Méntor empieza abajo, en lo último que se ha dicho (bloque
+  // 25); las demás, arriba
+  if (nombre === "charla") {
+    mostrarCharla();
+    irAlFinal();
+    enfocarCampoCharla();
+  } else {
+    window.scrollTo(0, 0);
+  }
 }
 
 // Cada botón de la barra abre su pantalla. En el PC la barra se ve también
@@ -5649,7 +6110,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 26. APP INSTALABLE (SERVICE WORKER)
+// 27. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -5658,13 +6119,14 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 27. INICIO
+// 28. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 
 // Vuelve a dibujar todo. Se llama cada vez que cambia algo.
 function actualizarTodo() {
   mostrarCuenta();
+  mostrarCharla();
   mostrarRituales();
   mostrarRevisionEnHoy();
   mostrarHabitos();
