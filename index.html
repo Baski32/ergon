@@ -356,9 +356,10 @@
 
     <!-- ============================================================
          CONTENIDO
-         Las cuatro pantallas de la barra de abajo y la conversación con
-         Méntor. Solo se ve una a la vez: script.js quita el atributo
-         hidden a la que toca.
+         Las seis pantallas de la barra de abajo (Hoy, Mosaico, Méntor,
+         Prometheus, Metas y Archivo) y la conversación guiada con Méntor.
+         Solo se ve una a la vez: script.js quita el atributo hidden a la
+         que toca.
          ============================================================ -->
     <main class="contenedor">
       <!-- ============================================================
@@ -507,6 +508,122 @@
             Lo que ve Méntor
           </button>
         </div>
+      </div>
+
+      <!-- ============================================================
+           PANTALLA PROMETHEUS
+           El laboratorio de Prometheus: mis estadísticas, con estilo
+           futurista (solo en esta pestaña: style.css, bloque 21). Lo
+           calcula y lo dibuja script.js (bloques 27 y 28); aquí solo
+           están las cajas.
+           ============================================================ -->
+      <div class="pantalla laboratorio" data-pantalla="prometheus" hidden>
+        <!-- Cabecera: el piloto encendido y qué es esta pantalla -->
+        <header class="lab-cabecera">
+          <p class="lab-piloto">
+            <span class="lab-led"></span>Laboratorio en línea
+          </p>
+          <p class="lab-lema">Tus disciplinas, en números.</p>
+        </header>
+
+        <!-- Señales: frases sobre mis datos que van pasando cada 5 segundos
+             (lo mismo que dicen las cifras y las gráficas de abajo) -->
+        <div class="lab-senales">
+          <span class="lab-senales-etiqueta">Señal</span>
+          <div id="lab-senal" class="lab-senal-caja"></div>
+          <span id="lab-senal-cuenta" class="lab-senales-cuenta"></span>
+        </div>
+
+        <!-- Sin hábitos: este aviso sustituye a las secciones de hábitos -->
+        <p id="lab-vacio" class="lab-vacio" hidden>
+          Aún no hay disciplinas que analizar. Crea tu primer hábito en Hoy y,
+          en unos días, aquí verás cómo vas.
+        </p>
+
+        <div class="lab-rejilla">
+          <!-- Hoy: el anillo con lo cumplido y lo que queda -->
+          <section class="lab-tarjeta lab-hoy lab-de-habitos">
+            <div class="lab-anillo">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="lab-anillo-fondo" cx="60" cy="60" r="52" />
+                <circle
+                  id="lab-anillo-relleno"
+                  class="lab-anillo-relleno"
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  transform="rotate(-90 60 60)"
+                />
+              </svg>
+              <div class="lab-anillo-centro">
+                <span id="lab-hoy-porcentaje" class="lab-hoy-porcentaje"></span>
+                <span class="lab-etiqueta">Hoy</span>
+              </div>
+            </div>
+            <div class="lab-hoy-texto">
+              <p id="lab-hoy-cuenta" class="lab-hoy-cuenta"></p>
+              <p id="lab-hoy-quedan" class="lab-hoy-quedan"></p>
+            </div>
+          </section>
+
+          <!-- Cifras: cuatro números y lo que han cambiado (las crea
+               script.js) -->
+          <section
+            id="lab-cifras"
+            class="lab-cifras"
+            aria-label="Cifras"
+          ></section>
+
+          <!-- Semana a semana: lo cumplido de cada semana, en columnas -->
+          <section class="lab-tarjeta lab-semanas-tarjeta lab-de-habitos">
+            <h2 class="lab-titulo">Semana a semana</h2>
+            <p class="lab-subtitulo">
+              Lo que tocaba y cumpliste cada semana (la de ahora, hasta ayer)
+            </p>
+            <div id="lab-semanas" class="lab-columnas"></div>
+            <details class="lab-datos">
+              <summary>Ver los datos</summary>
+              <table id="lab-semanas-tabla" class="lab-tabla"></table>
+            </details>
+          </section>
+
+          <!-- Tu semana tipo: cada día de la semana, en barras -->
+          <section class="lab-tarjeta lab-de-habitos">
+            <h2 class="lab-titulo">Tu semana tipo</h2>
+            <p class="lab-subtitulo">
+              Cada día de la semana, en las últimas 8 semanas
+            </p>
+            <div id="lab-dias" class="lab-barras"></div>
+            <p id="lab-dias-nota" class="lab-nota"></p>
+          </section>
+
+          <!-- Peso: la línea con los pesos apuntados -->
+          <section class="lab-tarjeta">
+            <h2 class="lab-titulo">Peso</h2>
+            <p id="lab-peso-resumen" class="lab-subtitulo"></p>
+            <div id="lab-peso" class="lab-linea"></div>
+            <details id="lab-peso-datos" class="lab-datos">
+              <summary>Ver los datos</summary>
+              <table id="lab-peso-tabla" class="lab-tabla"></table>
+            </details>
+            <button id="boton-apuntar-peso" type="button" class="lab-boton">
+              Apuntar el peso de hoy
+            </button>
+          </section>
+
+          <!-- Cada disciplina: constancia, racha y mejor racha -->
+          <section class="lab-tarjeta lab-disciplinas-tarjeta lab-de-habitos">
+            <h2 class="lab-titulo">Cada disciplina</h2>
+            <p class="lab-subtitulo">
+              Últimos 30 días (4 semanas en las semanales), racha y récord
+            </p>
+            <ul id="lab-disciplinas" class="lab-disciplinas"></ul>
+          </section>
+        </div>
+
+        <!-- El cuadrito con el dato de una columna o de un punto (sale al
+             pasar por encima o al tocar) -->
+        <div id="lab-dato" class="lab-dato" role="tooltip" hidden></div>
       </div>
 
       <!-- ============================================================
@@ -934,6 +1051,7 @@
       <button type="button" data-destino="hoy">Hoy</button>
       <button type="button" data-destino="mosaico">Mosaico</button>
       <button type="button" data-destino="charla">Méntor</button>
+      <button type="button" data-destino="prometheus">Prometheus</button>
       <button type="button" data-destino="metas">Metas</button>
       <button type="button" data-destino="archivo">Archivo</button>
     </nav>

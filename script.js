@@ -30,9 +30,11 @@
 // 24. Consejeros · Conexión
 // 25. Consejeros · Charla con Méntor
 // 26. Consejeros · Lo que ven de mí
-// 27. Barra superior y navegación
-// 28. App instalable (service worker)
-// 29. Inicio
+// 27. Prometheus · Estadísticas
+// 28. Prometheus · El laboratorio
+// 29. Barra superior y navegación
+// 30. App instalable (service worker)
+// 31. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -6453,9 +6455,1122 @@ casillaCompartir.addEventListener("change", function () {
 cerrarAlTocarFuera(ventanaContexto);
 
 // ==========================================================================
-// 27. BARRA SUPERIOR Y NAVEGACIÓN
+// 27. PROMETHEUS · ESTADÍSTICAS
+// Los números de la pestaña Prometheus. Salen de los mismos datos y de las
+// mismas funciones que el resto de la app (racha, constancia, resumen del
+// día…), así siempre cuadran con lo que se ve en Hoy y en el mosaico.
+// Aquí solo se calcula; el bloque 28 lo dibuja.
+// ==========================================================================
+
+// Los días de la semana, de lunes a domingo: el nombre y su abreviatura.
+const diasLab = [
+  { nombre: "lunes", corto: "Lun" },
+  { nombre: "martes", corto: "Mar" },
+  { nombre: "miércoles", corto: "Mié" },
+  { nombre: "jueves", corto: "Jue" },
+  { nombre: "viernes", corto: "Vie" },
+  { nombre: "sábado", corto: "Sáb" },
+  { nombre: "domingo", corto: "Dom" },
+];
+
+// La fecha de unos días antes (número negativo) o después, a las 00:00:
+// fechaMas(fecha, -1) es el día anterior.
+function fechaMas(fecha, dias) {
+  const nueva = new Date(
+    fecha.getFullYear(),
+    fecha.getMonth(),
+    fecha.getDate(),
+  );
+  nueva.setDate(nueva.getDate() + dias);
+  return nueva;
+}
+
+// Qué parte de un total es un número, en tanto por ciento y redondeado.
+// Si el total es 0 no hay nada que medir: devuelve null.
+function porcentaje(parte, total) {
+  if (total === 0) {
+    return null;
+  }
+  return Math.round((parte / total) * 100);
+}
+
+// Un tanto por ciento para leer: «87 %» (con un espacio que no se parte
+// en dos líneas,  ), o «—» si no hay dato.
+function textoPorcentaje(valor) {
+  if (valor === null) {
+    return "—";
+  }
+  return valor + " %";
+}
+
+// Días o semanas en texto: «1 día», «19 días», «1 semana», «3 semanas».
+function textoDuracion(cantidad, enSemanas) {
+  if (enSemanas) {
+    if (cantidad === 1) {
+      return "1 semana";
+    }
+    return cantidad + " semanas";
+  }
+  return textoDias(cantidad);
+}
+
+// Una fecha corta para las gráficas: "2026-10-03" → «3 oct».
+function fechaCorta(clave) {
+  return new Date(clave + "T00:00").toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+// Lo que ha cambiado un peso, con su signo: «−0,7 kg», «+0,4 kg» o «sin
+// cambios». Se redondea a una décima (como se apunta).
+function textoDiferencia(kilos) {
+  const redondo = Math.round(kilos * 10) / 10;
+  if (redondo === 0) {
+    return "sin cambios";
+  }
+  // El espacio antes de «kg» no se parte en dos líneas (\u00A0). «−» es el
+  // signo menos de verdad (más largo que el guion «-»)
+  const texto = textoKilos(Math.abs(redondo)).replace(" ", "\u00A0");
+  if (redondo > 0) {
+    return "+" + texto;
+  }
+  return "−" + texto;
+}
+
+// Suma unos días seguidos: desde «desde» y durante «dias» días. Hoy no
+// cuenta (aún hay tiempo), ni los días en que no tocaba nada. Devuelve lo
+// que tocaba, lo cumplido, los días perfectos y los días que contaron.
+function sumarDias(desde, dias) {
+  const suma = { tocan: 0, cumplidos: 0, perfectos: 0, contados: 0 };
+
+  for (let i = 0; i < dias; i++) {
+    const fecha = fechaMas(desde, i);
+    if (fecha.toLocaleDateString("en-CA") < hoy) {
+      const resumen = resumenDelDia(fecha);
+      if (resumen.tocan > 0) {
+        suma.tocan += resumen.tocan;
+        suma.cumplidos += resumen.cumplidos;
+        suma.contados++;
+        if (resumen.cumplidos === resumen.tocan) {
+          suma.perfectos++;
+        }
+      }
+    }
+  }
+
+  return suma;
+}
+
+// Los últimos 30 días (sin hoy) y los 30 de antes, para compararlos.
+function ultimos30() {
+  const ahora = new Date();
+  return {
+    ahora: sumarDias(fechaMas(ahora, -30), 30),
+    antes: sumarDias(fechaMas(ahora, -60), 30),
+  };
+}
+
+// Las últimas 12 semanas (de lunes a domingo), de la más antigua a la de
+// ahora, con lo que tocaba y lo cumplido. La de ahora cuenta hasta ayer y
+// va «en curso». No salen las semanas de antes del primer hábito, ni la de
+// ahora si aún no tiene ningún día (los lunes).
+function semanasRecientes() {
+  const semanas = [];
+  const esteLunes = lunesDe(new Date());
+
+  for (let i = 11; i >= 0; i--) {
+    const lunes = fechaMas(esteLunes, -7 * i);
+    const suma = sumarDias(lunes, 7);
+    semanas.push({
+      lunes: lunes.toLocaleDateString("en-CA"),
+      tocan: suma.tocan,
+      cumplidos: suma.cumplidos,
+      porcentaje: porcentaje(suma.cumplidos, suma.tocan),
+      enCurso: i === 0,
+    });
+  }
+
+  // findIndex busca la primera semana con datos; slice se queda con esa y
+  // las siguientes
+  const primera = semanas.findIndex(function (semana) {
+    return semana.tocan > 0;
+  });
+  if (primera === -1) {
+    return [];
+  }
+  return semanas.slice(primera).filter(function (semana) {
+    return semana.tocan > 0 || !semana.enCurso;
+  });
+}
+
+// Cada día de la semana (de lunes a domingo) en las últimas 8 semanas, sin
+// hoy: lo que tocaba, lo cumplido y el tanto por ciento.
+function semanaTipo() {
+  const dias = diasLab.map(function (dia) {
+    return {
+      nombre: dia.nombre,
+      corto: dia.corto,
+      tocan: 0,
+      cumplidos: 0,
+    };
+  });
+  const desde = fechaMas(new Date(), -56);
+
+  for (let i = 0; i < 56; i++) {
+    const fecha = fechaMas(desde, i);
+    const resumen = resumenDelDia(fecha);
+    // getDay() da 0 el domingo; (+ 6) % 7 lo pasa a 0 = lunes … 6 = domingo
+    const dia = dias[(fecha.getDay() + 6) % 7];
+    dia.tocan += resumen.tocan;
+    dia.cumplidos += resumen.cumplidos;
+  }
+
+  dias.forEach(function (dia) {
+    dia.porcentaje = porcentaje(dia.cumplidos, dia.tocan);
+  });
+  return dias;
+}
+
+// Los días de la semana que mejor van y los que más cuestan (de los que
+// tienen datos; si empatan, todos los empatados). Si hay menos de dos
+// días con datos o todos van igual, no hay ni mejores ni peores: listas
+// vacías.
+function mejorYPeorDia(dias) {
+  const conDatos = dias.filter(function (dia) {
+    return dia.porcentaje !== null;
+  });
+  const porcentajes = conDatos.map(function (dia) {
+    return dia.porcentaje;
+  });
+  const maximo = Math.max(...porcentajes);
+  const minimo = Math.min(...porcentajes);
+
+  if (conDatos.length < 2 || maximo === minimo) {
+    return { mejores: [], peores: [] };
+  }
+  return {
+    mejores: conDatos.filter(function (dia) {
+      return dia.porcentaje === maximo;
+    }),
+    peores: conDatos.filter(function (dia) {
+      return dia.porcentaje === minimo;
+    }),
+  };
+}
+
+// Unos días de la semana en una frase: «el miércoles» o «el miércoles y el
+// domingo».
+function losDias(lista) {
+  return enFrase(
+    lista.map(function (dia) {
+      return "el " + dia.nombre;
+    }),
+  );
+}
+
+// La racha más larga de las que siguen vivas: { habito, racha, enSemanas }
+// (o null si no hay ninguna). Las de «unas veces por semana» van en
+// semanas: para compararlas con las demás, cada semana vale 7 días.
+function rachaMasLarga() {
+  let mejor = null;
+
+  habitos.forEach(function (habito) {
+    const racha = calcularRacha(habito.id);
+    const enSemanas = habito.frecuencia === "semanal";
+    let enDias = racha;
+    if (enSemanas) {
+      enDias = racha * 7;
+    }
+    if (racha > 0 && (!mejor || enDias > mejor.enDias)) {
+      mejor = {
+        habito: habito,
+        racha: racha,
+        enSemanas: enSemanas,
+        enDias: enDias,
+      };
+    }
+  });
+
+  return mejor;
+}
+
+// La mejor racha de los de «unas veces por semana», en semanas: recorre las
+// semanas desde la de su inicio. La de ahora suma si ya se ha llegado; si
+// aún no, no corta la racha (todavía hay tiempo).
+function mejorRachaSemanas(habito) {
+  let mejor = 0;
+  let seguidas = 0;
+  const lunes = lunesDe(new Date(inicioDe(habito) + "T00:00"));
+  const esteLunes = lunesDe(new Date()).toLocaleDateString("en-CA");
+
+  while (lunes.toLocaleDateString("en-CA") <= esteLunes) {
+    if (semanaCumplida(habito, lunes)) {
+      seguidas++;
+      mejor = Math.max(mejor, seguidas);
+    } else if (lunes.toLocaleDateString("en-CA") !== esteLunes) {
+      seguidas = 0;
+    }
+    lunes.setDate(lunes.getDate() + 7);
+  }
+
+  return mejor;
+}
+
+// Cuántos días se ha cumplido un hábito desde su inicio hasta hoy (con las
+// reglas que tenía cada día). En templanza, los días sin recaer.
+function totalCumplidos(habito) {
+  let total = 0;
+  const fecha = new Date(inicioDe(habito) + "T00:00");
+
+  while (fecha.toLocaleDateString("en-CA") <= hoy) {
+    const clave = fecha.toLocaleDateString("en-CA");
+    if (estaCumplido(reglasEn(habito, clave), registro[clave] || {})) {
+      total++;
+    }
+    fecha.setDate(fecha.getDate() + 1);
+  }
+
+  return total;
+}
+
+// Los números de un hábito: su constancia (la misma de Hoy), su racha, su
+// récord (la mejor racha) y cuántas veces se ha cumplido en total.
+function numerosDe(habito) {
+  const datos = constancia(habito);
+  const racha = calcularRacha(habito.id);
+  const mejorYTotal = mejorRachaYTotal(habito);
+
+  // El récord nunca es menor que la racha de ahora (la de ahora cuenta el
+  // comodín; mejorRachaYTotal, no)
+  let record = Math.max(mejorYTotal.mejor, racha);
+  if (habito.frecuencia === "semanal") {
+    record = Math.max(mejorRachaSemanas(habito), racha);
+  }
+
+  return {
+    porcentaje: porcentaje(datos.cumplidos, datos.posibles),
+    cumplidos: datos.cumplidos,
+    posibles: datos.posibles,
+    enSemanas: datos.enSemanas,
+    racha: racha,
+    record: record,
+    total: totalCumplidos(habito),
+  };
+}
+
+// Los pesos apuntados, de la fecha más antigua a la más nueva (sort con
+// localeCompare ordena los textos "2026-10-03" como fechas), y el primero,
+// el penúltimo y el último.
+function datosPeso() {
+  const pesos = pesosDe()
+    .slice()
+    .sort(function (a, b) {
+      return a.fecha.localeCompare(b.fecha);
+    });
+
+  return {
+    pesos: pesos,
+    primero: pesos[0] || null,
+    anterior: pesos[pesos.length - 2] || null,
+    ultimo: pesos[pesos.length - 1] || null,
+  };
+}
+
+// Todas las estadísticas juntas (las usan las gráficas y las señales).
+function estadisticas() {
+  const dias = semanaTipo();
+  return {
+    hoy: resumenDelDia(new Date()),
+    treinta: ultimos30(),
+    semanas: semanasRecientes(),
+    dias: dias,
+    extremos: mejorYPeorDia(dias),
+    racha: rachaMasLarga(),
+    peso: datosPeso(),
+  };
+}
+
+// Las señales: frases cortas sobre los números, que van pasando arriba del
+// laboratorio.
+function senalesDe(datos) {
+  const lista = [];
+
+  if (habitos.length > 0) {
+    if (datos.hoy.tocan === 0) {
+      lista.push("Hoy no te toca ninguna disciplina.");
+    } else if (datos.hoy.cumplidos === datos.hoy.tocan) {
+      lista.push("Hoy lo llevas todo cumplido: día perfecto.");
+    } else {
+      let disciplinas = " disciplinas.";
+      if (datos.hoy.tocan === 1) {
+        disciplinas = " disciplina.";
+      }
+      lista.push(
+        "Hoy llevas " +
+          datos.hoy.cumplidos +
+          " de " +
+          datos.hoy.tocan +
+          disciplinas,
+      );
+    }
+  }
+
+  if (datos.racha) {
+    lista.push(
+      "Tu racha más larga: «" +
+        datos.racha.habito.nombre +
+        "», " +
+        textoDuracion(datos.racha.racha, datos.racha.enSemanas) +
+        ".",
+    );
+  }
+
+  const treinta = datos.treinta.ahora;
+  if (treinta.contados > 0) {
+    lista.push(
+      "Constancia de los últimos " +
+        textoDias(treinta.contados) +
+        ": " +
+        textoPorcentaje(porcentaje(treinta.cumplidos, treinta.tocan)) +
+        ".",
+    );
+    lista.push(
+      "Días perfectos en los últimos " +
+        textoDias(treinta.contados) +
+        ": " +
+        treinta.perfectos +
+        ".",
+    );
+  }
+
+  const mejores = datos.extremos.mejores;
+  const peores = datos.extremos.peores;
+  if (mejores.length > 0) {
+    let inicio = "Tu mejor día de la semana: ";
+    if (mejores.length > 1) {
+      inicio = "Tus mejores días de la semana: ";
+    }
+    lista.push(
+      inicio +
+        losDias(mejores) +
+        " (" +
+        textoPorcentaje(mejores[0].porcentaje) +
+        ").",
+    );
+
+    let peor = "El que más te cuesta: ";
+    if (peores.length > 1) {
+      peor = "Los que más te cuestan: ";
+    }
+    lista.push(
+      peor +
+        losDias(peores) +
+        " (" +
+        textoPorcentaje(peores[0].porcentaje) +
+        ").",
+    );
+  }
+
+  const peso = datos.peso;
+  if (peso.ultimo && peso.anterior) {
+    lista.push(
+      "Peso: " +
+        textoKilos(peso.ultimo.kilos) +
+        ", " +
+        textoDiferencia(peso.ultimo.kilos - peso.anterior.kilos) +
+        " desde el " +
+        fechaCorta(peso.anterior.fecha) +
+        ".",
+    );
+  } else if (peso.ultimo) {
+    lista.push(
+      "Peso: " +
+        textoKilos(peso.ultimo.kilos) +
+        " (" +
+        fechaCorta(peso.ultimo.fecha) +
+        ").",
+    );
+  }
+
+  if (lista.length === 0) {
+    lista.push("Apunta tus hábitos unos días y aquí irán saliendo señales.");
+  }
+  return lista;
+}
+
+// ==========================================================================
+// 28. PROMETHEUS · EL LABORATORIO
+// Dibuja la pestaña Prometheus con los números del bloque 27: el anillo de
+// hoy, las cifras, las columnas de cada semana, las barras de la semana
+// tipo, el peso y cada disciplina. Las columnas y los puntos del peso
+// enseñan su dato al pasar por encima o al tocarlos, y cada gráfica tiene
+// sus datos también en una tabla («Ver los datos»). El estilo futurista
+// está en style.css, bloque 21.
+// ==========================================================================
+
+// El cuadrito con el dato de una columna o de un punto.
+const datoLab = document.getElementById("lab-dato");
+
+// Largo de la línea del anillo de hoy: el de una circunferencia de radio 52
+// (2 · π · radio).
+const largoAnillo = 2 * Math.PI * 52;
+
+// Las señales que van pasando, cuál toca ahora y el temporizador que las
+// cambia cada 5 segundos (null si están paradas).
+let senales = [];
+let senalActual = 0;
+let temporizadorSenales = null;
+
+// Enseña el dato de un elemento (su data-dato) en el cuadrito, encima de
+// él. Math.max y Math.min lo dejan siempre dentro de la pantalla.
+function mostrarDato(elemento) {
+  datoLab.textContent = elemento.dataset.dato;
+  datoLab.hidden = false;
+
+  const caja = elemento.getBoundingClientRect();
+  const ancho = datoLab.offsetWidth;
+  let izquierda = caja.left + caja.width / 2 - ancho / 2;
+  izquierda = Math.max(8, Math.min(izquierda, window.innerWidth - ancho - 8));
+
+  datoLab.style.left = izquierda + "px";
+  datoLab.style.top = caja.top - datoLab.offsetHeight - 8 + "px";
+}
+
+// Esconde el cuadrito.
+function esconderDato() {
+  datoLab.hidden = true;
+}
+
+// Prepara un elemento (una columna, un punto) para enseñar su dato: con el
+// ratón al pasar por encima, en el móvil al tocarlo y con el teclado al
+// llegar a él. aria-label hace que un lector de pantalla lo lea igual.
+function conectarDato(elemento, texto) {
+  elemento.dataset.dato = texto;
+  elemento.setAttribute("aria-label", texto);
+  elemento.addEventListener("pointerenter", function () {
+    mostrarDato(elemento);
+  });
+  elemento.addEventListener("click", function () {
+    mostrarDato(elemento);
+  });
+  elemento.addEventListener("focus", function () {
+    mostrarDato(elemento);
+  });
+  elemento.addEventListener("pointerleave", esconderDato);
+  elemento.addEventListener("blur", esconderDato);
+}
+
+// Al bajar por la pantalla, el cuadrito se quedaría flotando: se esconde.
+window.addEventListener("scroll", esconderDato, { passive: true });
+
+// Rellena una tabla: una fila de títulos y una fila por dato. Todo con
+// textContent (como texto, nunca como HTML).
+function rellenarTabla(tabla, titulos, filas) {
+  tabla.innerHTML = "";
+
+  const cabecera = tabla.createTHead().insertRow();
+  titulos.forEach(function (titulo) {
+    const celda = document.createElement("th");
+    celda.textContent = titulo;
+    cabecera.append(celda);
+  });
+
+  const cuerpo = tabla.createTBody();
+  filas.forEach(function (fila) {
+    const linea = cuerpo.insertRow();
+    fila.forEach(function (dato) {
+      linea.insertCell().textContent = dato;
+    });
+  });
+}
+
+// Una línea de la rejilla de una gráfica, a una altura (en %) y con su
+// número a la izquierda.
+function lineaRejilla(altura, texto) {
+  const linea = document.createElement("span");
+  linea.classList.add("lab-eje");
+  linea.style.bottom = altura + "%";
+  const numero = document.createElement("span");
+  numero.textContent = texto;
+  linea.append(numero);
+  return linea;
+}
+
+// Un mensaje en lugar de una gráfica («Aún no hay…»).
+function sinGrafica(contenedor, texto) {
+  contenedor.innerHTML = "";
+  contenedor.append(crearParrafo(texto, "lab-nota"));
+}
+
+// Hoy: el anillo se llena con lo cumplido (stroke-dashoffset es la parte
+// de la línea que queda sin pintar), el tanto por ciento en el centro y, al
+// lado, cuántas van y cuáles quedan.
+function dibujarHoy(resumen) {
+  let parte = 0;
+  if (resumen.tocan > 0) {
+    parte = resumen.cumplidos / resumen.tocan;
+  }
+
+  const relleno = document.getElementById("lab-anillo-relleno");
+  relleno.style.strokeDasharray = largoAnillo;
+  relleno.style.strokeDashoffset = largoAnillo * (1 - parte);
+  // Vacío no se ve (si no, el borde redondo dejaría un punto arriba)
+  relleno.classList.toggle("vacio", parte === 0);
+
+  const centro = document.getElementById("lab-hoy-porcentaje");
+  const cuenta = document.getElementById("lab-hoy-cuenta");
+  const quedan = document.getElementById("lab-hoy-quedan");
+
+  if (resumen.tocan === 0) {
+    centro.textContent = "—";
+    cuenta.textContent = "Hoy no te toca ninguna disciplina.";
+    quedan.textContent = "";
+    return;
+  }
+
+  centro.textContent = textoPorcentaje(Math.round(parte * 100));
+  let disciplinas = " disciplinas cumplidas";
+  if (resumen.tocan === 1) {
+    disciplinas = " disciplina cumplida";
+  }
+  cuenta.textContent = resumen.cumplidos + " de " + resumen.tocan + disciplinas;
+
+  // Las que tocan hoy y aún se pueden hacer (sin las de «unas veces por
+  // semana», que no tienen día fijo)
+  const pendientes = habitos.filter(function (habito) {
+    return (
+      habito.frecuencia !== "semanal" &&
+      tocaEn(habito, new Date()) &&
+      !estaCumplido(habito, habitosHoy) &&
+      !hoyYaFallado(habito)
+    );
+  });
+  if (pendientes.length === 0) {
+    quedan.textContent = "No te queda nada por hoy.";
+  } else {
+    const nombres = pendientes.map(function (habito) {
+      return habito.nombre;
+    });
+    quedan.textContent = "Te quedan: " + enFrase(nombres) + ".";
+  }
+}
+
+// Una cifra: su nombre, el número, un detalle y, si lo hay, lo que ha
+// cambiado («▲ 3 más…»). sentido: "sube" (a mejor, verde), "baja" (a peor,
+// rojo) o "igual" (sin color: así se usa también en el peso, donde subir
+// o bajar no es ni bueno ni malo).
+function crearCifra(nombre, valor, detalle, cambio, sentido) {
+  const cifra = document.createElement("div");
+  cifra.classList.add("lab-cifra");
+  cifra.append(
+    crearParrafo(nombre, "lab-cifra-nombre"),
+    crearParrafo(valor, "lab-cifra-valor"),
+    crearParrafo(detalle, "lab-cifra-detalle"),
+  );
+  if (cambio) {
+    const linea = crearParrafo(cambio, "lab-cifra-cambio");
+    linea.classList.add(sentido);
+    cifra.append(linea);
+  }
+  return cifra;
+}
+
+// Lo que ha cambiado una cifra frente a los 30 días anteriores, con su
+// flecha: { texto, sentido }. singular y plural son la unidad que va
+// detrás del número (« punto», « puntos»; en los días perfectos, nada).
+function cambioFrente(ahora, antes, singular, plural) {
+  const diferencia = ahora - antes;
+  if (diferencia === 0) {
+    return { texto: "= igual que los 30 días anteriores", sentido: "igual" };
+  }
+
+  let unidad = plural;
+  if (Math.abs(diferencia) === 1) {
+    unidad = singular;
+  }
+  if (diferencia > 0) {
+    return {
+      texto: "▲ " + diferencia + unidad + " más que los 30 días anteriores",
+      sentido: "sube",
+    };
+  }
+  return {
+    texto: "▼ " + -diferencia + unidad + " menos que los 30 días anteriores",
+    sentido: "baja",
+  };
+}
+
+// Las cuatro cifras: días perfectos, constancia, mejor racha y peso.
+function dibujarCifras(datos) {
+  const caja = document.getElementById("lab-cifras");
+  caja.innerHTML = "";
+  const ahora = datos.treinta.ahora;
+  const antes = datos.treinta.antes;
+
+  // 1. Días perfectos (y constancia) de los últimos 30 días; si aún no
+  // hay 30, los que haya. Se comparan con los 30 de antes, si los hay
+  if (ahora.contados === 0) {
+    caja.append(
+      crearCifra("Días perfectos", "—", "aún sin días que contar"),
+      crearCifra("Constancia", "—", "aún sin días que contar"),
+    );
+  } else {
+    let cambioPerfectos = null;
+    let cambioConstancia = null;
+    const constanciaAhora = porcentaje(ahora.cumplidos, ahora.tocan);
+    if (antes.contados > 0) {
+      cambioPerfectos = cambioFrente(ahora.perfectos, antes.perfectos, "", "");
+      cambioConstancia = cambioFrente(
+        constanciaAhora,
+        porcentaje(antes.cumplidos, antes.tocan),
+        " punto",
+        " puntos",
+      );
+    }
+    caja.append(
+      crearCifra(
+        "Días perfectos",
+        String(ahora.perfectos),
+        "de los últimos " + textoDias(ahora.contados),
+        cambioPerfectos && cambioPerfectos.texto,
+        cambioPerfectos && cambioPerfectos.sentido,
+      ),
+      crearCifra(
+        "Constancia",
+        textoPorcentaje(constanciaAhora),
+        "de lo que tocaba, últimos " + textoDias(ahora.contados),
+        cambioConstancia && cambioConstancia.texto,
+        cambioConstancia && cambioConstancia.sentido,
+      ),
+    );
+  }
+
+  // 2. La racha más larga de las que siguen vivas
+  if (datos.racha) {
+    caja.append(
+      crearCifra(
+        "Mejor racha viva",
+        textoDuracion(datos.racha.racha, datos.racha.enSemanas),
+        datos.racha.habito.nombre,
+      ),
+    );
+  } else {
+    caja.append(crearCifra("Mejor racha viva", "—", "aún ninguna"));
+  }
+
+  // 3. El último peso y lo que ha cambiado desde el anterior
+  const peso = datos.peso;
+  if (peso.ultimo) {
+    let cambio = null;
+    if (peso.anterior) {
+      cambio =
+        textoDiferencia(peso.ultimo.kilos - peso.anterior.kilos) +
+        " desde el " +
+        fechaCorta(peso.anterior.fecha);
+    }
+    caja.append(
+      crearCifra(
+        "Peso",
+        textoKilos(peso.ultimo.kilos),
+        "el " + fechaCorta(peso.ultimo.fecha),
+        cambio,
+        "igual",
+      ),
+    );
+  } else {
+    caja.append(crearCifra("Peso", "—", "aún sin apuntar"));
+  }
+}
+
+// Semana a semana: una columna por semana, de 0 a 100 %, con la rejilla a
+// 0, 50 y 100 %. La de ahora va más clara («en curso») y lleva su número
+// encima. Cada columna enseña su dato al tocarla. Las fechas de abajo, si
+// hay más de 6 semanas, van una sí y una no (si no, no caben).
+function dibujarSemanas(semanas) {
+  const contenedor = document.getElementById("lab-semanas");
+  const tabla = document.getElementById("lab-semanas-tabla");
+
+  if (semanas.length === 0) {
+    sinGrafica(contenedor, "Aún no hay semanas que mostrar.");
+    tabla.innerHTML = "";
+    return;
+  }
+  contenedor.innerHTML = "";
+
+  const grafica = document.createElement("div");
+  grafica.classList.add("lab-grafica");
+  grafica.append(
+    lineaRejilla(100, "100 %"),
+    lineaRejilla(50, "50 %"),
+    lineaRejilla(0, "0 %"),
+  );
+
+  const fila = document.createElement("div");
+  fila.classList.add("lab-columnas-fila");
+  const etiquetas = document.createElement("div");
+  etiquetas.classList.add("lab-columnas-etiquetas");
+
+  semanas.forEach(function (semana, i) {
+    const valor = semana.porcentaje || 0;
+
+    const columna = document.createElement("button");
+    columna.type = "button";
+    columna.classList.add("lab-columna");
+    columna.classList.toggle("en-curso", semana.enCurso);
+
+    const barra = document.createElement("span");
+    barra.classList.add("lab-columna-barra");
+    barra.style.height = valor + "%";
+    columna.append(barra);
+
+    // El número encima, solo en la última (las demás, al tocarlas)
+    if (i === semanas.length - 1) {
+      const numero = document.createElement("span");
+      numero.classList.add("lab-columna-valor");
+      numero.style.bottom = valor + "%";
+      numero.textContent = textoPorcentaje(semana.porcentaje);
+      columna.append(numero);
+    }
+
+    let texto =
+      nombreSemana(semana.lunes) +
+      ": " +
+      textoPorcentaje(semana.porcentaje) +
+      " (" +
+      semana.cumplidos +
+      " de " +
+      semana.tocan +
+      ")";
+    if (semana.enCurso) {
+      texto += " · en curso, hasta ayer";
+    }
+    conectarDato(columna, texto);
+    fila.append(columna);
+
+    const etiqueta = document.createElement("span");
+    if (semanas.length <= 6 || (semanas.length - 1 - i) % 2 === 0) {
+      etiqueta.textContent = fechaCorta(semana.lunes);
+    }
+    etiquetas.append(etiqueta);
+  });
+
+  grafica.append(fila);
+  contenedor.append(grafica, etiquetas);
+
+  // La misma información, en la tabla de «Ver los datos»
+  rellenarTabla(
+    tabla,
+    ["Semana", "Cumplido", "De lo que tocaba"],
+    semanas.map(function (semana) {
+      let nombre = "del " + fechaCorta(semana.lunes);
+      if (semana.enCurso) {
+        nombre += " (en curso)";
+      }
+      return [
+        nombre,
+        textoPorcentaje(semana.porcentaje),
+        semana.cumplidos + " de " + semana.tocan,
+      ];
+    }),
+  );
+}
+
+// Tu semana tipo: una barra por día de la semana, con su número al final.
+// El mejor día (o los mejores, si empatan) va en el color del fuego;
+// debajo, una nota con los mejores y los que más cuestan.
+function dibujarDias(dias, extremos) {
+  const contenedor = document.getElementById("lab-dias");
+  const nota = document.getElementById("lab-dias-nota");
+  contenedor.innerHTML = "";
+
+  dias.forEach(function (dia) {
+    const fila = document.createElement("div");
+    fila.classList.add("lab-barra-fila");
+    fila.classList.toggle("mejor", extremos.mejores.includes(dia));
+
+    const pista = document.createElement("span");
+    pista.classList.add("lab-barra-pista");
+    const relleno = document.createElement("span");
+    relleno.classList.add("lab-barra-relleno");
+    relleno.style.width = (dia.porcentaje || 0) + "%";
+    pista.append(relleno);
+
+    fila.append(
+      crearParrafo(dia.corto, "lab-barra-dia"),
+      pista,
+      crearParrafo(textoPorcentaje(dia.porcentaje), "lab-barra-valor"),
+    );
+    contenedor.append(fila);
+  });
+
+  if (extremos.mejores.length > 0) {
+    let mejor = "Tu mejor día es ";
+    if (extremos.mejores.length > 1) {
+      mejor = "Tus mejores días son ";
+    }
+    let peor = " y el que más te cuesta, ";
+    if (extremos.peores.length > 1) {
+      peor = " y los que más te cuestan, ";
+    }
+    nota.textContent =
+      mejor + losDias(extremos.mejores) + peor + losDias(extremos.peores) + ".";
+  } else {
+    nota.textContent =
+      "Con unas semanas más de datos verás qué días te cuestan más.";
+  }
+}
+
+// El peso: una línea con los pesos apuntados (de izquierda a derecha según
+// su fecha), con el área de debajo sombreada, un punto en cada peso (cada
+// uno enseña su dato al tocarlo) y el último con su número. El dibujo es
+// un SVG de 100 × 100 que se estira a todo el ancho (preserveAspectRatio
+// "none"); los puntos y los números van encima, en HTML, con left y top
+// en %.
+function dibujarPeso(peso) {
+  const resumen = document.getElementById("lab-peso-resumen");
+  const contenedor = document.getElementById("lab-peso");
+  const datos = document.getElementById("lab-peso-datos");
+  contenedor.innerHTML = "";
+  datos.hidden = peso.pesos.length === 0;
+
+  rellenarTabla(
+    document.getElementById("lab-peso-tabla"),
+    ["Fecha", "Peso", "Cambio"],
+    peso.pesos.map(function (apunte, i) {
+      let cambio = "—";
+      if (i > 0) {
+        cambio = textoDiferencia(apunte.kilos - peso.pesos[i - 1].kilos);
+      }
+      return [fechaCorta(apunte.fecha), textoKilos(apunte.kilos), cambio];
+    }),
+  );
+
+  if (peso.pesos.length === 0) {
+    resumen.textContent = "Aún no has apuntado ningún peso.";
+    return;
+  }
+  if (peso.pesos.length === 1) {
+    resumen.textContent =
+      "Un peso apuntado: " +
+      textoKilos(peso.ultimo.kilos) +
+      " el " +
+      fechaCorta(peso.ultimo.fecha) +
+      ". Apunta otro día para ver la línea.";
+    return;
+  }
+
+  resumen.textContent =
+    "De " +
+    textoKilos(peso.primero.kilos) +
+    " (" +
+    fechaCorta(peso.primero.fecha) +
+    ") a " +
+    textoKilos(peso.ultimo.kilos) +
+    " (" +
+    fechaCorta(peso.ultimo.fecha) +
+    "): " +
+    textoDiferencia(peso.ultimo.kilos - peso.primero.kilos) +
+    ".";
+
+  // De qué peso a qué peso va la gráfica: un poco por encima del máximo y
+  // por debajo del mínimo, para que la línea no toque los bordes
+  const kilos = peso.pesos.map(function (apunte) {
+    return apunte.kilos;
+  });
+  const maximo = Math.max(...kilos);
+  const minimo = Math.min(...kilos);
+  const margen = Math.max(0.5, (maximo - minimo) * 0.15);
+  const arriba = Math.round((maximo + margen) * 10) / 10;
+  const abajo = Math.round((minimo - margen) * 10) / 10;
+
+  // Las fechas, en milisegundos, para colocar cada peso según su día
+  // (|| 1: por si acaso, que nunca se divida entre 0)
+  const primero = new Date(peso.primero.fecha + "T00:00").getTime();
+  const ultimo = new Date(peso.ultimo.fecha + "T00:00").getTime();
+  const tiempo = ultimo - primero || 1;
+
+  // Dónde va cada peso, en % del ancho (x) y del alto (y, 0 arriba)
+  const puntos = peso.pesos.map(function (apunte) {
+    const momento = new Date(apunte.fecha + "T00:00").getTime();
+    return {
+      apunte: apunte,
+      x: ((momento - primero) / tiempo) * 100,
+      y: ((arriba - apunte.kilos) / (arriba - abajo)) * 100,
+    };
+  });
+
+  // El SVG: el área (la línea y las dos esquinas de abajo) y la línea
+  const trazo = puntos
+    .map(function (punto) {
+      return punto.x + "," + punto.y;
+    })
+    .join(" ");
+  contenedor.innerHTML =
+    '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+    '<polygon class="lab-linea-area" points="' +
+    trazo +
+    ' 100,100 0,100" />' +
+    '<polyline class="lab-linea-trazo" points="' +
+    trazo +
+    '" />' +
+    "</svg>";
+
+  contenedor.append(
+    lineaRejilla(100, numero(arriba)),
+    lineaRejilla(0, numero(abajo)),
+  );
+
+  // Un punto por peso; con muchos (más de 15), solo se ve el último, pero
+  // todos se pueden tocar
+  puntos.forEach(function (punto, i) {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.classList.add("lab-punto");
+    if (i === puntos.length - 1) {
+      boton.classList.add("ultimo");
+    }
+    if (puntos.length <= 15 || i === puntos.length - 1) {
+      boton.classList.add("visible");
+    }
+    boton.style.left = punto.x + "%";
+    boton.style.top = punto.y + "%";
+    boton.append(document.createElement("span"));
+    conectarDato(
+      boton,
+      fechaLarga(punto.apunte.fecha) + ": " + textoKilos(punto.apunte.kilos),
+    );
+    contenedor.append(boton);
+  });
+
+  // El número del último peso junto a su punto: encima si la línea llega
+  // bajando (así no la tapa) y debajo si llega subiendo. Y las fechas de
+  // los extremos, debajo de la gráfica
+  const ultimoPunto = puntos[puntos.length - 1];
+  const valor = crearParrafo(textoKilos(peso.ultimo.kilos), "lab-punto-valor");
+  valor.style.top = ultimoPunto.y + "%";
+  if (peso.ultimo.kilos < peso.anterior.kilos) {
+    valor.classList.add("debajo");
+  }
+  const fechaFinal = crearParrafo(
+    fechaCorta(peso.ultimo.fecha),
+    "lab-linea-fecha",
+  );
+  fechaFinal.classList.add("final");
+  contenedor.append(
+    valor,
+    crearParrafo(fechaCorta(peso.primero.fecha), "lab-linea-fecha"),
+    fechaFinal,
+  );
+}
+
+// Cada disciplina: icono, nombre, constancia (número y barra) y, debajo,
+// racha, récord y total.
+function dibujarDisciplinas() {
+  const lista = document.getElementById("lab-disciplinas");
+  lista.innerHTML = "";
+
+  habitos.forEach(function (habito) {
+    const datos = numerosDe(habito);
+    const fila = document.createElement("li");
+    fila.classList.add("lab-disciplina");
+
+    const medidor = document.createElement("div");
+    medidor.classList.add("lab-medidor");
+    const relleno = document.createElement("span");
+    relleno.style.width = (datos.porcentaje || 0) + "%";
+    medidor.append(relleno);
+
+    // En templanza, el total son días sin recaer; en los semanales, veces
+    let total = "En total: " + textoDias(datos.total);
+    if (datos.enSemanas) {
+      total = "En total: " + datos.total + " veces";
+      if (datos.total === 1) {
+        total = "En total: 1 vez";
+      }
+    }
+    const cifras =
+      "Racha: " +
+      textoDuracion(datos.racha, datos.enSemanas) +
+      " · Récord: " +
+      textoDuracion(datos.record, datos.enSemanas) +
+      " · " +
+      total;
+
+    fila.append(
+      crearIcono(iconoDe(habito)),
+      crearParrafo(habito.nombre, "lab-disciplina-nombre"),
+      crearParrafo(textoPorcentaje(datos.porcentaje), "lab-disciplina-cifra"),
+      medidor,
+      crearParrafo(cifras, "lab-disciplina-detalle"),
+    );
+    lista.append(fila);
+  });
+}
+
+// Pone la señal que toca en su caja (con la animación de entrar) y pasa a
+// la siguiente; al llegar a la última, vuelve a la primera (% es el resto
+// de la división).
+function pasarSenal() {
+  const caja = document.getElementById("lab-senal");
+  caja.innerHTML = "";
+  if (senales.length === 0) {
+    return;
+  }
+  if (senalActual >= senales.length) {
+    senalActual = 0;
+  }
+
+  caja.append(crearParrafo(senales[senalActual], "lab-senal"));
+  document.getElementById("lab-senal-cuenta").textContent =
+    senalActual + 1 + "/" + senales.length;
+  senalActual = (senalActual + 1) % senales.length;
+}
+
+// Empiezan a pasar las señales (al entrar en la pestaña), desde la primera.
+function iniciarSenales() {
+  pararSenales();
+  senalActual = 0;
+  pasarSenal();
+  temporizadorSenales = setInterval(pasarSenal, 5000);
+}
+
+// Se paran (al salir de la pestaña).
+function pararSenales() {
+  clearInterval(temporizadorSenales);
+  temporizadorSenales = null;
+}
+
+// Dibuja todo el laboratorio. Sin hábitos, las secciones de hábitos se
+// esconden y sale el aviso; el peso se ve siempre.
+function mostrarPrometheus() {
+  const datos = estadisticas();
+  const hayHabitos = habitos.length > 0;
+
+  document.getElementById("lab-vacio").hidden = hayHabitos;
+  document.querySelectorAll(".lab-de-habitos").forEach(function (seccion) {
+    seccion.hidden = !hayHabitos;
+  });
+
+  dibujarHoy(datos.hoy);
+  dibujarCifras(datos);
+  dibujarSemanas(datos.semanas);
+  dibujarDias(datos.dias, datos.extremos);
+  dibujarPeso(datos.peso);
+  dibujarDisciplinas();
+  senales = senalesDe(datos);
+}
+
+// «Apuntar el peso de hoy» abre la ventana del perfil (bloque 19), donde
+// está el campo del peso.
+document
+  .getElementById("boton-apuntar-peso")
+  .addEventListener("click", abrirVentanaPerfil);
+
+// ==========================================================================
+// 29. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
-// Hoy · Mosaico · Méntor · Metas · Archivo.
+// Hoy · Mosaico · Méntor · Prometheus · Metas · Archivo.
 // ==========================================================================
 
 const pantallas = document.querySelectorAll(".pantalla");
@@ -6497,6 +7612,22 @@ function mostrarPantalla(nombre) {
   // «conversando» del body lo hace en style.css)
   document.body.classList.toggle("conversando", nombre === "mentor");
 
+  // En Prometheus, toda la app se vuelve el laboratorio: la clase
+  // «en-prometheus» del body oscurece el fondo y las barras (style.css,
+  // bloque 21), y la franja de la hora del móvil (theme-color) pasa a
+  // oscura. Las señales solo van pasando mientras se ve la pantalla
+  const enPrometheus = nombre === "prometheus";
+  document.body.classList.toggle("en-prometheus", enPrometheus);
+  document
+    .querySelector('meta[name="theme-color"]')
+    .setAttribute("content", enPrometheus ? "#090C10" : "#F4F1EA");
+  esconderDato();
+  if (enPrometheus) {
+    iniciarSenales();
+  } else {
+    pararSenales();
+  }
+
   // La conversación no se recuerda: al volver a abrir la app, se empieza en
   // la pantalla de antes
   if (nombre !== "mentor") {
@@ -6535,7 +7666,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 28. APP INSTALABLE (SERVICE WORKER)
+// 30. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -6544,7 +7675,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 29. INICIO
+// 31. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 
@@ -6558,6 +7689,7 @@ function actualizarTodo() {
   mostrarHistorial();
   mostrarConstancia();
   mostrarMosaico();
+  mostrarPrometheus();
   mostrarMetas();
   mostrarPerfil();
   mostrarRevisiones();

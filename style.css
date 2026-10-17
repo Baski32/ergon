@@ -2,6 +2,8 @@
    ERGON — style.css
    Estilo de la antigua Grecia y Roma: mármol, terracota, bronce y oliva.
    Fuentes: Cinzel (títulos) y EB Garamond (texto).
+   La pestaña Prometheus es la excepción: un laboratorio futurista, oscuro
+   y con las letras del sistema (bloque 21).
 
    ÍNDICE
     1. Colores
@@ -24,8 +26,9 @@
    18. Metas · Laureles (metas cumplidas)
    19. Archivo · Cuenta, recordatorios, consejeros, perfil y revisiones
    20. Archivo · Copia de seguridad
-   21. Navegación
-   22. Escritorio (pantallas anchas)
+   21. Prometheus · El laboratorio
+   22. Navegación
+   23. Escritorio (pantallas anchas)
    ========================================================================== */
 
 /* ==========================================================================
@@ -2481,20 +2484,905 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   21. NAVEGACIÓN
-   La barra fija de abajo: Hoy · Mosaico · Méntor · Metas · Archivo. En el
-   PC pasa a la izquierda (bloque 22).
+   21. PROMETHEUS · EL LABORATORIO
+   La única pestaña futurista. Al entrar en ella, script.js pone la clase
+   «en-prometheus» en el body y toda la app se vuelve un laboratorio oscuro:
+   el fondo, la barra de arriba, la de abajo y la pantalla, con luz de
+   holograma (cian) y el fuego de Prometeo (ámbar). Al salir, todo vuelve a
+   ser de mármol. Las letras son las del sistema (en el iPhone, San
+   Francisco), sin descargar nada: una normal para el texto y una de ancho
+   fijo para los datos.
    ========================================================================== */
 
-/* Fija abajo, con cinco botones iguales. El padding de abajo deja sitio a la
-   barra de inicio del iPhone (safe-area) */
+/* Los colores y las letras del laboratorio (solo existen con la clase
+   «en-prometheus»):
+   lab-fondo: el fondo de la página, casi negro y azulado
+   lab-tarjeta: las tarjetas (y el hueco de 2px entre columnas)
+   lab-borde: los bordes finos, cian casi transparente
+   lab-rejilla: las líneas de las gráficas
+   lab-texto, lab-texto-2 y lab-tenue: el texto, el secundario y el de las
+   etiquetas pequeñas
+   lab-cian: la luz de holograma (piloto, títulos, pestaña activa)
+   lab-datos: las columnas, las barras y la línea del peso
+   lab-fuego: lo que destaca (el anillo de hoy y el mejor día)
+   lab-sube y lab-baja: un cambio a mejor y a peor (siempre con su flecha) */
+body.en-prometheus {
+  --lab-fondo: #090c10;
+  --lab-tarjeta: #0f1419;
+  --lab-borde: rgba(95, 208, 228, 0.14);
+  --lab-rejilla: rgba(147, 167, 177, 0.16);
+  --lab-texto: #e3ecf0;
+  --lab-texto-2: #93a7b1;
+  --lab-tenue: #6b8590;
+  --lab-cian: #5fd0e4;
+  --lab-datos: #2f9fb5;
+  --lab-fuego: #cc7c2a;
+  --lab-sube: #7fd3a1;
+  --lab-baja: #f08a76;
+  --lab-letra: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --lab-datos-letra: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+
+  background-color: var(--lab-fondo);
+  color: var(--lab-texto);
+}
+
+/* Las luces del laboratorio, detrás de todo: un resplandor cian arriba a
+   la izquierda y uno de fuego abajo a la derecha. position: fixed: se
+   quedan quietas al bajar; z-index: -1: detrás del contenido */
+body.en-prometheus::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(
+      circle 420px at 0% 0%,
+      rgba(95, 208, 228, 0.13),
+      transparent 70%
+    ),
+    radial-gradient(
+      circle 380px at 100% 100%,
+      rgba(204, 124, 42, 0.12),
+      transparent 70%
+    );
+}
+
+/* La rejilla de holograma: líneas finas cada 32px, que se apagan hacia los
+   bordes (mask-image: solo se ve donde la máscara es opaca, en el centro
+   de arriba) */
+body.en-prometheus::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+      0deg,
+      rgba(95, 208, 228, 0.045) 0 1px,
+      transparent 1px 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(95, 208, 228, 0.045) 0 1px,
+      transparent 1px 32px
+    );
+  -webkit-mask-image: radial-gradient(
+    ellipse at 50% 20%,
+    black,
+    transparent 70%
+  );
+  mask-image: radial-gradient(ellipse at 50% 20%, black, transparent 70%);
+}
+
+/* La barra de arriba y la de abajo: oscuras y de cristal (difuminan lo
+   que pasa por debajo), con bordes cian */
+body.en-prometheus .barra-superior,
+body.en-prometheus .navegacion {
+  background-color: rgba(9, 12, 16, 0.82);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-color: var(--lab-borde);
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.4);
+}
+
+body.en-prometheus .barra-superior h1 {
+  color: var(--lab-texto);
+}
+
+body.en-prometheus .fecha-hoy,
+body.en-prometheus .navegacion button {
+  color: var(--lab-texto-2);
+}
+
+/* La pestaña activa, en cian encendido */
+body.en-prometheus .navegacion button.activa {
+  color: var(--lab-cian);
+  background-color: rgba(95, 208, 228, 0.08);
+  border-left-color: var(--lab-cian);
+  text-shadow: 0 0 12px rgba(95, 208, 228, 0.6);
+}
+
+body.en-prometheus .navegacion-marca {
+  color: var(--lab-texto);
+}
+
+/* La pantalla: con las letras del sistema */
+.laboratorio {
+  font-family: var(--lab-letra);
+  font-size: 16px;
+}
+
+.laboratorio p {
+  margin: 0;
+}
+
+/* ---------- Cabecera y señales ---------- */
+
+/* «● Laboratorio en línea» y, debajo, el lema */
+.lab-cabecera {
+  margin-bottom: 14px;
+}
+
+.lab-piloto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-cian);
+}
+
+/* El piloto: un punto cian que late (animación «latir») */
+.lab-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--lab-cian);
+  box-shadow: 0 0 8px var(--lab-cian);
+  animation: latir 1.6s ease-in-out infinite;
+}
+
+@keyframes latir {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+
+.lab-lema {
+  margin-top: 4px;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Las señales: una tira como un panel de luces, con líneas finas de
+   pantalla (el segundo degradado) y un brillo que la cruza cada 8 s
+   (::after, animación «barrer») */
+.lab-senales {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  overflow: hidden;
+  background-image: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.42),
+      rgba(0, 0, 0, 0.3)
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 3px
+    );
+  border: 1px solid var(--lab-borde);
+  border-radius: 12px;
+}
+
+.lab-senales::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 30%;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: barrer 8s linear infinite;
+}
+
+@keyframes barrer {
+  to {
+    left: 110%;
+  }
+}
+
+/* «SEÑAL» y «2/6», pequeños y de ancho fijo */
+.lab-senales-etiqueta,
+.lab-senales-cuenta {
+  flex: none;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-tenue);
+}
+
+.lab-senales-cuenta {
+  padding: 2px 7px;
+  letter-spacing: 0.04em;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+/* La caja de la frase: dos líneas de alto, para que no salte al cambiar */
+.lab-senal-caja {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 2.6em;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+/* Cada frase entra subiendo desde abajo */
+.lab-senal {
+  animation: entrar-senal 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes entrar-senal {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+
+/* Sin hábitos: el aviso */
+.lab-vacio {
+  margin: 16px 0 0;
+  color: var(--lab-texto-2);
+}
+
+/* ---------- Las tarjetas ---------- */
+
+/* Todas las tarjetas, una debajo de otra (en el PC, en dos columnas:
+   bloque 23) */
+.lab-rejilla {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+/* Cada tarjeta: oscura, con borde fino cian y un filo de luz arriba
+   (::before, una línea que se apaga hacia los lados) */
+.lab-tarjeta {
+  position: relative;
+  padding: 16px;
+  background-color: var(--lab-tarjeta);
+  border: 1px solid var(--lab-borde);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.lab-tarjeta::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(95, 208, 228, 0.55),
+    transparent
+  );
+}
+
+/* Hace falta porque display ganaría al atributo hidden */
+.lab-tarjeta[hidden],
+.lab-vacio[hidden] {
+  display: none;
+}
+
+/* El título de cada tarjeta: pequeño, de ancho fijo y en cian, con una
+   rayita delante */
+.lab-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-cian);
+}
+
+.lab-titulo::before {
+  content: "";
+  width: 14px;
+  height: 1px;
+  background-color: var(--lab-cian);
+}
+
+.laboratorio .lab-subtitulo {
+  margin: 4px 0 14px;
+  font-size: 0.8rem;
+  color: var(--lab-texto-2);
+}
+
+/* Una nota debajo de una gráfica, o en su lugar si aún no hay datos */
+.laboratorio .lab-nota {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--lab-texto-2);
+}
+
+/* Los iconos de los hábitos, en el gris claro del laboratorio */
+.laboratorio .icono {
+  color: var(--lab-texto-2);
+}
+
+/* ---------- Hoy: el anillo ---------- */
+
+.lab-hoy {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* El anillo y, encima, lo de su centro (position: absolute + inset: 0) */
+.lab-anillo {
+  position: relative;
+  flex: none;
+  width: 132px;
+  height: 132px;
+}
+
+.lab-anillo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* El fondo del anillo y el relleno (el fuego, con su resplandor). El largo
+   pintado lo pone script.js (stroke-dasharray y stroke-dashoffset) y
+   transition lo hace crecer poco a poco */
+.lab-anillo-fondo,
+.lab-anillo-relleno {
+  fill: none;
+  stroke-width: 9;
+}
+
+.lab-anillo-fondo {
+  stroke: rgba(95, 208, 228, 0.1);
+}
+
+.lab-anillo-relleno {
+  stroke: var(--lab-fuego);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px rgba(204, 124, 42, 0.65));
+  transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lab-anillo-relleno.vacio {
+  opacity: 0;
+}
+
+.lab-anillo-centro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* El número grande de hoy */
+.lab-hoy-porcentaje {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* «HOY» y los nombres de las cifras: pequeños y de ancho fijo */
+.lab-etiqueta,
+.lab-cifra-nombre {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-tenue);
+}
+
+.lab-hoy-cuenta {
+  font-weight: 600;
+}
+
+.laboratorio .lab-hoy-quedan {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--lab-texto-2);
+}
+
+/* ---------- Las cifras ---------- */
+
+/* Dos columnas de cifras (en el PC, también) */
+.lab-cifras {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.lab-cifra {
+  padding: 12px 14px;
+  background-color: var(--lab-tarjeta);
+  border: 1px solid var(--lab-borde);
+  border-radius: 14px;
+}
+
+.laboratorio .lab-cifra-valor {
+  margin-top: 4px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.laboratorio .lab-cifra-detalle {
+  font-size: 0.75rem;
+  color: var(--lab-texto-2);
+}
+
+/* Lo que ha cambiado: verde si es a mejor y rojo si es a peor (siempre con
+   su flecha, para no depender solo del color); sin color si es igual o si
+   no es ni bueno ni malo (el peso) */
+.laboratorio .lab-cifra-cambio {
+  margin-top: 6px;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.66rem;
+  line-height: 1.35;
+  color: var(--lab-texto-2);
+}
+
+.laboratorio .lab-cifra-cambio.sube {
+  color: var(--lab-sube);
+}
+
+.laboratorio .lab-cifra-cambio.baja {
+  color: var(--lab-baja);
+}
+
+/* ---------- Gráficas: rejilla, columnas, barras y línea ---------- */
+
+/* Una línea de la rejilla, a la altura que le pone script.js, con su
+   número a la izquierda, fuera de la gráfica */
+.lab-eje {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px solid var(--lab-rejilla);
+}
+
+.lab-eje span {
+  position: absolute;
+  right: calc(100% + 6px);
+  transform: translateY(-50%);
+  font-family: var(--lab-datos-letra);
+  font-size: 0.6rem;
+  white-space: nowrap;
+  color: var(--lab-tenue);
+}
+
+/* Semana a semana. La gráfica deja sitio a la izquierda para los números
+   de la rejilla y arriba para el número de la última columna */
+.lab-grafica {
+  position: relative;
+  height: 140px;
+  margin: 22px 0 0 40px;
+}
+
+/* Las columnas, en fila, separadas por un hueco de 2px */
+.lab-columnas-fila {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 2px;
+}
+
+/* Cada columna es un botón tan alto como la gráfica (así es fácil de
+   tocar); dentro, la barra crece desde abajo */
+.lab-columna {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* La barra: como mucho 24px de ancho, redondeada solo arriba */
+.lab-columna-barra {
+  width: min(24px, 70%);
+  min-height: 2px;
+  background-color: var(--lab-datos);
+  border-radius: 4px 4px 0 0;
+  transition: filter 0.2s;
+}
+
+/* La semana en curso, más apagada (aún no ha terminado) */
+.lab-columna.en-curso .lab-columna-barra {
+  background-color: color-mix(in srgb, var(--lab-datos) 55%, transparent);
+}
+
+/* Al pasar por encima o llegar con el teclado, la barra se ilumina */
+.lab-columna:hover .lab-columna-barra,
+.lab-columna:focus-visible .lab-columna-barra {
+  filter: brightness(1.35);
+}
+
+.lab-columna:focus-visible,
+.lab-punto:focus-visible {
+  outline: 2px solid var(--lab-cian);
+  outline-offset: 2px;
+}
+
+/* El número encima de la última columna */
+.lab-columna-valor {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -4px);
+  font-family: var(--lab-datos-letra);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  color: var(--lab-texto);
+}
+
+/* Las fechas de debajo, una por columna */
+.lab-columnas-etiquetas {
+  display: flex;
+  gap: 2px;
+  margin: 6px 0 0 40px;
+}
+
+.lab-columnas-etiquetas span {
+  flex: 1;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.58rem;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--lab-tenue);
+}
+
+/* Tu semana tipo: cada fila es el día, la barra y el número */
+.lab-barras {
+  display: grid;
+  gap: 8px;
+}
+
+.lab-barra-fila {
+  display: grid;
+  grid-template-columns: 34px 1fr 46px;
+  align-items: center;
+  gap: 10px;
+}
+
+.laboratorio .lab-barra-dia {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.7rem;
+  color: var(--lab-texto-2);
+}
+
+/* La pista (el 100 %) y el relleno, redondeado solo en su punta */
+.lab-barra-pista {
+  height: 12px;
+  background-color: rgba(95, 208, 228, 0.08);
+  border-radius: 0 4px 4px 0;
+}
+
+.lab-barra-relleno {
+  display: block;
+  height: 100%;
+  background-color: var(--lab-datos);
+  border-radius: 0 4px 4px 0;
+}
+
+/* El mejor día, en el color del fuego */
+.lab-barra-fila.mejor .lab-barra-relleno {
+  background-color: var(--lab-fuego);
+  box-shadow: 0 0 10px rgba(204, 124, 42, 0.5);
+}
+
+.laboratorio .lab-barra-valor {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+/* El peso: la gráfica deja sitio a la izquierda para los números y abajo
+   para las fechas */
+.lab-linea {
+  position: relative;
+  height: 150px;
+  margin: 26px 0 28px 46px;
+}
+
+/* El dibujo se estira a todo el ancho y alto; overflow: visible deja ver
+   la línea entera aunque toque el borde */
+.lab-linea svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* La línea, de 2px aunque el dibujo se estire (non-scaling-stroke) */
+.lab-linea-trazo {
+  fill: none;
+  stroke: var(--lab-datos);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* El área de debajo, un velo muy suave del mismo color */
+.lab-linea-area {
+  fill: var(--lab-datos);
+  opacity: 0.1;
+}
+
+/* Cada punto: un botón de 24px (fácil de tocar) centrado en su sitio
+   (translate -50 %), con el punto de verdad dentro */
+.lab-punto {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* El punto: 8px, con un aro del color de la tarjeta (así se ve bien
+   encima de la línea). Si hay muchos, solo se ve el último */
+.lab-punto span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--lab-datos);
+  box-shadow: 0 0 0 2px var(--lab-tarjeta);
+  visibility: hidden;
+}
+
+.lab-punto.visible span {
+  visibility: visible;
+}
+
+.lab-punto.ultimo span {
+  width: 10px;
+  height: 10px;
+  background-color: var(--lab-cian);
+  box-shadow:
+    0 0 0 2px var(--lab-tarjeta),
+    0 0 10px var(--lab-cian);
+}
+
+/* El número del último peso, pegado a la derecha: encima de su punto o,
+   si la línea llega bajando, debajo (clase «debajo»), para no taparla */
+.laboratorio .lab-punto-valor {
+  position: absolute;
+  right: 0;
+  transform: translateY(calc(-100% - 10px));
+  font-family: var(--lab-datos-letra);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.laboratorio .lab-punto-valor.debajo {
+  transform: translateY(12px);
+}
+
+/* Las fechas del primer y del último peso, debajo */
+.laboratorio .lab-linea-fecha {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.6rem;
+  color: var(--lab-tenue);
+}
+
+.laboratorio .lab-linea-fecha.final {
+  left: auto;
+  right: 0;
+}
+
+/* «Ver los datos»: la tabla de cada gráfica, plegada */
+.lab-datos {
+  margin-top: 12px;
+}
+
+.lab-datos summary {
+  font-size: 0.75rem;
+  color: var(--lab-texto-2);
+  cursor: pointer;
+}
+
+.lab-tabla {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab-tabla th {
+  font-weight: 500;
+  text-align: left;
+  color: var(--lab-tenue);
+}
+
+.lab-tabla th,
+.lab-tabla td {
+  padding: 5px 4px 5px 0;
+  border-bottom: 1px solid var(--lab-rejilla);
+}
+
+/* «Apuntar el peso de hoy»: una píldora de cristal cian */
+.lab-boton {
+  margin-top: 14px;
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--lab-texto);
+  background-color: rgba(95, 208, 228, 0.08);
+  border: 1px solid rgba(95, 208, 228, 0.3);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.lab-boton:hover {
+  background-color: rgba(95, 208, 228, 0.15);
+  box-shadow: 0 0 14px rgba(95, 208, 228, 0.25);
+}
+
+/* ---------- Cada disciplina ---------- */
+
+.lab-disciplinas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada una es una rejilla: el icono a la izquierda; arriba, el nombre y el
+   número; debajo, la barra y la racha */
+.lab-disciplina {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--lab-rejilla);
+}
+
+.lab-disciplina:last-child {
+  border-bottom: none;
+}
+
+.lab-disciplina .icono {
+  grid-row: span 3;
+  align-self: start;
+}
+
+.laboratorio .lab-disciplina-nombre {
+  overflow: hidden;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.laboratorio .lab-disciplina-cifra {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.75rem;
+}
+
+/* La barra de la constancia: la pista es el mismo cian, más suave */
+.lab-medidor {
+  grid-column: 2 / 4;
+  height: 6px;
+  background-color: rgba(95, 208, 228, 0.1);
+  border-radius: 3px;
+}
+
+.lab-medidor span {
+  display: block;
+  height: 100%;
+  background-color: var(--lab-datos);
+  border-radius: 3px;
+}
+
+.laboratorio .lab-disciplina-detalle {
+  grid-column: 2 / 4;
+  font-size: 0.72rem;
+  color: var(--lab-texto-2);
+}
+
+/* ---------- El cuadrito del dato ---------- */
+
+/* Flota encima de todo (position: fixed: donde diga script.js). No
+   estorba al tocar (pointer-events: none) */
+.lab-dato {
+  position: fixed;
+  z-index: 30;
+  max-width: 240px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: var(--lab-texto);
+  background-color: rgba(15, 20, 25, 0.96);
+  border: 1px solid var(--lab-borde);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+/* Con «reducir movimiento», nada se mueve: ni el piloto, ni el brillo de
+   las señales, ni las frases, ni el anillo */
+@media (prefers-reduced-motion: reduce) {
+  .lab-led,
+  .lab-senales::after,
+  .lab-senal {
+    animation: none;
+  }
+
+  .lab-anillo-relleno {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   22. NAVEGACIÓN
+   La barra fija de abajo: Hoy · Mosaico · Méntor · Prometheus · Metas ·
+   Archivo. En el PC pasa a la izquierda (bloque 23).
+   ========================================================================== */
+
+/* Fija abajo, con seis botones. Cada columna mide lo que su palabra
+   («auto») más un trozo igual del sitio que sobra: así cabe «Prometheus»,
+   que es más larga. El padding de abajo deja sitio a la barra de inicio
+   del iPhone (safe-area) */
 .navegacion {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, auto);
   max-width: 500px;
   margin: 0 auto;
   padding-bottom: env(safe-area-inset-bottom);
@@ -2503,15 +3391,26 @@ button.recordatorio {
   box-shadow: 0 -4px 12px rgba(43, 37, 34, 0.08);
 }
 
+/* Letras algo más pequeñas que antes (con seis botones, si no, no caben
+   en el móvil) */
 .navegacion button {
-  padding: 16px 0 14px;
+  padding: 16px 2px 14px;
   font-family: "Cinzel", serif;
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
   color: var(--bronce);
   background: none;
   border: none;
   cursor: pointer;
+}
+
+/* En móviles estrechos (como el iPhone SE, de 320px), aún más pequeñas y
+   más juntas: si no, «Prometheus» no cabe */
+@media (max-width: 370px) {
+  .navegacion button {
+    font-size: 0.66rem;
+    letter-spacing: 0.01em;
+  }
 }
 
 /* La pantalla que se está viendo: en terracota */
@@ -2537,7 +3436,7 @@ body.conversando .navegacion {
 }
 
 /* ==========================================================================
-   22. ESCRITORIO (PANTALLAS ANCHAS)
+   23. ESCRITORIO (PANTALLAS ANCHAS)
    Desde 900px de ancho (el PC), la barra de navegación pasa a ser una
    columna fija a la izquierda y el contenido aprovecha el ancho. En el
    móvil no cambia nada.
@@ -2689,5 +3588,18 @@ body.conversando .navegacion {
   [data-pantalla="charla"] {
     max-width: 680px;
     margin: 0 auto;
+  }
+
+  /* Prometheus: las tarjetas en dos columnas. Semana a semana y cada
+     disciplina ocupan las dos (grid-column: 1 / -1, de la primera línea a
+     la última) */
+  .lab-rejilla {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .lab-rejilla .lab-semanas-tarjeta,
+  .lab-rejilla .lab-disciplinas-tarjeta {
+    grid-column: 1 / -1;
   }
 }
