@@ -1,7 +1,7 @@
 // ==========================================================================
 // ERGON — script.js
 // Toda la lógica de la app. Los datos se guardan en este dispositivo y, con
-// la cuenta abierta, también en la nube (Supabase, bloques 21 a 23).
+// la cuenta abierta, también en la nube (Supabase, bloques 21 a 24).
 //
 // ÍNDICE
 //  1. Datos guardados
@@ -27,9 +27,10 @@
 // 21. Nube · Cuenta
 // 22. Nube · Sincronizar
 // 23. Recordatorios
-// 24. Barra superior y navegación
-// 25. App instalable (service worker)
-// 26. Inicio
+// 24. Consejeros
+// 25. Barra superior y navegación
+// 26. App instalable (service worker)
+// 27. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -4408,8 +4409,9 @@ formEntrar.addEventListener("submit", async function (evento) {
   errorEntrar.textContent = "";
   formEntrar.reset();
   mostrarCuenta();
-  // Después de sincronizar, lo de los recordatorios (bloque 23)
-  sincronizar().then(revisarAvisos);
+  // Después de sincronizar, lo de los recordatorios y los consejeros
+  // (bloques 23 y 24)
+  sincronizar().then(revisarAvisos).then(revisarConsejeros);
 });
 
 // «Salir»: pregunta, quita los avisos de este dispositivo (si los tenía),
@@ -4445,10 +4447,11 @@ document
 // Dibuja la sección Cuenta: el formulario para entrar o, si ya se ha
 // entrado, el email y cómo va la sincronización. También el puntito de la
 // barra de arriba (verde: todo subido; bronce: hay cambios esperando;
-// terracota: algo ha fallado) y la sección Recordatorios, que solo se ve
-// con la cuenta abierta.
+// terracota: algo ha fallado) y las secciones Recordatorios y Consejeros,
+// que solo se ven con la cuenta abierta.
 function mostrarCuenta() {
   mostrarRecordatorios();
+  mostrarConsejeros();
   const seccion = document.getElementById("seccion-cuenta");
   const punto = document.getElementById("estado-nube");
   seccion.hidden = !hayNube();
@@ -5388,7 +5391,192 @@ document
   });
 
 // ==========================================================================
-// 24. BARRA SUPERIOR Y NAVEGACIÓN
+// 24. CONSEJEROS
+// Méntor (y, más adelante, los demás consejeros) contestará con la IA de
+// Claude. La app no habla con Claude directamente: habla con la función
+// «consejero» del servidor (supabase/functions/consejero), que guarda la
+// clave de la API. Así la clave nunca está en este archivo, que cualquiera
+// puede leer. La función también pone un límite de mensajes al día y lleva
+// la cuenta de lo gastado.
+// ==========================================================================
+
+// Cómo va el día, según el servidor: { listo, nombre, motor, hoy, limite,
+// coste }. null mientras no se sabe.
+let usoConsejeros = null;
+
+// El último fallo al hablar con la función ("" si ninguno), la última
+// respuesta de la prueba y si se está probando ahora.
+let errorConsejeros = "";
+let respuestaPrueba = "";
+let probandoConsejero = false;
+
+// Llama a la función «consejero» con el pase de la sesión. Si dice que no,
+// su explicación (en castellano) pasa a ser el mensaje del error.
+async function llamarConsejero(cuerpo) {
+  try {
+    return await peticion("POST", "/functions/v1/consejero", cuerpo);
+  } catch (error) {
+    // peticion avisa de los fallos como «servidor 429: {"error": "…"}»
+    const partes = /^servidor (\d+): ([\s\S]*)$/.exec(error.message);
+    if (!partes) {
+      throw error;
+    }
+    let explicacion = "";
+    try {
+      explicacion = JSON.parse(partes[2]).error || "";
+    } catch (otroError) {
+      // No era JSON: se queda sin explicación
+    }
+    if (explicacion === "" && partes[1] === "404") {
+      explicacion = "Falta desplegar la función «consejero» en Supabase.";
+    }
+    if (explicacion === "") {
+      explicacion = "El servidor ha fallado (" + partes[1] + ").";
+    }
+    throw new Error(explicacion);
+  }
+}
+
+// Manda una conversación a un consejero ("mentor") y devuelve su respuesta.
+// mensajes: [{ de: "yo" o "consejero", texto }]. Lo usarán las lecciones
+// siguientes para hablar con Méntor.
+async function hablarConConsejero(consejero, mensajes) {
+  const respuesta = await llamarConsejero({
+    accion: "hablar",
+    consejero: consejero,
+    mensajes: mensajes,
+  });
+  usoConsejeros = respuesta.uso;
+  return respuesta.texto;
+}
+
+// Un error convertido en mensaje para la sección (los del servidor ya
+// vienen explicados).
+function textoErrorConsejero(error) {
+  if (error.message === "sesion") {
+    return "Tu sesión ha caducado: vuelve a entrar.";
+  }
+  if (error instanceof TypeError) {
+    return "Sin conexión. Prueba otra vez cuando tengas internet.";
+  }
+  return error.message;
+}
+
+// Al abrir la app con la cuenta abierta (después de sincronizar): pregunta
+// cómo va el día, para enseñarlo en Archivo.
+async function revisarConsejeros() {
+  if (!hayNube() || !sesion) {
+    return;
+  }
+  try {
+    usoConsejeros = await llamarConsejero({ accion: "uso" });
+    errorConsejeros = "";
+  } catch (error) {
+    errorConsejeros = textoErrorConsejero(error);
+  }
+  mostrarConsejeros();
+}
+
+// Dinero en texto: "0,03 $" (o "menos de 0,01 $" si es muy poco).
+function textoDolares(cantidad) {
+  if (cantidad > 0 && cantidad < 0.005) {
+    return "menos de 0,01 $";
+  }
+  return (
+    cantidad.toLocaleString("es-ES", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " $"
+  );
+}
+
+// «Probar la conexión»: un saludo a Méntor. Su respuesta sale debajo.
+async function probarConsejero() {
+  probandoConsejero = true;
+  errorConsejeros = "";
+  respuestaPrueba = "";
+  mostrarConsejeros();
+
+  try {
+    respuestaPrueba = await hablarConConsejero("mentor", [
+      {
+        de: "yo",
+        texto:
+          "Salve, Méntor. Es una prueba de conexión desde Ergon: preséntate en una o dos frases.",
+      },
+    ]);
+  } catch (error) {
+    errorConsejeros = textoErrorConsejero(error);
+  }
+
+  probandoConsejero = false;
+  mostrarConsejeros();
+
+  // Que se vea la respuesta (en el móvil puede quedar más abajo)
+  if (respuestaPrueba) {
+    document
+      .getElementById("consejeros-respuesta")
+      .scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+// Dibuja la sección Consejeros (en Archivo), solo con la cuenta abierta:
+// cómo va el día (o qué falta) y la respuesta de la prueba.
+function mostrarConsejeros() {
+  const seccion = document.getElementById("seccion-consejeros");
+  seccion.hidden = !hayNube() || !sesion;
+  if (seccion.hidden) {
+    return;
+  }
+
+  let estado = "";
+  if (probandoConsejero) {
+    estado = "Méntor está escribiendo…";
+  } else if (errorConsejeros) {
+    estado = errorConsejeros;
+  } else if (usoConsejeros && !usoConsejeros.listo) {
+    estado =
+      "Falta la clave de Claude: añádela en Supabase (Edge Functions → Secrets) con el nombre ANTHROPIC_API_KEY.";
+  } else if (usoConsejeros) {
+    // «Méntor · Claude Sonnet 5.5 · Hoy: 3 de 30 mensajes (0,04 $).»
+    let mensajes = " mensajes";
+    if (usoConsejeros.limite === 1) {
+      mensajes = " mensaje";
+    }
+    estado =
+      usoConsejeros.nombre +
+      " · " +
+      usoConsejeros.motor +
+      " · Hoy: " +
+      usoConsejeros.hoy +
+      " de " +
+      usoConsejeros.limite +
+      mensajes;
+    if (usoConsejeros.coste > 0) {
+      estado = estado + " (" + textoDolares(usoConsejeros.coste) + ")";
+    }
+    estado = estado + ".";
+  }
+  document.getElementById("consejeros-estado").textContent = estado;
+
+  document.getElementById("boton-probar-consejero").disabled =
+    probandoConsejero;
+
+  // La respuesta, en una burbuja de Méntor con su cara (bloque 8)
+  const caja = document.getElementById("consejeros-respuesta");
+  caja.innerHTML = "";
+  if (respuestaPrueba) {
+    caja.append(burbujaMentor(respuestaPrueba));
+  }
+  caja.hidden = respuestaPrueba === "";
+}
+
+document
+  .getElementById("boton-probar-consejero")
+  .addEventListener("click", probarConsejero);
+
+// ==========================================================================
+// 25. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
 // Hoy · Mosaico · Metas · Archivo.
 // ==========================================================================
@@ -5461,7 +5649,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 25. APP INSTALABLE (SERVICE WORKER)
+// 26. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -5470,7 +5658,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 26. INICIO
+// 27. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 
@@ -5502,8 +5690,8 @@ if (tocaBienvenida()) {
 }
 
 // Con la cuenta abierta, sincronizar nada más abrir y, después, revisar los
-// avisos de este dispositivo (bloque 23).
-sincronizar().then(revisarAvisos);
+// avisos de este dispositivo (bloque 23) y cómo van los consejeros (24).
+sincronizar().then(revisarAvisos).then(revisarConsejeros);
 
 // En el iPhone, la app puede quedarse abierta de fondo y volver horas
 // después. Al volver (visibilitychange): si ya es otro día, se recarga para

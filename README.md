@@ -37,6 +37,7 @@ Sin cuenta, los datos se guardan solo en el navegador de cada dispositivo. Con c
 - `localStorage` para guardar los datos.
 - [Supabase](https://supabase.com) para la cuenta y la nube, con `fetch` y sin librerías: base de datos Postgres con seguridad por filas (RLS).
 - Recordatorios con Web Push (claves VAPID): una *Edge Function* de Supabase en Deno decide y envía los avisos, y `pg_cron` la llama cada 5 minutos. El SQL y la función están en la carpeta `supabase/`.
+- La IA de Claude (su API) a través de otra *Edge Function*, `consejero`: la clave de la API se guarda como secreto en el servidor, nunca en la app, y hay un límite de mensajes al día.
 - Dibujos en SVG (laurel, llama, iconos) y animaciones con CSS.
 - Ventanas con el elemento `<dialog>` y avisos con promesas (`async` / `await`).
 - PWA: `manifest.json` y un *service worker* para instalarla y usarla sin conexión.

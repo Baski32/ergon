@@ -22,7 +22,7 @@
    16. Mosaico del mes
    17. Metas · Tarjetas
    18. Metas · Laureles (metas cumplidas)
-   19. Archivo · Cuenta, recordatorios, perfil y revisiones
+   19. Archivo · Cuenta, recordatorios, consejeros, perfil y revisiones
    20. Archivo · Copia de seguridad
    21. Navegación
    22. Escritorio (pantallas anchas)
@@ -1894,14 +1894,15 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   19. ARCHIVO · CUENTA, RECORDATORIOS, PERFIL Y REVISIONES
-   La cuenta de la nube, los recordatorios, los datos del perfil, el
-   historial del peso y las revisiones semanales.
+   19. ARCHIVO · CUENTA, RECORDATORIOS, CONSEJEROS, PERFIL Y REVISIONES
+   La cuenta de la nube, los recordatorios, la conexión con los consejeros,
+   los datos del perfil, el historial del peso y las revisiones semanales.
    ========================================================================== */
 
 /* Cada sección, con un hueco debajo */
 .cuenta,
 .recordatorios,
+.consejeros,
 .perfil,
 .revisiones {
   margin-bottom: 32px;
@@ -1910,6 +1911,7 @@ button.recordatorio {
 /* Sus títulos, como el de la copia de seguridad */
 .cuenta h2,
 .recordatorios h2,
+.consejeros h2,
 .perfil h2,
 .revisiones h2 {
   font-family: "Cinzel", serif;
@@ -2062,6 +2064,31 @@ button.recordatorio {
   flex-wrap: wrap;
 }
 
+/* Consejeros: el texto de arriba, centrado */
+.consejeros .pie-texto {
+  margin-top: 0;
+  text-align: center;
+}
+
+/* La respuesta de Méntor a la prueba: su burbuja con su cara (bloque 15),
+   en columna para que se coloque a la izquierda. pre-line respeta los
+   saltos de línea entre párrafos */
+.consejeros-respuesta {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+  /* Al bajar hasta ella, que no quede detrás de la barra de abajo */
+  scroll-margin-bottom: 90px;
+}
+
+.consejeros-respuesta[hidden] {
+  display: none;
+}
+
+.consejeros-respuesta .burbuja {
+  white-space: pre-line;
+}
+
 /* Cada dato: el nombre a la izquierda y el valor a la derecha */
 .perfil-fila {
   display: flex;
@@ -2176,6 +2203,13 @@ button.recordatorio {
 .pie-botones button:hover,
 .boton-importar:hover {
   background-color: var(--piedra);
+}
+
+/* Mientras se espera (p. ej., «Probar la conexión»), el botón se apaga */
+.pie-botones button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  background: none;
 }
 
 /* «Última copia: hace N días» */

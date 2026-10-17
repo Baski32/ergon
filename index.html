@@ -555,6 +555,28 @@
           </div>
         </section>
 
+        <!-- Consejeros: Méntor con la IA de Claude, a través del servidor
+             (solo con la cuenta abierta). El estado y la respuesta los pone
+             script.js -->
+        <section id="seccion-consejeros" class="consejeros" hidden>
+          <h2>Consejeros</h2>
+          <p class="pie-texto">
+            Méntor contestará con la IA de Claude. La clave de Claude se guarda
+            en el servidor, nunca en la app.
+          </p>
+          <p id="consejeros-estado" class="cuenta-estado"></p>
+          <div class="pie-botones">
+            <button id="boton-probar-consejero" type="button">
+              Probar la conexión
+            </button>
+          </div>
+          <div
+            id="consejeros-respuesta"
+            class="consejeros-respuesta"
+            hidden
+          ></div>
+        </section>
+
         <!-- Perfil: los datos los pone script.js -->
         <section class="perfil">
           <h2>Perfil</h2>
