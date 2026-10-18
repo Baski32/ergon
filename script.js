@@ -32,9 +32,11 @@
 // 26. Consejeros · Lo que ven de mí
 // 27. Prometheus · Estadísticas
 // 28. Prometheus · El laboratorio
-// 29. Barra superior y navegación
-// 30. App instalable (service worker)
-// 31. Inicio
+// 29. Prometheus · Apuntar el sueño
+// 30. Prometheus · Apuntar los entrenos
+// 31. Barra superior y navegación
+// 32. App instalable (service worker)
+// 33. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -90,6 +92,17 @@ const conversaciones =
 const ajustesConsejeros =
   JSON.parse(localStorage.getItem("ergon-consejeros")) || {};
 
+// El sueño de cada noche, por el día en que me levanté (bloque 29):
+// { "2026-10-16": { acostarse: "23:40", levantarse: "07:30",
+//   calidad: "bien", "regular" o "mal" } }
+const sueno = JSON.parse(localStorage.getItem("ergon-sueno")) || {};
+
+// Los entrenos, por su id (bloque 30):
+// { "e1760700000000": { id, fecha, tipo, minutos, intensidad (1 a 10),
+//   ejercicios: [{ nombre, series: [{ repeticiones, kilos }] }], nota,
+//   habito (el id del hábito que marcó, o "") } }
+const entrenos = JSON.parse(localStorage.getItem("ergon-entrenos")) || {};
+
 // Guarda la lista de hábitos.
 function guardarHabitos() {
   localStorage.setItem("ergon-habitos", JSON.stringify(habitos));
@@ -144,6 +157,18 @@ function guardarAjustesConsejeros() {
 function guardarConversacion(id) {
   localStorage.setItem("ergon-conversaciones", JSON.stringify(conversaciones));
   apuntarCambio("conversacion:" + id);
+}
+
+// Guarda el sueño. dia: la noche que ha cambiado (o se ha borrado).
+function guardarSueno(dia) {
+  localStorage.setItem("ergon-sueno", JSON.stringify(sueno));
+  apuntarCambio("sueno:" + dia);
+}
+
+// Guarda los entrenos. id: el que ha cambiado (o se ha borrado).
+function guardarEntreno(id) {
+  localStorage.setItem("ergon-entrenos", JSON.stringify(entrenos));
+  apuntarCambio("entreno:" + id);
 }
 
 // ==========================================================================
@@ -2533,8 +2558,9 @@ const conversacionBienvenida = {
 
 // ==========================================================================
 // 12. RITUALES DE MAÑANA Y DE NOCHE
-// Por la mañana, la intención del día. Por la noche, el examen de Séneca:
-// Ergon recuerda sus tres preguntas para responderlas en el diario de papel.
+// Por la mañana, la intención del día y cómo he dormido. Por la noche, el
+// examen de Séneca: Ergon recuerda sus tres preguntas para responderlas en
+// el diario de papel.
 // ==========================================================================
 
 // La mañana empieza a las 4 y la noche, a las 20. De madrugada (antes de las
@@ -2582,7 +2608,7 @@ function crearParrafo(texto, clase) {
 // no perderlo si la pantalla se vuelve a dibujar mientras se escribe).
 function tarjetaManana(ritual, escrito) {
   const tarjeta = document.createElement("form");
-  tarjeta.classList.add("ritual");
+  tarjeta.classList.add("ritual", "ritual-intencion");
 
   let saludo = "Buenos días";
   if (new Date().getHours() >= 14) {
@@ -2636,6 +2662,84 @@ function tarjetaManana(ritual, escrito) {
     guardarRitual(ritual);
   });
 
+  return tarjeta;
+}
+
+// Un campo de hora con su nombre delante («Me acosté [23:40]»).
+function campoHora(texto, nombre, valor) {
+  const etiqueta = document.createElement("label");
+  etiqueta.classList.add("ritual-hora");
+  const campo = document.createElement("input");
+  campo.type = "time";
+  campo.name = nombre;
+  campo.value = valor;
+  etiqueta.append(crearParrafo(texto, "ritual-hora-texto"), campo);
+  return etiqueta;
+}
+
+// La tarjeta del sueño (por la mañana, mientras no se haya apuntado la
+// noche): a qué hora me acosté y me levanté y, al tocar «Bien», «Regular»
+// o «Mal», se guarda. Las horas vienen puestas como la última noche
+// apuntada. horas: lo que ya había en los campos (para no perderlo si la
+// pantalla se vuelve a dibujar).
+function tarjetaSueno(ritual, dia, horas) {
+  const tarjeta = document.createElement("div");
+  tarjeta.classList.add("ritual", "ritual-sueno");
+
+  const habituales = horasHabituales();
+  const acostarse = campoHora(
+    "Me acosté",
+    "acostarse",
+    horas.acostarse || habituales.acostarse,
+  );
+  const levantarse = campoHora(
+    "Me levanté",
+    "levantarse",
+    horas.levantarse || habituales.levantarse,
+  );
+  const filaHoras = document.createElement("div");
+  filaHoras.classList.add("ritual-horas");
+  filaHoras.append(acostarse, levantarse);
+
+  const error = crearParrafo("", "ventana-error");
+
+  // Los tres botones de cómo dormí: cada uno guarda la noche
+  const botones = document.createElement("div");
+  botones.classList.add("ritual-calidad");
+  calidadesSueno.forEach(function (calidad) {
+    botones.append(
+      crearBoton(calidad.nombre, "ritual-calidad-boton", function () {
+        const noche = {
+          acostarse: acostarse.querySelector("input").value,
+          levantarse: levantarse.querySelector("input").value,
+          calidad: calidad.id,
+        };
+        const fallo = falloSueno(noche);
+        if (fallo) {
+          error.textContent = fallo;
+          return;
+        }
+        sueno[dia] = noche;
+        guardarSueno(dia);
+        actualizarTodo();
+      }),
+    );
+  });
+
+  // «Hoy no»: la tarjeta no vuelve hoy (se apunta en el ritual del día)
+  const hoyNo = crearBoton("Hoy no", "ritual-hoy-no", function () {
+    ritual.sueno = "no";
+    guardarRitual(ritual);
+  });
+
+  tarjeta.append(
+    crearParrafo("Sueño de anoche", "ritual-titulo"),
+    filaHoras,
+    crearParrafo("¿Qué tal has dormido?", "ritual-texto"),
+    botones,
+    error,
+    hoyNo,
+  );
   return tarjeta;
 }
 
@@ -2700,19 +2804,28 @@ function guardarRitual(ritual) {
   mostrarRituales();
 }
 
+// Lo que hay escrito en un campo de la caja de los rituales ("" si no está).
+function valorEnRituales(caja, selector) {
+  const campo = caja.querySelector(selector);
+  if (campo) {
+    return campo.value;
+  }
+  return "";
+}
+
 // Dibuja lo que toca según la hora: por la mañana, la tarjeta de la
-// intención (o la intención ya escrita); por la noche, el examen (hasta que
-// se marca hecho).
+// intención (o la intención ya escrita) y la del sueño (o lo que dormí); por
+// la noche, el examen (hasta que se marca hecho).
 function mostrarRituales() {
   const caja = document.getElementById("ritual");
 
-  // Lo que se estaba escribiendo en la intención (al marcar un hábito, todo
-  // se vuelve a dibujar y se perdería)
-  const campoAnterior = caja.querySelector("input");
-  let escrito = "";
-  if (campoAnterior) {
-    escrito = campoAnterior.value;
-  }
+  // Lo que se estaba escribiendo (al marcar un hábito, todo se vuelve a
+  // dibujar y se perdería)
+  const escrito = valorEnRituales(caja, ".ritual-intencion input");
+  const horas = {
+    acostarse: valorEnRituales(caja, '.ritual-sueno [name="acostarse"]'),
+    levantarse: valorEnRituales(caja, '.ritual-sueno [name="levantarse"]'),
+  };
 
   caja.innerHTML = "";
   const dia = diaDelRitual();
@@ -2722,7 +2835,11 @@ function mostrarRituales() {
     if (!ritual.examen) {
       caja.append(tarjetaNoche(ritual, dia));
     }
-  } else if (ritual.intencion === undefined || cambiandoIntencion) {
+    caja.hidden = caja.children.length === 0;
+    return;
+  }
+
+  if (ritual.intencion === undefined || cambiandoIntencion) {
     caja.append(tarjetaManana(ritual, escrito));
   } else if (ritual.intencion !== "") {
     // La intención ya escrita, como recordatorio. Al tocarla, se cambia
@@ -2736,6 +2853,22 @@ function mostrarRituales() {
     );
     linea.title = "Cambiar la intención";
     caja.append(linea);
+  }
+
+  // El sueño de anoche: si ya está, como recordatorio (al tocarlo se abre
+  // su ventana para cambiarlo); si no, la tarjeta (salvo «Hoy no»)
+  if (sueno[dia]) {
+    const linea = crearBoton(
+      "Anoche: " + textoNoche(sueno[dia]) + ".",
+      "recordatorio",
+      function () {
+        abrirVentanaSueno(dia);
+      },
+    );
+    linea.title = "Cambiar el sueño de anoche";
+    caja.append(linea);
+  } else if (ritual.sueno !== "no") {
+    caja.append(tarjetaSueno(ritual, dia, horas));
   }
 
   caja.hidden = caja.children.length === 0;
@@ -4094,6 +4227,8 @@ const claves = [
   "ergon-rituales",
   "ergon-revisiones",
   "ergon-conversaciones",
+  "ergon-sueno",
+  "ergon-entrenos",
 ];
 
 // El día de la última copia se guarda aparte, en «ergon-ultima-copia»: no
@@ -4544,8 +4679,9 @@ function mostrarCuenta() {
 //   "ergon-metas", "ergon-perfil", "ergon-recordatorios", "ergon-consejeros",
 //   "ritual:2026-10-16",
 //   "revision:2026-10-12", "conversacion:c1760700000000" (una por
-//   conversación con Méntor) y, del registro, una fila por hábito y día:
-//   "registro:2026-10-16:h123".
+//   conversación con Méntor), "sueno:2026-10-16" (una por noche),
+//   "entreno:e1760700000000" (una por entreno) y, del registro, una fila
+//   por hábito y día: "registro:2026-10-16:h123".
 //   Así, marcar hábitos distintos en dos dispositivos no se pisa.
 // - Cada cambio de aquí se apunta en «pendientes» con su hora. Se sube en
 //   cuanto se puede; sin conexión, espera (también si se cierra la app).
@@ -4616,6 +4752,12 @@ function valorLocal(clave) {
   }
   if (partes[0] === "conversacion") {
     return conversaciones[partes[1]] || null;
+  }
+  if (partes[0] === "sueno") {
+    return sueno[partes[1]] || null;
+  }
+  if (partes[0] === "entreno") {
+    return entrenos[partes[1]] || null;
   }
   if (clave === "ergon-habitos") {
     return habitos;
@@ -4691,6 +4833,18 @@ function aplicarFila(fila) {
     } else {
       conversaciones[partes[1]] = fila.valor;
     }
+  } else if (partes[0] === "sueno") {
+    if (fila.valor === null) {
+      delete sueno[partes[1]];
+    } else {
+      sueno[partes[1]] = fila.valor;
+    }
+  } else if (partes[0] === "entreno") {
+    if (fila.valor === null) {
+      delete entrenos[partes[1]];
+    } else {
+      entrenos[partes[1]] = fila.valor;
+    }
   } else if (fila.clave === "ergon-habitos") {
     reemplazarLista(habitos, fila.valor || []);
   } else if (fila.clave === "ergon-metas") {
@@ -4716,6 +4870,8 @@ function guardarLoBajado() {
   localStorage.setItem("ergon-recordatorios", JSON.stringify(recordatorios));
   localStorage.setItem("ergon-conversaciones", JSON.stringify(conversaciones));
   localStorage.setItem("ergon-consejeros", JSON.stringify(ajustesConsejeros));
+  localStorage.setItem("ergon-sueno", JSON.stringify(sueno));
+  localStorage.setItem("ergon-entrenos", JSON.stringify(entrenos));
 }
 
 // Un valor convertido en texto con las propiedades en orden alfabético. La
@@ -4855,6 +5011,12 @@ function apuntarTodo() {
   Object.keys(conversaciones).forEach(function (id) {
     pendientes["conversacion:" + id] = ahora;
   });
+  Object.keys(sueno).forEach(function (dia) {
+    pendientes["sueno:" + dia] = ahora;
+  });
+  Object.keys(entrenos).forEach(function (id) {
+    pendientes["entreno:" + id] = ahora;
+  });
   guardarPendientes();
 }
 
@@ -4925,6 +5087,8 @@ async function primeraSincronizacion() {
   reemplazarObjeto(recordatorios, {});
   reemplazarObjeto(conversaciones, {});
   reemplazarObjeto(ajustesConsejeros, {});
+  reemplazarObjeto(sueno, {});
+  reemplazarObjeto(entrenos, {});
 
   let ultima = filas[0].subido;
   filas.forEach(function (fila) {
@@ -6777,17 +6941,208 @@ function datosPeso() {
   };
 }
 
+// Las noches de los últimos «dias» días (hoy incluido: cada noche va por
+// el día en que me levanté), de la más antigua a la más nueva, con los
+// minutos dormidos (null si no está apuntada). No salen las del principio
+// sin apuntar.
+function nochesRecientes(dias) {
+  const noches = [];
+  for (let i = dias - 1; i >= 0; i--) {
+    const dia = fechaMas(new Date(), -i).toLocaleDateString("en-CA");
+    const noche = sueno[dia] || null;
+    let minutos = null;
+    if (noche) {
+      minutos = minutosDormidos(noche.acostarse, noche.levantarse);
+    }
+    noches.push({ dia: dia, noche: noche, minutos: minutos });
+  }
+
+  const primera = noches.findIndex(function (noche) {
+    return noche.minutos !== null;
+  });
+  if (primera === -1) {
+    return [];
+  }
+  return noches.slice(primera);
+}
+
+// Lo dormido de media en unos días seguidos (desde «desde», durante «dias»
+// días): { media (en minutos, o null si no hay ninguna noche), noches }.
+function mediaSueno(desde, dias) {
+  let total = 0;
+  let noches = 0;
+  for (let i = 0; i < dias; i++) {
+    const dia = fechaMas(desde, i).toLocaleDateString("en-CA");
+    const noche = sueno[dia];
+    if (noche && dia <= hoy) {
+      total += minutosDormidos(noche.acostarse, noche.levantarse);
+      noches++;
+    }
+  }
+
+  let media = null;
+  if (noches > 0) {
+    media = Math.round(total / noches);
+  }
+  return { media: media, noches: noches };
+}
+
+// Los entrenos de la semana que empieza un lunes: cuántos y cuántos
+// minutos en total.
+function entrenosDeLaSemana(lunes) {
+  const desde = lunes.toLocaleDateString("en-CA");
+  const hasta = fechaMas(lunes, 6).toLocaleDateString("en-CA");
+  let cuantos = 0;
+  let minutos = 0;
+  Object.values(entrenos).forEach(function (entreno) {
+    if (entreno.fecha >= desde && entreno.fecha <= hasta) {
+      cuantos++;
+      minutos += entreno.minutos || 0;
+    }
+  });
+  return { cuantos: cuantos, minutos: minutos };
+}
+
+// El nombre de un ejercicio, preparado para compararlo con otros: sin
+// mayúsculas, sin tildes y sin espacios de más («Press  de Banca» y «press
+// de banca» son el mismo).
+function claveEjercicio(nombre) {
+  return sinTildes(nombre).trim().replace(/\s+/g, " ");
+}
+
+// Los ejercicios usados, sin repetir, del más reciente al más antiguo (con
+// el nombre tal como se escribió la última vez).
+function nombresEjercicios() {
+  const vistos = {};
+  const nombres = [];
+  entrenosOrdenados().forEach(function (entreno) {
+    entreno.ejercicios.forEach(function (ejercicio) {
+      const clave = claveEjercicio(ejercicio.nombre);
+      if (!vistos[clave]) {
+        vistos[clave] = true;
+        nombres.push(ejercicio.nombre);
+      }
+    });
+  });
+  return nombres;
+}
+
+// ¿Es la serie «a» mejor que la «b»? Más kilos o, con los mismos kilos,
+// más repeticiones (sin kilos cuentan como 0: peso del cuerpo).
+function esMejorSerie(a, b) {
+  const kilosA = a.kilos || 0;
+  const kilosB = b.kilos || 0;
+  if (kilosA !== kilosB) {
+    return kilosA > kilosB;
+  }
+  return a.repeticiones > b.repeticiones;
+}
+
+// La mejor serie de un ejercicio (null si no tiene series).
+function mejorSerie(ejercicio) {
+  let mejor = null;
+  ejercicio.series.forEach(function (serie) {
+    if (!mejor || esMejorSerie(serie, mejor)) {
+      mejor = serie;
+    }
+  });
+  return mejor;
+}
+
+// Una serie para leer: «80 kg × 6» o, sin kilos, «6 repeticiones».
+function textoSerie(serie) {
+  if (serie.kilos) {
+    return textoKilos(serie.kilos) + " × " + serie.repeticiones;
+  }
+  return textoRepeticiones(serie.repeticiones);
+}
+
+// «1 repetición», «12 repeticiones».
+function textoRepeticiones(cantidad) {
+  if (cantidad === 1) {
+    return "1 repetición";
+  }
+  return cantidad + " repeticiones";
+}
+
+// Cómo ha ido un ejercicio, de la sesión más antigua a la más nueva:
+// [{ fecha, mejor: la mejor serie de ese día }]. Si sale dos veces en un
+// mismo entreno, cuenta la mejor.
+function historialEjercicio(nombre) {
+  const clave = claveEjercicio(nombre);
+  const sesiones = [];
+
+  entrenosOrdenados()
+    .reverse()
+    .forEach(function (entreno) {
+      let mejor = null;
+      entreno.ejercicios.forEach(function (ejercicio) {
+        if (claveEjercicio(ejercicio.nombre) === clave) {
+          const suya = mejorSerie(ejercicio);
+          if (suya && (!mejor || esMejorSerie(suya, mejor))) {
+            mejor = suya;
+          }
+        }
+      });
+      if (mejor) {
+        sesiones.push({ fecha: entreno.fecha, mejor: mejor });
+      }
+    });
+
+  return sesiones;
+}
+
+// La última mejora: en el último entreno de gimnasio, el primer ejercicio
+// cuya mejor serie supera a la de la vez anterior. { nombre, ahora, antes }
+// o null si no hay ninguna.
+function ultimaMejora() {
+  const ultimo = entrenosOrdenados().find(function (entreno) {
+    return entreno.tipo === "gimnasio" && entreno.ejercicios.length > 0;
+  });
+  if (!ultimo) {
+    return null;
+  }
+
+  for (let i = 0; i < ultimo.ejercicios.length; i++) {
+    const nombre = ultimo.ejercicios[i].nombre;
+    const sesiones = historialEjercicio(nombre);
+    const ahora = sesiones[sesiones.length - 1];
+    const antes = sesiones[sesiones.length - 2];
+    if (
+      antes &&
+      ahora.fecha === ultimo.fecha &&
+      esMejorSerie(ahora.mejor, antes.mejor)
+    ) {
+      return { nombre: nombre, ahora: ahora.mejor, antes: antes.mejor };
+    }
+  }
+  return null;
+}
+
 // Todas las estadísticas juntas (las usan las gráficas y las señales).
 function estadisticas() {
   const dias = semanaTipo();
+  const ahora = new Date();
+  const esteLunes = lunesDe(ahora);
   return {
-    hoy: resumenDelDia(new Date()),
+    hoy: resumenDelDia(ahora),
     treinta: ultimos30(),
     semanas: semanasRecientes(),
     dias: dias,
     extremos: mejorYPeorDia(dias),
     racha: rachaMasLarga(),
     peso: datosPeso(),
+    sueno: {
+      noches: nochesRecientes(14),
+      semana: mediaSueno(fechaMas(ahora, -6), 7),
+      antes: mediaSueno(fechaMas(ahora, -13), 7),
+    },
+    entrenos: {
+      estaSemana: entrenosDeLaSemana(esteLunes),
+      pasada: entrenosDeLaSemana(fechaMas(esteLunes, -7)),
+      lista: entrenosOrdenados(),
+    },
+    mejora: ultimaMejora(),
   };
 }
 
@@ -6868,6 +7223,42 @@ function senalesDe(datos) {
         losDias(peores) +
         " (" +
         textoPorcentaje(peores[0].porcentaje) +
+        ").",
+    );
+  }
+
+  if (sueno[hoy]) {
+    lista.push("Anoche: " + textoNoche(sueno[hoy]) + ".");
+  }
+  if (datos.sueno.semana.noches >= 2) {
+    lista.push(
+      "Sueño de la última semana: " +
+        textoHoras(datos.sueno.semana.media) +
+        " de media (" +
+        datos.sueno.semana.noches +
+        " noches).",
+    );
+  }
+
+  const semana = datos.entrenos.estaSemana;
+  if (semana.cuantos > 0) {
+    let texto = "Esta semana llevas " + semana.cuantos + " entrenos";
+    if (semana.cuantos === 1) {
+      texto = "Esta semana llevas 1 entreno";
+    }
+    if (semana.minutos > 0) {
+      texto += " (" + semana.minutos + " min)";
+    }
+    lista.push(texto + ".");
+  }
+
+  if (datos.mejora) {
+    lista.push(
+      datos.mejora.nombre +
+        ": " +
+        textoSerie(datos.mejora.ahora) +
+        ", mejor que la vez anterior (" +
+        textoSerie(datos.mejora.antes) +
         ").",
     );
   }
@@ -7076,13 +7467,14 @@ function crearCifra(nombre, valor, detalle, cambio, sentido) {
   return cifra;
 }
 
-// Lo que ha cambiado una cifra frente a los 30 días anteriores, con su
-// flecha: { texto, sentido }. singular y plural son la unidad que va
-// detrás del número (« punto», « puntos»; en los días perfectos, nada).
-function cambioFrente(ahora, antes, singular, plural) {
+// Lo que ha cambiado una cifra frente a otra anterior, con su flecha:
+// { texto, sentido }. singular y plural son la unidad que va detrás del
+// número (« punto», « puntos»; en los días perfectos, nada) y «frente»,
+// con qué se compara («los 30 días anteriores»).
+function cambioFrente(ahora, antes, singular, plural, frente) {
   const diferencia = ahora - antes;
   if (diferencia === 0) {
-    return { texto: "= igual que los 30 días anteriores", sentido: "igual" };
+    return { texto: "= igual que " + frente, sentido: "igual" };
   }
 
   let unidad = plural;
@@ -7091,17 +7483,18 @@ function cambioFrente(ahora, antes, singular, plural) {
   }
   if (diferencia > 0) {
     return {
-      texto: "▲ " + diferencia + unidad + " más que los 30 días anteriores",
+      texto: "▲ " + diferencia + unidad + " más que " + frente,
       sentido: "sube",
     };
   }
   return {
-    texto: "▼ " + -diferencia + unidad + " menos que los 30 días anteriores",
+    texto: "▼ " + -diferencia + unidad + " menos que " + frente,
     sentido: "baja",
   };
 }
 
-// Las cuatro cifras: días perfectos, constancia, mejor racha y peso.
+// Las seis cifras: días perfectos, constancia, mejor racha, peso, sueño y
+// entrenos.
 function dibujarCifras(datos) {
   const caja = document.getElementById("lab-cifras");
   caja.innerHTML = "";
@@ -7120,12 +7513,19 @@ function dibujarCifras(datos) {
     let cambioConstancia = null;
     const constanciaAhora = porcentaje(ahora.cumplidos, ahora.tocan);
     if (antes.contados > 0) {
-      cambioPerfectos = cambioFrente(ahora.perfectos, antes.perfectos, "", "");
+      cambioPerfectos = cambioFrente(
+        ahora.perfectos,
+        antes.perfectos,
+        "",
+        "",
+        "los 30 días anteriores",
+      );
       cambioConstancia = cambioFrente(
         constanciaAhora,
         porcentaje(antes.cumplidos, antes.tocan),
         " punto",
         " puntos",
+        "los 30 días anteriores",
       );
     }
     caja.append(
@@ -7181,12 +7581,129 @@ function dibujarCifras(datos) {
   } else {
     caja.append(crearCifra("Peso", "—", "aún sin apuntar"));
   }
+
+  // 4. El sueño de media en la última semana, frente a la anterior (sin
+  // color: dormir más no siempre es mejor)
+  const sueno7 = datos.sueno.semana;
+  const suenoAntes = datos.sueno.antes;
+  if (sueno7.media === null) {
+    caja.append(crearCifra("Sueño", "—", "aún sin apuntar"));
+  } else {
+    let cambio = null;
+    if (suenoAntes.media !== null) {
+      cambio = cambioFrente(
+        sueno7.media,
+        suenoAntes.media,
+        " min",
+        " min",
+        "la semana anterior",
+      ).texto;
+    }
+    let noches = " noches";
+    if (sueno7.noches === 1) {
+      noches = " noche";
+    }
+    caja.append(
+      crearCifra(
+        "Sueño",
+        textoHoras(sueno7.media),
+        "de media, última semana (" + sueno7.noches + noches + ")",
+        cambio,
+        "igual",
+      ),
+    );
+  }
+
+  // 5. Los entrenos de esta semana, frente a la pasada (también sin color)
+  if (datos.entrenos.lista.length === 0) {
+    caja.append(crearCifra("Entrenos", "—", "aún sin apuntar"));
+    return;
+  }
+  const semana = datos.entrenos.estaSemana;
+  const pasada = datos.entrenos.pasada;
+  let detalle = "esta semana";
+  if (semana.minutos > 0) {
+    detalle = "esta semana, " + semana.minutos + " min";
+  }
+  let cambioEntrenos = null;
+  if (pasada.cuantos > 0 || semana.cuantos > 0) {
+    cambioEntrenos = cambioFrente(
+      semana.cuantos,
+      pasada.cuantos,
+      "",
+      "",
+      "la semana pasada",
+    ).texto;
+  }
+  caja.append(
+    crearCifra(
+      "Entrenos",
+      String(semana.cuantos),
+      detalle,
+      cambioEntrenos,
+      "igual",
+    ),
+  );
+}
+
+// Dibuja una gráfica de columnas (la usan «Semana a semana» y el sueño).
+// columnas: [{ altura (en %, de 0 a 100; null si no hay dato), numero (el
+// texto de encima: solo se enseña en la última), etiqueta (la de debajo),
+// dato (lo que se ve al tocarla), apagada (más clara) }]. rejilla: las
+// líneas, [{ altura, texto }]. Si hay más de 7 columnas, las etiquetas de
+// debajo van una sí y una no (contando desde la última): si no, no caben.
+function dibujarColumnas(contenedor, columnas, rejilla) {
+  contenedor.innerHTML = "";
+
+  const grafica = document.createElement("div");
+  grafica.classList.add("lab-grafica");
+  rejilla.forEach(function (linea) {
+    grafica.append(lineaRejilla(linea.altura, linea.texto));
+  });
+
+  const fila = document.createElement("div");
+  fila.classList.add("lab-columnas-fila");
+  const etiquetas = document.createElement("div");
+  etiquetas.classList.add("lab-columnas-etiquetas");
+
+  columnas.forEach(function (columna, i) {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.classList.add("lab-columna");
+    boton.classList.toggle("apagada", Boolean(columna.apagada));
+
+    if (columna.altura !== null) {
+      const barra = document.createElement("span");
+      barra.classList.add("lab-columna-barra");
+      barra.style.height = columna.altura + "%";
+      boton.append(barra);
+
+      // El número encima, solo en la última (las demás, al tocarlas)
+      if (i === columnas.length - 1 && columna.numero) {
+        const numero = document.createElement("span");
+        numero.classList.add("lab-columna-valor");
+        numero.style.bottom = columna.altura + "%";
+        numero.textContent = columna.numero;
+        boton.append(numero);
+      }
+    }
+
+    conectarDato(boton, columna.dato);
+    fila.append(boton);
+
+    const etiqueta = document.createElement("span");
+    if (columnas.length <= 7 || (columnas.length - 1 - i) % 2 === 0) {
+      etiqueta.textContent = columna.etiqueta;
+    }
+    etiquetas.append(etiqueta);
+  });
+
+  grafica.append(fila);
+  contenedor.append(grafica, etiquetas);
 }
 
 // Semana a semana: una columna por semana, de 0 a 100 %, con la rejilla a
-// 0, 50 y 100 %. La de ahora va más clara («en curso») y lleva su número
-// encima. Cada columna enseña su dato al tocarla. Las fechas de abajo, si
-// hay más de 6 semanas, van una sí y una no (si no, no caben).
+// 0, 50 y 100 %. La de ahora va más clara (está en curso).
 function dibujarSemanas(semanas) {
   const contenedor = document.getElementById("lab-semanas");
   const tabla = document.getElementById("lab-semanas-tabla");
@@ -7196,67 +7713,36 @@ function dibujarSemanas(semanas) {
     tabla.innerHTML = "";
     return;
   }
-  contenedor.innerHTML = "";
 
-  const grafica = document.createElement("div");
-  grafica.classList.add("lab-grafica");
-  grafica.append(
-    lineaRejilla(100, "100 %"),
-    lineaRejilla(50, "50 %"),
-    lineaRejilla(0, "0 %"),
+  dibujarColumnas(
+    contenedor,
+    semanas.map(function (semana) {
+      let dato =
+        nombreSemana(semana.lunes) +
+        ": " +
+        textoPorcentaje(semana.porcentaje) +
+        " (" +
+        semana.cumplidos +
+        " de " +
+        semana.tocan +
+        ")";
+      if (semana.enCurso) {
+        dato += " · en curso, hasta ayer";
+      }
+      return {
+        altura: semana.porcentaje || 0,
+        numero: textoPorcentaje(semana.porcentaje),
+        etiqueta: fechaCorta(semana.lunes),
+        dato: dato,
+        apagada: semana.enCurso,
+      };
+    }),
+    [
+      { altura: 100, texto: "100 %" },
+      { altura: 50, texto: "50 %" },
+      { altura: 0, texto: "0 %" },
+    ],
   );
-
-  const fila = document.createElement("div");
-  fila.classList.add("lab-columnas-fila");
-  const etiquetas = document.createElement("div");
-  etiquetas.classList.add("lab-columnas-etiquetas");
-
-  semanas.forEach(function (semana, i) {
-    const valor = semana.porcentaje || 0;
-
-    const columna = document.createElement("button");
-    columna.type = "button";
-    columna.classList.add("lab-columna");
-    columna.classList.toggle("en-curso", semana.enCurso);
-
-    const barra = document.createElement("span");
-    barra.classList.add("lab-columna-barra");
-    barra.style.height = valor + "%";
-    columna.append(barra);
-
-    // El número encima, solo en la última (las demás, al tocarlas)
-    if (i === semanas.length - 1) {
-      const numero = document.createElement("span");
-      numero.classList.add("lab-columna-valor");
-      numero.style.bottom = valor + "%";
-      numero.textContent = textoPorcentaje(semana.porcentaje);
-      columna.append(numero);
-    }
-
-    let texto =
-      nombreSemana(semana.lunes) +
-      ": " +
-      textoPorcentaje(semana.porcentaje) +
-      " (" +
-      semana.cumplidos +
-      " de " +
-      semana.tocan +
-      ")";
-    if (semana.enCurso) {
-      texto += " · en curso, hasta ayer";
-    }
-    conectarDato(columna, texto);
-    fila.append(columna);
-
-    const etiqueta = document.createElement("span");
-    if (semanas.length <= 6 || (semanas.length - 1 - i) % 2 === 0) {
-      etiqueta.textContent = fechaCorta(semana.lunes);
-    }
-    etiquetas.append(etiqueta);
-  });
-
-  grafica.append(fila);
-  contenedor.append(grafica, etiquetas);
 
   // La misma información, en la tabla de «Ver los datos»
   rellenarTabla(
@@ -7273,6 +7759,240 @@ function dibujarSemanas(semanas) {
         semana.cumplidos + " de " + semana.tocan,
       ];
     }),
+  );
+}
+
+// Un texto con la primera letra en mayúscula: «noche del…» → «Noche del…».
+function conMayuscula(texto) {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// El sueño: una columna por noche de las últimas 2 semanas (por el día en
+// que me levanté). La altura son las horas; la rejilla marca 0, 8 y el
+// tope (10 h, o más si alguna noche pasa de 10). Arriba, la media de la
+// última semana y lo de anoche.
+function dibujarSueno(datosSueno) {
+  const contenedor = document.getElementById("lab-sueno");
+  const resumen = document.getElementById("lab-sueno-resumen");
+  const tabla = document.getElementById("lab-sueno-tabla");
+  const noches = datosSueno.noches;
+  document.getElementById("lab-sueno-datos").hidden = noches.length === 0;
+
+  if (noches.length === 0) {
+    resumen.textContent =
+      "Aún no has apuntado ninguna noche. Apúntala con «+ Sueño» o por la mañana, en Hoy.";
+    contenedor.innerHTML = "";
+    tabla.innerHTML = "";
+    return;
+  }
+
+  let texto = "";
+  if (datosSueno.semana.media !== null) {
+    texto =
+      "Media de la última semana: " + textoHoras(datosSueno.semana.media) + ".";
+  }
+  if (sueno[hoy]) {
+    texto += " Anoche: " + textoNoche(sueno[hoy]) + ".";
+  }
+  resumen.textContent = texto.trim();
+
+  // El tope de la gráfica, en minutos: 10 h o la noche más larga, redondeada
+  // a la hora de arriba
+  let tope = 10 * 60;
+  noches.forEach(function (noche) {
+    if (noche.minutos !== null) {
+      tope = Math.max(tope, Math.ceil(noche.minutos / 60) * 60);
+    }
+  });
+
+  dibujarColumnas(
+    contenedor,
+    noches.map(function (noche) {
+      const nombre = conMayuscula(nombreNoche(noche.dia));
+      if (noche.minutos === null) {
+        return {
+          altura: null,
+          etiqueta: String(new Date(noche.dia + "T00:00").getDate()),
+          dato: nombre + ": sin apuntar",
+        };
+      }
+      return {
+        altura: (noche.minutos / tope) * 100,
+        numero: textoHorasCorto(noche.minutos),
+        etiqueta: String(new Date(noche.dia + "T00:00").getDate()),
+        dato:
+          nombre +
+          ": " +
+          textoNoche(noche.noche) +
+          " (" +
+          noche.noche.acostarse +
+          "–" +
+          noche.noche.levantarse +
+          ")",
+      };
+    }),
+    [
+      { altura: 100, texto: tope / 60 + " h" },
+      { altura: ((8 * 60) / tope) * 100, texto: "8 h" },
+      { altura: 0, texto: "0 h" },
+    ],
+  );
+
+  rellenarTabla(
+    tabla,
+    ["Noche", "Me acosté", "Me levanté", "Horas", "Cómo"],
+    noches
+      .filter(function (noche) {
+        return noche.noche !== null;
+      })
+      .map(function (noche) {
+        return [
+          "al " + fechaCorta(noche.dia),
+          noche.noche.acostarse,
+          noche.noche.levantarse,
+          textoHoras(noche.minutos),
+          noche.noche.calidad,
+        ];
+      }),
+  );
+}
+
+// Los entrenos: cuántos van esta semana y los 6 últimos. Al tocar uno, se
+// abre su ventana para verlo, cambiarlo o borrarlo.
+function dibujarEntrenos(datosEntrenos) {
+  const resumen = document.getElementById("lab-entrenos-resumen");
+  const lista = document.getElementById("lab-entrenos");
+  lista.innerHTML = "";
+
+  if (datosEntrenos.lista.length === 0) {
+    resumen.textContent = "Aún no has apuntado ningún entreno.";
+    return;
+  }
+
+  const semana = datosEntrenos.estaSemana;
+  let texto = "Esta semana: " + semana.cuantos + " entrenos";
+  if (semana.cuantos === 1) {
+    texto = "Esta semana: 1 entreno";
+  }
+  if (semana.minutos > 0) {
+    texto += ", " + semana.minutos + " min";
+  }
+  resumen.textContent = texto + ".";
+
+  datosEntrenos.lista.slice(0, 6).forEach(function (entreno) {
+    const partes = [
+      new Date(entreno.fecha + "T00:00").toLocaleDateString("es-ES", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      }),
+    ];
+    if (entreno.minutos) {
+      partes.push(entreno.minutos + " min");
+    }
+    partes.push("intensidad " + entreno.intensidad);
+    if (entreno.ejercicios.length === 1) {
+      partes.push("1 ejercicio");
+    } else if (entreno.ejercicios.length > 1) {
+      partes.push(entreno.ejercicios.length + " ejercicios");
+    }
+
+    const boton = crearBoton("", "lab-entreno", function () {
+      abrirVentanaEntreno(entreno.id);
+    });
+    boton.append(
+      crearParrafo(nombreTipo(entreno.tipo), "lab-entreno-tipo"),
+      crearParrafo(partes.join(" · "), "lab-entreno-detalle"),
+    );
+    const fila = document.createElement("li");
+    fila.append(boton);
+    lista.append(fila);
+  });
+}
+
+// El ejercicio que se está viendo en «Progreso en el gimnasio» (se
+// recuerda al volver a dibujar).
+let ejercicioElegido = "";
+
+// Progreso en el gimnasio: para el ejercicio elegido, una línea con la
+// mejor serie de cada sesión (los kilos; si nunca lleva kilos, las
+// repeticiones) y, arriba, la última frente a la anterior.
+function dibujarProgreso() {
+  const selector = document.getElementById("lab-ejercicio");
+  const resumen = document.getElementById("lab-progreso-resumen");
+  const contenedor = document.getElementById("lab-progreso");
+  const nombres = nombresEjercicios();
+  contenedor.innerHTML = "";
+  selector.parentElement.hidden = nombres.length === 0;
+
+  if (nombres.length === 0) {
+    resumen.textContent =
+      "Cuando apuntes entrenos de gimnasio con ejercicios, aquí verás cómo progresa cada uno.";
+    return;
+  }
+
+  // Si el elegido ya no existe (o aún no hay ninguno), el más reciente
+  const elegido = nombres.find(function (nombre) {
+    return claveEjercicio(nombre) === claveEjercicio(ejercicioElegido);
+  });
+  ejercicioElegido = elegido || nombres[0];
+
+  selector.innerHTML = "";
+  nombres.forEach(function (nombre) {
+    const opcion = document.createElement("option");
+    opcion.value = nombre;
+    opcion.textContent = nombre;
+    selector.append(opcion);
+  });
+  selector.value = ejercicioElegido;
+
+  const sesiones = historialEjercicio(ejercicioElegido);
+  const ultima = sesiones[sesiones.length - 1];
+  if (sesiones.length === 1) {
+    resumen.textContent =
+      "Una sesión (" +
+      fechaCorta(ultima.fecha) +
+      "): " +
+      textoSerie(ultima.mejor) +
+      ". Con la siguiente verás la línea.";
+    return;
+  }
+
+  const anterior = sesiones[sesiones.length - 2];
+  resumen.textContent =
+    "Mejor serie el " +
+    fechaCorta(ultima.fecha) +
+    ": " +
+    textoSerie(ultima.mejor) +
+    " (la vez anterior, " +
+    textoSerie(anterior.mejor) +
+    ").";
+
+  // Con kilos, la línea va en kilos; sin kilos nunca, en repeticiones
+  const conKilos = sesiones.some(function (sesion) {
+    return sesion.mejor.kilos;
+  });
+  let textoValor = textoRepeticiones;
+  let margen = 1;
+  if (conKilos) {
+    textoValor = textoKilos;
+    margen = 2.5;
+  }
+  dibujarLinea(
+    contenedor,
+    sesiones.map(function (sesion) {
+      let valor = sesion.mejor.repeticiones;
+      if (conKilos) {
+        valor = sesion.mejor.kilos || 0;
+      }
+      return {
+        fecha: sesion.fecha,
+        valor: valor,
+        dato: fechaLarga(sesion.fecha) + ": " + textoSerie(sesion.mejor),
+      };
+    }),
+    textoValor,
+    margen,
   );
 }
 
@@ -7321,12 +8041,105 @@ function dibujarDias(dias, extremos) {
   }
 }
 
-// El peso: una línea con los pesos apuntados (de izquierda a derecha según
-// su fecha), con el área de debajo sombreada, un punto en cada peso (cada
-// uno enseña su dato al tocarlo) y el último con su número. El dibujo es
-// un SVG de 100 × 100 que se estira a todo el ancho (preserveAspectRatio
-// "none"); los puntos y los números van encima, en HTML, con left y top
-// en %.
+// Dibuja una línea en el tiempo (la usan el peso y el progreso de cada
+// ejercicio). puntos: [{ fecha, valor, dato }], de más antiguo a más
+// nuevo; cada uno va a la izquierda o a la derecha según su fecha. Debajo
+// de la línea, el área sombreada; en cada punto, un botón que enseña su
+// dato al tocarlo, y el último con su número (textoValor lo escribe:
+// «75,5 kg»). margenMinimo: cuánto deja como poco por encima del máximo y
+// por debajo del mínimo, para que la línea no toque los bordes. El dibujo
+// es un SVG de 100 × 100 que se estira a todo el ancho
+// (preserveAspectRatio "none"); los puntos y los números van encima, en
+// HTML, con left y top en %.
+function dibujarLinea(contenedor, puntos, textoValor, margenMinimo) {
+  contenedor.innerHTML = "";
+
+  // De qué valor a qué valor va la gráfica (nunca por debajo de 0)
+  const valores = puntos.map(function (punto) {
+    return punto.valor;
+  });
+  const maximo = Math.max(...valores);
+  const minimo = Math.min(...valores);
+  const margen = Math.max(margenMinimo, (maximo - minimo) * 0.15);
+  const arriba = Math.round((maximo + margen) * 10) / 10;
+  const abajo = Math.max(0, Math.round((minimo - margen) * 10) / 10);
+
+  // Las fechas, en milisegundos, para colocar cada punto según su día
+  // (|| 1: por si acaso, que nunca se divida entre 0)
+  const primero = new Date(puntos[0].fecha + "T00:00").getTime();
+  const ultimo = new Date(puntos[puntos.length - 1].fecha + "T00:00").getTime();
+  const tiempo = ultimo - primero || 1;
+
+  // Dónde va cada punto, en % del ancho (x) y del alto (y, 0 arriba)
+  const sitios = puntos.map(function (punto) {
+    const momento = new Date(punto.fecha + "T00:00").getTime();
+    return {
+      x: ((momento - primero) / tiempo) * 100,
+      y: ((arriba - punto.valor) / (arriba - abajo)) * 100,
+    };
+  });
+
+  // El SVG: el área (la línea y las dos esquinas de abajo) y la línea
+  const trazo = sitios
+    .map(function (sitio) {
+      return sitio.x + "," + sitio.y;
+    })
+    .join(" ");
+  contenedor.innerHTML =
+    '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+    '<polygon class="lab-linea-area" points="' +
+    trazo +
+    ' 100,100 0,100" />' +
+    '<polyline class="lab-linea-trazo" points="' +
+    trazo +
+    '" />' +
+    "</svg>";
+
+  contenedor.append(
+    lineaRejilla(100, numero(arriba)),
+    lineaRejilla(0, numero(abajo)),
+  );
+
+  // Un punto por dato; con muchos (más de 15), solo se ve el último, pero
+  // todos se pueden tocar
+  sitios.forEach(function (sitio, i) {
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.classList.add("lab-punto");
+    if (i === sitios.length - 1) {
+      boton.classList.add("ultimo");
+    }
+    if (sitios.length <= 15 || i === sitios.length - 1) {
+      boton.classList.add("visible");
+    }
+    boton.style.left = sitio.x + "%";
+    boton.style.top = sitio.y + "%";
+    boton.append(document.createElement("span"));
+    conectarDato(boton, puntos[i].dato);
+    contenedor.append(boton);
+  });
+
+  // El número del último junto a su punto: debajo si la línea llega bajando
+  // (así no la tapa) y encima si llega subiendo. Y las fechas de los
+  // extremos, debajo de la gráfica
+  const fin = puntos[puntos.length - 1];
+  const penultimo = puntos[puntos.length - 2];
+  const valor = crearParrafo(textoValor(fin.valor), "lab-punto-valor");
+  valor.style.top = sitios[sitios.length - 1].y + "%";
+  if (fin.valor < penultimo.valor) {
+    valor.classList.add("debajo");
+  }
+  const fechaFinal = crearParrafo(fechaCorta(fin.fecha), "lab-linea-fecha");
+  fechaFinal.classList.add("final");
+  contenedor.append(
+    valor,
+    crearParrafo(fechaCorta(puntos[0].fecha), "lab-linea-fecha"),
+    fechaFinal,
+  );
+}
+
+// El peso: el resumen (del primero al último), la tabla de «Ver los datos»
+// y, con dos pesos o más, la línea.
 function dibujarPeso(peso) {
   const resumen = document.getElementById("lab-peso-resumen");
   const contenedor = document.getElementById("lab-peso");
@@ -7373,94 +8186,17 @@ function dibujarPeso(peso) {
     textoDiferencia(peso.ultimo.kilos - peso.primero.kilos) +
     ".";
 
-  // De qué peso a qué peso va la gráfica: un poco por encima del máximo y
-  // por debajo del mínimo, para que la línea no toque los bordes
-  const kilos = peso.pesos.map(function (apunte) {
-    return apunte.kilos;
-  });
-  const maximo = Math.max(...kilos);
-  const minimo = Math.min(...kilos);
-  const margen = Math.max(0.5, (maximo - minimo) * 0.15);
-  const arriba = Math.round((maximo + margen) * 10) / 10;
-  const abajo = Math.round((minimo - margen) * 10) / 10;
-
-  // Las fechas, en milisegundos, para colocar cada peso según su día
-  // (|| 1: por si acaso, que nunca se divida entre 0)
-  const primero = new Date(peso.primero.fecha + "T00:00").getTime();
-  const ultimo = new Date(peso.ultimo.fecha + "T00:00").getTime();
-  const tiempo = ultimo - primero || 1;
-
-  // Dónde va cada peso, en % del ancho (x) y del alto (y, 0 arriba)
-  const puntos = peso.pesos.map(function (apunte) {
-    const momento = new Date(apunte.fecha + "T00:00").getTime();
-    return {
-      apunte: apunte,
-      x: ((momento - primero) / tiempo) * 100,
-      y: ((arriba - apunte.kilos) / (arriba - abajo)) * 100,
-    };
-  });
-
-  // El SVG: el área (la línea y las dos esquinas de abajo) y la línea
-  const trazo = puntos
-    .map(function (punto) {
-      return punto.x + "," + punto.y;
-    })
-    .join(" ");
-  contenedor.innerHTML =
-    '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
-    '<polygon class="lab-linea-area" points="' +
-    trazo +
-    ' 100,100 0,100" />' +
-    '<polyline class="lab-linea-trazo" points="' +
-    trazo +
-    '" />' +
-    "</svg>";
-
-  contenedor.append(
-    lineaRejilla(100, numero(arriba)),
-    lineaRejilla(0, numero(abajo)),
-  );
-
-  // Un punto por peso; con muchos (más de 15), solo se ve el último, pero
-  // todos se pueden tocar
-  puntos.forEach(function (punto, i) {
-    const boton = document.createElement("button");
-    boton.type = "button";
-    boton.classList.add("lab-punto");
-    if (i === puntos.length - 1) {
-      boton.classList.add("ultimo");
-    }
-    if (puntos.length <= 15 || i === puntos.length - 1) {
-      boton.classList.add("visible");
-    }
-    boton.style.left = punto.x + "%";
-    boton.style.top = punto.y + "%";
-    boton.append(document.createElement("span"));
-    conectarDato(
-      boton,
-      fechaLarga(punto.apunte.fecha) + ": " + textoKilos(punto.apunte.kilos),
-    );
-    contenedor.append(boton);
-  });
-
-  // El número del último peso junto a su punto: encima si la línea llega
-  // bajando (así no la tapa) y debajo si llega subiendo. Y las fechas de
-  // los extremos, debajo de la gráfica
-  const ultimoPunto = puntos[puntos.length - 1];
-  const valor = crearParrafo(textoKilos(peso.ultimo.kilos), "lab-punto-valor");
-  valor.style.top = ultimoPunto.y + "%";
-  if (peso.ultimo.kilos < peso.anterior.kilos) {
-    valor.classList.add("debajo");
-  }
-  const fechaFinal = crearParrafo(
-    fechaCorta(peso.ultimo.fecha),
-    "lab-linea-fecha",
-  );
-  fechaFinal.classList.add("final");
-  contenedor.append(
-    valor,
-    crearParrafo(fechaCorta(peso.primero.fecha), "lab-linea-fecha"),
-    fechaFinal,
+  dibujarLinea(
+    contenedor,
+    peso.pesos.map(function (apunte) {
+      return {
+        fecha: apunte.fecha,
+        valor: apunte.kilos,
+        dato: fechaLarga(apunte.fecha) + ": " + textoKilos(apunte.kilos),
+      };
+    }),
+    textoKilos,
+    0.5,
   );
 }
 
@@ -7542,7 +8278,8 @@ function pararSenales() {
 }
 
 // Dibuja todo el laboratorio. Sin hábitos, las secciones de hábitos se
-// esconden y sale el aviso; el peso se ve siempre.
+// esconden y sale el aviso; el peso, el sueño y los entrenos se ven
+// siempre.
 function mostrarPrometheus() {
   const datos = estadisticas();
   const hayHabitos = habitos.length > 0;
@@ -7557,18 +8294,783 @@ function mostrarPrometheus() {
   dibujarSemanas(datos.semanas);
   dibujarDias(datos.dias, datos.extremos);
   dibujarPeso(datos.peso);
+  dibujarSueno(datos.sueno);
+  dibujarEntrenos(datos.entrenos);
+  dibujarProgreso();
   dibujarDisciplinas();
   senales = senalesDe(datos);
 }
 
-// «Apuntar el peso de hoy» abre la ventana del perfil (bloque 19), donde
-// está el campo del peso.
+// Los botones de apuntar, arriba del laboratorio: el sueño (bloque 29), un
+// entreno (bloque 30) y el peso (en la ventana del perfil, bloque 19).
+// (Los dos primeros, dentro de una función: así no reciben el evento del
+// clic como si fuera el día o el entreno que abrir.)
+document
+  .getElementById("boton-apuntar-sueno")
+  .addEventListener("click", function () {
+    abrirVentanaSueno();
+  });
+document
+  .getElementById("boton-apuntar-entreno")
+  .addEventListener("click", function () {
+    abrirVentanaEntreno();
+  });
 document
   .getElementById("boton-apuntar-peso")
   .addEventListener("click", abrirVentanaPerfil);
 
+// Al elegir otro ejercicio en «Progreso en el gimnasio», su línea.
+document
+  .getElementById("lab-ejercicio")
+  .addEventListener("change", function (evento) {
+    ejercicioElegido = evento.target.value;
+    dibujarProgreso();
+  });
+
 // ==========================================================================
-// 29. BARRA SUPERIOR Y NAVEGACIÓN
+// 29. PROMETHEUS · APUNTAR EL SUEÑO
+// Cada noche se guarda por el día en que me levanté: a qué hora me acosté,
+// a qué hora me levanté y cómo dormí. Se apunta en la tarjeta de la mañana
+// (bloque 12) o en su ventana («+ Sueño» en Prometheus, o al tocar lo de
+// anoche en Hoy), que sirve también para cambiarla o borrarla.
+// ==========================================================================
+
+// Cómo se puede dormir: su id (lo que se guarda) y su nombre.
+const calidadesSueno = [
+  { id: "bien", nombre: "Bien" },
+  { id: "regular", nombre: "Regular" },
+  { id: "mal", nombre: "Mal" },
+];
+
+// Minutos dormidos entre dos horas ("23:40" y "07:30"). Si la de levantarse
+// es más temprana que la de acostarse, entre medias pasó la medianoche: se
+// suma un día entero (1440 minutos).
+function minutosDormidos(acostarse, levantarse) {
+  const a = acostarse.split(":");
+  const l = levantarse.split(":");
+  let minutos =
+    Number(l[0]) * 60 + Number(l[1]) - (Number(a[0]) * 60 + Number(a[1]));
+  if (minutos <= 0) {
+    minutos += 1440;
+  }
+  return minutos;
+}
+
+// Unos minutos en horas: «7 h 50 min», «8 h» o «45 min».
+function textoHoras(minutos) {
+  const horas = Math.floor(minutos / 60);
+  const resto = Math.round(minutos % 60);
+  if (horas === 0) {
+    return resto + " min";
+  }
+  if (resto === 0) {
+    return horas + " h";
+  }
+  return horas + " h " + resto + " min";
+}
+
+// Lo mismo, más corto (para encima de una columna): «7 h 50» u «8 h».
+function textoHorasCorto(minutos) {
+  const horas = Math.floor(minutos / 60);
+  const resto = Math.round(minutos % 60);
+  if (resto === 0) {
+    return horas + " h";
+  }
+  return horas + " h " + String(resto).padStart(2, "0");
+}
+
+// Una noche en una frase: «7 h 50 min, dormiste bien».
+function textoNoche(noche) {
+  return (
+    textoHoras(minutosDormidos(noche.acostarse, noche.levantarse)) +
+    ", dormiste " +
+    noche.calidad
+  );
+}
+
+// El nombre de una noche por el día en que me levanté: «noche del 15 al 16
+// de octubre» (o «del 31 de octubre al 1 de noviembre»).
+function nombreNoche(dia) {
+  const despues = new Date(dia + "T00:00");
+  const antes = fechaMas(despues, -1);
+  const mesDespues = despues.toLocaleDateString("es-ES", { month: "long" });
+  if (antes.getMonth() === despues.getMonth()) {
+    return (
+      "noche del " +
+      antes.getDate() +
+      " al " +
+      despues.getDate() +
+      " de " +
+      mesDespues
+    );
+  }
+  return (
+    "noche del " +
+    antes.getDate() +
+    " de " +
+    antes.toLocaleDateString("es-ES", { month: "long" }) +
+    " al " +
+    despues.getDate() +
+    " de " +
+    mesDespues
+  );
+}
+
+// Las horas de siempre: las de la última noche apuntada o, si no hay
+// ninguna, las 23:30 y las 7:30.
+function horasHabituales() {
+  const dias = Object.keys(sueno).sort();
+  if (dias.length === 0) {
+    return { acostarse: "23:30", levantarse: "07:30" };
+  }
+  const ultima = sueno[dias[dias.length - 1]];
+  return { acostarse: ultima.acostarse, levantarse: ultima.levantarse };
+}
+
+// Qué le falta a una noche para poder guardarla ("" si está bien).
+function falloSueno(noche) {
+  if (!noche.acostarse || !noche.levantarse) {
+    return "Pon a qué hora te acostaste y te levantaste.";
+  }
+  if (!noche.calidad) {
+    return "Elige cómo dormiste.";
+  }
+  if (minutosDormidos(noche.acostarse, noche.levantarse) > 16 * 60) {
+    return "Revisa las horas: salen más de 16 horas de sueño.";
+  }
+  return "";
+}
+
+// Piezas de la ventana del sueño.
+const ventanaSueno = document.getElementById("ventana-sueno");
+const formSueno = document.getElementById("form-sueno");
+const campoSuenoDia = document.getElementById("sueno-dia");
+const campoAcostarse = document.getElementById("sueno-acostarse");
+const campoLevantarse = document.getElementById("sueno-levantarse");
+const textoSuenoDuracion = document.getElementById("sueno-duracion");
+const errorSueno = document.getElementById("sueno-error");
+const botonBorrarSueno = document.getElementById("sueno-eliminar");
+
+// La calidad elegida en la ventana ("" si ninguna).
+function calidadElegida() {
+  const marcada = formSueno.querySelector('[name="sueno-calidad"]:checked');
+  if (marcada) {
+    return marcada.value;
+  }
+  return "";
+}
+
+// Debajo de las horas, cuánto salen: «Dormiste 7 h 50 min.»
+function mostrarDuracionSueno() {
+  if (campoAcostarse.value && campoLevantarse.value) {
+    textoSuenoDuracion.textContent =
+      "Dormiste " +
+      textoHoras(minutosDormidos(campoAcostarse.value, campoLevantarse.value)) +
+      ".";
+  } else {
+    textoSuenoDuracion.textContent = "";
+  }
+}
+
+// Pone en la ventana la noche de un día: la apuntada o, si aún no lo está,
+// las horas de siempre y sin calidad. «Borrar» solo sale si ya existe.
+function rellenarVentanaSueno(dia) {
+  const noche = sueno[dia];
+  const horas = noche || horasHabituales();
+
+  campoSuenoDia.value = dia;
+  campoAcostarse.value = horas.acostarse;
+  campoLevantarse.value = horas.levantarse;
+  formSueno
+    .querySelectorAll('[name="sueno-calidad"]')
+    .forEach(function (opcion) {
+      opcion.checked = Boolean(noche) && opcion.value === noche.calidad;
+    });
+  botonBorrarSueno.hidden = !noche;
+  errorSueno.textContent = "";
+  mostrarDuracionSueno();
+}
+
+// Abre la ventana con la noche de un día (si no se dice cuál, la de esta
+// mañana: el día del ritual, que de madrugada aún es el anterior).
+function abrirVentanaSueno(dia) {
+  campoSuenoDia.max = hoy;
+  rellenarVentanaSueno(dia || diaDelRitual());
+  ventanaSueno.showModal();
+}
+
+// Al cambiar el día se carga esa noche; al cambiar una hora, la duración.
+campoSuenoDia.addEventListener("change", function () {
+  if (campoSuenoDia.value) {
+    rellenarVentanaSueno(campoSuenoDia.value);
+  }
+});
+campoAcostarse.addEventListener("input", mostrarDuracionSueno);
+campoLevantarse.addEventListener("input", mostrarDuracionSueno);
+
+// «Guardar»: comprueba la noche, la guarda y vuelve a dibujar todo.
+formSueno.addEventListener("submit", function (evento) {
+  evento.preventDefault();
+  const dia = campoSuenoDia.value;
+  if (!dia || dia > hoy) {
+    errorSueno.textContent = "Elige el día en que te levantaste (hoy o antes).";
+    return;
+  }
+
+  const noche = {
+    acostarse: campoAcostarse.value,
+    levantarse: campoLevantarse.value,
+    calidad: calidadElegida(),
+  };
+  const fallo = falloSueno(noche);
+  if (fallo) {
+    errorSueno.textContent = fallo;
+    return;
+  }
+
+  sueno[dia] = noche;
+  guardarSueno(dia);
+  ventanaSueno.close();
+  actualizarTodo();
+});
+
+// «Borrar»: pregunta antes y borra esa noche.
+botonBorrarSueno.addEventListener("click", async function () {
+  const dia = campoSuenoDia.value;
+  const borrar = await preguntar(
+    "¿Borrar el sueño de la " + nombreNoche(dia) + "?",
+    "Borrar",
+    "Cancelar",
+  );
+  if (!borrar) {
+    return;
+  }
+  delete sueno[dia];
+  guardarSueno(dia);
+  ventanaSueno.close();
+  actualizarTodo();
+});
+
+document
+  .getElementById("sueno-cancelar")
+  .addEventListener("click", function () {
+    ventanaSueno.close();
+  });
+
+cerrarAlTocarFuera(ventanaSueno);
+
+// ==========================================================================
+// 30. PROMETHEUS · APUNTAR LOS ENTRENOS
+// Cada entreno guarda el día, el tipo, los minutos, la intensidad (del 1 al
+// 10), una nota y, en los de gimnasio, los ejercicios con sus series
+// (repeticiones y kilos). Puede marcar también un hábito de casilla (el
+// del gimnasio), para no apuntarlo dos veces. Se apunta, se cambia y se
+// borra en su ventana («+ Entreno» en Prometheus, o al tocar uno de la
+// lista).
+// ==========================================================================
+
+// Los tipos de entreno: su id (lo que se guarda) y su nombre.
+const tiposEntreno = [
+  { id: "gimnasio", nombre: "Gimnasio" },
+  { id: "correr", nombre: "Correr" },
+  { id: "caminar", nombre: "Caminar" },
+  { id: "bici", nombre: "Bici" },
+  { id: "nadar", nombre: "Nadar" },
+  { id: "deporte", nombre: "Deporte de equipo" },
+  { id: "otro", nombre: "Otro" },
+];
+
+// El nombre de un tipo: "gimnasio" → «Gimnasio».
+function nombreTipo(id) {
+  const tipo = tiposEntreno.find(function (t) {
+    return t.id === id;
+  });
+  if (tipo) {
+    return tipo.nombre;
+  }
+  return "Entreno";
+}
+
+// Cómo de duro fue, en palabras: 1–3 suave, 4–6 media, 7–8 dura y 9–10 al
+// límite.
+function textoIntensidad(intensidad) {
+  if (intensidad <= 3) {
+    return "suave";
+  }
+  if (intensidad <= 6) {
+    return "media";
+  }
+  if (intensidad <= 8) {
+    return "dura";
+  }
+  return "al límite";
+}
+
+// Los entrenos de más nuevo a más antiguo (por día y, el mismo día, por
+// cuándo se apuntaron: el id lleva dentro ese momento).
+function entrenosOrdenados() {
+  return Object.values(entrenos).sort(function (a, b) {
+    if (a.fecha !== b.fecha) {
+      return b.fecha.localeCompare(a.fecha);
+    }
+    return b.id.localeCompare(a.id);
+  });
+}
+
+// Los hábitos que puede marcar un entreno: los de casilla (los antiguos,
+// sin «medida», también lo son).
+function habitosDeCasilla() {
+  return habitos.filter(function (habito) {
+    return !habito.medida || habito.medida === "casilla";
+  });
+}
+
+// Marca un hábito de casilla como hecho un día. El de hoy va a habitosHoy
+// (el objeto que usan las fichas de Hoy).
+function marcarHabito(id, fecha) {
+  if (fecha === hoy) {
+    habitosHoy[id] = true;
+    guardarRegistro(id);
+    return;
+  }
+  if (!registro[fecha]) {
+    registro[fecha] = {};
+  }
+  registro[fecha][id] = true;
+  localStorage.setItem("ergon-registro", JSON.stringify(registro));
+  apuntarCambio("registro:" + fecha + ":" + id);
+}
+
+// Piezas de la ventana del entreno.
+const ventanaEntreno = document.getElementById("ventana-entreno");
+const formEntreno = document.getElementById("form-entreno");
+const campoEntrenoFecha = document.getElementById("entreno-fecha");
+const campoEntrenoTipo = document.getElementById("entreno-tipo");
+const campoEntrenoMinutos = document.getElementById("entreno-minutos");
+const campoIntensidad = document.getElementById("entreno-intensidad");
+const textoIntensidadElegida = document.getElementById(
+  "entreno-intensidad-texto",
+);
+const cajaEjercicios = document.getElementById("entreno-ejercicios");
+const listaEjercicios = document.getElementById("entreno-lista-ejercicios");
+const botonCopiarEntreno = document.getElementById("entreno-copiar");
+const campoEntrenoHabito = document.getElementById("entreno-habito");
+const campoEntrenoNota = document.getElementById("entreno-nota");
+const errorEntreno = document.getElementById("entreno-error");
+const botonBorrarEntreno = document.getElementById("entreno-eliminar");
+
+// El entreno que se está cambiando (su id), o null si es uno nuevo.
+let entrenoEditado = null;
+
+// Los ejercicios de la ventana mientras se escriben, como texto:
+// [{ nombre, series: [{ repeticiones, kilos }] }]
+let ejerciciosVentana = [];
+
+// Un ejercicio vacío, con una serie vacía.
+function ejercicioVacio() {
+  return { nombre: "", series: [{ repeticiones: "", kilos: "" }] };
+}
+
+// Los ejercicios del último entreno de gimnasio (o null si no hay), como
+// texto para la ventana. Si se está cambiando un entreno, otro que no sea
+// ese.
+function ejerciciosDelUltimo() {
+  const ultimo = entrenosOrdenados().find(function (entreno) {
+    return (
+      entreno.tipo === "gimnasio" &&
+      entreno.id !== entrenoEditado &&
+      entreno.ejercicios.length > 0
+    );
+  });
+  if (!ultimo) {
+    return null;
+  }
+  return ejerciciosComoTexto(ultimo.ejercicios);
+}
+
+// Unos ejercicios guardados (con números) pasados a texto, para la ventana.
+function ejerciciosComoTexto(ejercicios) {
+  return ejercicios.map(function (ejercicio) {
+    return {
+      nombre: ejercicio.nombre,
+      series: ejercicio.series.map(function (serie) {
+        let kilos = "";
+        if (serie.kilos !== null) {
+          kilos = serie.kilos.toLocaleString("es-ES");
+        }
+        return { repeticiones: String(serie.repeticiones), kilos: kilos };
+      }),
+    };
+  });
+}
+
+// Lee de la ventana lo escrito en los ejercicios (antes de volver a
+// dibujarlos, para no perder nada).
+function leerEjercicios() {
+  ejerciciosVentana = [];
+  cajaEjercicios.querySelectorAll(".ejercicio").forEach(function (caja) {
+    const series = [];
+    caja.querySelectorAll(".serie").forEach(function (fila) {
+      series.push({
+        repeticiones: fila.querySelector(".serie-repeticiones").value,
+        kilos: fila.querySelector(".serie-kilos").value,
+      });
+    });
+    ejerciciosVentana.push({
+      nombre: caja.querySelector(".ejercicio-nombre").value,
+      series: series,
+    });
+  });
+}
+
+// Un campo pequeño para una serie (repeticiones o kilos).
+function campoSerie(clase, valor, modo, ejemplo, nombre) {
+  const campo = document.createElement("input");
+  campo.type = "text";
+  campo.classList.add(clase);
+  campo.value = valor;
+  campo.inputMode = modo;
+  campo.placeholder = ejemplo;
+  campo.setAttribute("aria-label", nombre);
+  return campo;
+}
+
+// Dibuja los ejercicios de la ventana: cada uno con su nombre (que sugiere
+// los ya usados, con la lista «entreno-lista-ejercicios»), sus series
+// (repeticiones × kilos) y los botones para añadir o quitar. Cada botón
+// lee primero lo escrito y luego cambia la lista.
+function dibujarEjercicios() {
+  cajaEjercicios.innerHTML = "";
+
+  ejerciciosVentana.forEach(function (ejercicio, i) {
+    const caja = document.createElement("fieldset");
+    caja.classList.add("ejercicio");
+
+    const nombre = document.createElement("input");
+    nombre.type = "text";
+    nombre.classList.add("ejercicio-nombre");
+    nombre.value = ejercicio.nombre;
+    nombre.maxLength = 40;
+    nombre.placeholder = "Ejercicio (p. ej., press de banca)";
+    nombre.setAttribute("list", "entreno-lista-ejercicios");
+    nombre.setAttribute("aria-label", "Nombre del ejercicio " + (i + 1));
+
+    const quitar = crearBoton("×", "ejercicio-quitar", function () {
+      leerEjercicios();
+      ejerciciosVentana.splice(i, 1);
+      dibujarEjercicios();
+    });
+    quitar.setAttribute("aria-label", "Quitar este ejercicio");
+
+    const cabecera = document.createElement("div");
+    cabecera.classList.add("ejercicio-cabecera");
+    cabecera.append(nombre, quitar);
+
+    const series = document.createElement("ol");
+    series.classList.add("series");
+    ejercicio.series.forEach(function (serie, j) {
+      const fila = document.createElement("li");
+      fila.classList.add("serie");
+      const quitarSerie = crearBoton("×", "serie-quitar", function () {
+        leerEjercicios();
+        ejerciciosVentana[i].series.splice(j, 1);
+        dibujarEjercicios();
+      });
+      quitarSerie.setAttribute("aria-label", "Quitar la serie " + (j + 1));
+      fila.append(
+        crearParrafo(String(j + 1), "serie-numero"),
+        campoSerie(
+          "serie-repeticiones",
+          serie.repeticiones,
+          "numeric",
+          "reps",
+          "Repeticiones de la serie " + (j + 1),
+        ),
+        crearParrafo("×", "serie-por"),
+        campoSerie(
+          "serie-kilos",
+          serie.kilos,
+          "decimal",
+          "kg",
+          "Kilos de la serie " + (j + 1),
+        ),
+        crearParrafo("kg", "serie-unidad"),
+        quitarSerie,
+      );
+      series.append(fila);
+    });
+
+    // «+ Serie» copia la última (lo normal es repetir el mismo peso)
+    const nuevaSerie = crearBoton("+ Serie", "serie-nueva", function () {
+      leerEjercicios();
+      const lista = ejerciciosVentana[i].series;
+      const ultima = lista[lista.length - 1] || { repeticiones: "", kilos: "" };
+      lista.push({ repeticiones: ultima.repeticiones, kilos: ultima.kilos });
+      dibujarEjercicios();
+    });
+
+    caja.append(cabecera, series, nuevaSerie);
+    cajaEjercicios.append(caja);
+  });
+
+  // «Copiar el último entreno» solo si hay uno y aún no se ha escrito nada
+  const vacia = ejerciciosVentana.every(function (ejercicio) {
+    return ejercicio.nombre.trim() === "";
+  });
+  botonCopiarEntreno.hidden = !vacia || ejerciciosDelUltimo() === null;
+}
+
+// Los ejercicios solo salen en los entrenos de gimnasio.
+function mostrarSeccionEjercicios() {
+  document.getElementById("entreno-seccion-ejercicios").hidden =
+    campoEntrenoTipo.value !== "gimnasio";
+}
+
+// La intensidad elegida, en número y en palabras: «7 · dura».
+function mostrarIntensidad() {
+  textoIntensidadElegida.textContent =
+    campoIntensidad.value +
+    " · " +
+    textoIntensidad(Number(campoIntensidad.value));
+}
+
+// Rellena la lista de hábitos que puede marcar el entreno («Ninguno» y los
+// de casilla) y deja elegido el que toque.
+function rellenarHabitosEntreno(elegido) {
+  campoEntrenoHabito.innerHTML = "";
+  const ninguno = document.createElement("option");
+  ninguno.value = "";
+  ninguno.textContent = "Ninguno";
+  campoEntrenoHabito.append(ninguno);
+  habitosDeCasilla().forEach(function (habito) {
+    const opcion = document.createElement("option");
+    opcion.value = habito.id;
+    opcion.textContent = habito.nombre;
+    campoEntrenoHabito.append(opcion);
+  });
+  campoEntrenoHabito.value = elegido;
+}
+
+// Las sugerencias del nombre del ejercicio: los ya usados.
+function rellenarNombresEjercicios() {
+  listaEjercicios.innerHTML = "";
+  nombresEjercicios().forEach(function (nombre) {
+    const opcion = document.createElement("option");
+    opcion.value = nombre;
+    listaEjercicios.append(opcion);
+  });
+}
+
+// Abre la ventana: con un entreno para cambiarlo (su id) o vacía para uno
+// nuevo. El nuevo empieza hoy, del tipo y la intensidad del último, con un
+// ejercicio vacío y marcando el hábito del deporte (el de la corona), si
+// hay uno de casilla.
+function abrirVentanaEntreno(id) {
+  const entreno = entrenos[id] || null;
+  entrenoEditado = null;
+  if (entreno) {
+    entrenoEditado = entreno.id;
+  }
+  const ultimo = entrenosOrdenados()[0];
+
+  campoEntrenoFecha.max = hoy;
+  errorEntreno.textContent = "";
+  botonBorrarEntreno.hidden = !entreno;
+  let titulo = "Entreno nuevo";
+  if (entreno) {
+    titulo = "Editar entreno";
+  }
+  document.getElementById("entreno-titulo").textContent = titulo;
+
+  if (entreno) {
+    campoEntrenoFecha.value = entreno.fecha;
+    campoEntrenoTipo.value = entreno.tipo;
+    campoEntrenoMinutos.value = entreno.minutos || "";
+    campoIntensidad.value = entreno.intensidad;
+    campoEntrenoNota.value = entreno.nota;
+    rellenarHabitosEntreno(entreno.habito);
+    ejerciciosVentana = ejerciciosComoTexto(entreno.ejercicios);
+  } else {
+    campoEntrenoFecha.value = hoy;
+    campoEntrenoTipo.value = (ultimo && ultimo.tipo) || "gimnasio";
+    campoEntrenoMinutos.value = "";
+    campoIntensidad.value = (ultimo && ultimo.intensidad) || 6;
+    campoEntrenoNota.value = "";
+    const deporte = habitosDeCasilla().find(function (habito) {
+      return iconoDe(habito) === "corona";
+    });
+    rellenarHabitosEntreno((deporte && deporte.id) || "");
+    ejerciciosVentana = [ejercicioVacio()];
+  }
+
+  if (ejerciciosVentana.length === 0) {
+    ejerciciosVentana = [ejercicioVacio()];
+  }
+  rellenarNombresEjercicios();
+  mostrarSeccionEjercicios();
+  mostrarIntensidad();
+  dibujarEjercicios();
+  ventanaEntreno.showModal();
+}
+
+// Pasa los ejercicios escritos a números y comprueba que estén bien.
+// Devuelve { ejercicios } o { fallo }. Se saltan los ejercicios y las
+// series que estén vacíos del todo; los kilos se pueden dejar vacíos (con
+// el peso del cuerpo: se guardan como null).
+function ejerciciosEscritos() {
+  const ejercicios = [];
+
+  for (let i = 0; i < ejerciciosVentana.length; i++) {
+    const ejercicio = ejerciciosVentana[i];
+    const nombre = ejercicio.nombre.trim();
+    const series = [];
+
+    for (let j = 0; j < ejercicio.series.length; j++) {
+      const serie = ejercicio.series[j];
+      const repeticiones = serie.repeticiones.trim();
+      const kilos = serie.kilos.trim();
+      if (repeticiones === "" && kilos === "") {
+        continue;
+      }
+      const donde =
+        "«" + (nombre || "Ejercicio " + (i + 1)) + "», serie " + (j + 1);
+      const numeroRepeticiones = leerNumero(repeticiones, false);
+      if (
+        !Number.isInteger(numeroRepeticiones) ||
+        numeroRepeticiones < 1 ||
+        numeroRepeticiones > 100
+      ) {
+        return { fallo: donde + ": las repeticiones van de 1 a 100." };
+      }
+      let numeroKilos = null;
+      if (kilos !== "") {
+        numeroKilos = leerNumero(kilos, true);
+        if (isNaN(numeroKilos) || numeroKilos < 0 || numeroKilos > 500) {
+          return { fallo: donde + ": los kilos van de 0 a 500." };
+        }
+      }
+      series.push({ repeticiones: numeroRepeticiones, kilos: numeroKilos });
+    }
+
+    if (nombre === "" && series.length > 0) {
+      return { fallo: "Ponle nombre al ejercicio " + (i + 1) + "." };
+    }
+    if (nombre !== "") {
+      ejercicios.push({ nombre: nombre, series: series });
+    }
+  }
+
+  return { ejercicios: ejercicios };
+}
+
+// Al cambiar el tipo, salen o se esconden los ejercicios; al mover la
+// intensidad, cambia su número.
+campoEntrenoTipo.addEventListener("change", mostrarSeccionEjercicios);
+campoIntensidad.addEventListener("input", mostrarIntensidad);
+
+// «+ Ejercicio» añade uno vacío y pone el cursor en su nombre.
+document
+  .getElementById("entreno-nuevo-ejercicio")
+  .addEventListener("click", function () {
+    leerEjercicios();
+    ejerciciosVentana.push(ejercicioVacio());
+    dibujarEjercicios();
+    const nombres = cajaEjercicios.querySelectorAll(".ejercicio-nombre");
+    nombres[nombres.length - 1].focus();
+  });
+
+// «Copiar el último entreno»: pone los ejercicios y las series del último
+// entreno de gimnasio, para cambiar solo lo que haya cambiado.
+botonCopiarEntreno.addEventListener("click", function () {
+  ejerciciosVentana = ejerciciosDelUltimo();
+  dibujarEjercicios();
+});
+
+// «Guardar»: comprueba todo, guarda el entreno, marca el hábito (si se ha
+// elegido uno) y vuelve a dibujar todo.
+formEntreno.addEventListener("submit", function (evento) {
+  evento.preventDefault();
+  leerEjercicios();
+
+  const fecha = campoEntrenoFecha.value;
+  if (!fecha || fecha > hoy) {
+    errorEntreno.textContent = "Elige el día del entreno (hoy o antes).";
+    return;
+  }
+
+  let minutos = null;
+  if (campoEntrenoMinutos.value.trim() !== "") {
+    minutos = leerNumero(campoEntrenoMinutos.value.trim(), false);
+    if (!Number.isInteger(minutos) || minutos < 1 || minutos > 600) {
+      errorEntreno.textContent =
+        "Los minutos van de 1 a 600 (o déjalos vacíos).";
+      return;
+    }
+  }
+
+  let ejercicios = [];
+  if (campoEntrenoTipo.value === "gimnasio") {
+    const leidos = ejerciciosEscritos();
+    if (leidos.fallo) {
+      errorEntreno.textContent = leidos.fallo;
+      return;
+    }
+    ejercicios = leidos.ejercicios;
+  }
+
+  const id = entrenoEditado || "e" + Date.now();
+  entrenos[id] = {
+    id: id,
+    fecha: fecha,
+    tipo: campoEntrenoTipo.value,
+    minutos: minutos,
+    intensidad: Number(campoIntensidad.value),
+    ejercicios: ejercicios,
+    nota: campoEntrenoNota.value.trim(),
+    habito: campoEntrenoHabito.value,
+  };
+  guardarEntreno(id);
+
+  if (campoEntrenoHabito.value) {
+    marcarHabito(campoEntrenoHabito.value, fecha);
+  }
+
+  ventanaEntreno.close();
+  actualizarTodo();
+});
+
+// «Borrar»: pregunta antes y borra el entreno (el hábito que marcó se
+// queda marcado: se puede desmarcar en Hoy).
+botonBorrarEntreno.addEventListener("click", async function () {
+  const entreno = entrenos[entrenoEditado];
+  const borrar = await preguntar(
+    "¿Borrar el entreno de " +
+      nombreTipo(entreno.tipo).toLowerCase() +
+      " del " +
+      fechaLarga(entreno.fecha) +
+      "?",
+    "Borrar",
+    "Cancelar",
+  );
+  if (!borrar) {
+    return;
+  }
+  delete entrenos[entrenoEditado];
+  guardarEntreno(entrenoEditado);
+  ventanaEntreno.close();
+  actualizarTodo();
+});
+
+// «Cancelar». Esta ventana no se cierra al tocar fuera: se perdería lo
+// escrito por un toque sin querer.
+document
+  .getElementById("entreno-cancelar")
+  .addEventListener("click", function () {
+    ventanaEntreno.close();
+  });
+
+// ==========================================================================
+// 31. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
 // Hoy · Mosaico · Méntor · Prometheus · Metas · Archivo.
 // ==========================================================================
@@ -7666,7 +9168,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 30. APP INSTALABLE (SERVICE WORKER)
+// 32. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -7675,7 +9177,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 31. INICIO
+// 33. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 

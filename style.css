@@ -19,7 +19,7 @@
    11. Hoy · Llama de Prometeo
    12. Hoy · Semana
    13. Hoy · Constancia
-   14. Ventanas (editar hábito, meta y perfil; avisos)
+   14. Ventanas (editar hábito, meta y perfil; sueño y entreno; avisos)
    15. Méntor · Conversación y charla
    16. Mosaico del mes
    17. Metas · Tarjetas
@@ -415,9 +415,10 @@ body {
 
 /* ==========================================================================
    8. HOY · RITUALES Y RECORDATORIOS
-   La intención de la mañana, el examen de la noche (en tinta y oro, como un
-   templo a la luz de las antorchas), la revisión del domingo y las líneas
-   que recuerdan la intención y el propósito de la semana.
+   La intención de la mañana, el sueño de anoche, el examen de la noche (en
+   tinta y oro, como un templo a la luz de las antorchas), la revisión del
+   domingo y las líneas que recuerdan la intención, la noche apuntada y el
+   propósito de la semana.
    ========================================================================== */
 
 /* Las cajas de los rituales: una cosa debajo de otra. Ocultas si están
@@ -484,6 +485,73 @@ body {
 
 .ritual .ritual-hoy-no {
   align-self: flex-start;
+}
+
+/* La tarjeta del sueño: «Me acosté» y «Me levanté», en fila y a medias */
+.ritual-horas {
+  display: flex;
+  gap: 10px;
+}
+
+/* Cada hora: su nombre encima y el campo debajo. min-width: 0 deja que
+   se encoja en las pantallas estrechas */
+.ritual-hora {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ritual-hora-texto {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--bronce);
+}
+
+.ritual-hora input {
+  min-width: 0;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--tinta);
+  background-color: #fffdf8;
+  border: 1px solid var(--bronce);
+  border-radius: 4px;
+}
+
+.ritual-hora input:focus {
+  outline: none;
+  border-color: var(--terracota);
+}
+
+/* En el iPhone, la hora sale centrada: así va a la izquierda, como el
+   resto de campos */
+.ritual-hora input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+/* Bien, Regular y Mal: tres botones iguales (tres columnas de 1fr) */
+.ritual-calidad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.ritual-calidad-boton {
+  padding: 10px 0;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--terracota);
+  background-color: #fffdf8;
+  border: 1px solid var(--terracota);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ritual-calidad-boton:hover {
+  color: var(--marmol);
+  background-color: var(--terracota);
 }
 
 /* El examen de la noche: fondo de tinta, letras de mármol y detalles en oro */
@@ -936,10 +1004,11 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   14. VENTANAS (EDITAR HÁBITO, META Y PERFIL; AVISOS)
+   14. VENTANAS (EDITAR HÁBITO, META Y PERFIL; SUEÑO Y ENTRENO; AVISOS)
    Las ventanas <dialog> que se abren encima de la pantalla: editar un
-   hábito, editar una meta, el perfil y los avisos de Ergon (en lugar de
-   alert y confirm). Los círculos de los días también se usan en Méntor.
+   hábito, editar una meta, el perfil, el sueño, el entreno (con sus
+   ejercicios y series) y los avisos de Ergon (en lugar de alert y
+   confirm). Los círculos de los días también se usan en Méntor.
    ========================================================================== */
 
 /* La ventana: mármol con marco de bronce, centrada encima de todo. Si no
@@ -1046,11 +1115,14 @@ button.recordatorio {
   margin-left: auto;
 }
 
-/* Campos del hábito: nombre, desplegables, objetivo, unidad y fecha */
+/* Campos de las ventanas: nombre, desplegables, objetivo, unidad, fecha,
+   hora y la nota del entreno */
 .form-habito input[type="text"],
 .form-habito input[type="number"],
 .form-habito select,
-.form-habito input[type="date"] {
+.form-habito input[type="date"],
+.form-habito input[type="time"],
+.form-habito textarea {
   padding: 10px;
   font-family: inherit;
   font-size: 1rem;
@@ -1063,7 +1135,9 @@ button.recordatorio {
 .form-habito input[type="text"]:focus,
 .form-habito input[type="number"]:focus,
 .form-habito select:focus,
-.form-habito input[type="date"]:focus {
+.form-habito input[type="date"]:focus,
+.form-habito input[type="time"]:focus,
+.form-habito textarea:focus {
   outline: none;
   border-color: var(--bronce);
 }
@@ -1203,6 +1277,240 @@ button.recordatorio {
 .form-meta textarea:focus {
   outline: none;
   border-color: var(--bronce);
+}
+
+/* ---------- Sueño y entreno ---------- */
+
+/* La nota del entreno: dos líneas, y solo se estira hacia abajo */
+.form-habito textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+/* En el iPhone, la fecha y la hora salen centradas: así van a la
+   izquierda, como el resto de campos */
+.form-sueno input::-webkit-date-and-time-value,
+.form-entreno input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+/* Dos campos en fila, cada uno con su nombre encima: las horas del sueño,
+   el día y el tipo del entreno… align-items: end: si un nombre ocupa dos
+   líneas, los campos siguen a la misma altura */
+.sueno-horas,
+.entreno-fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 10px;
+}
+
+/* Los minutos necesitan poco sitio; la intensidad, más (su texto es más
+   largo): un tercio y dos tercios */
+.entreno-fila.entreno-esfuerzo {
+  grid-template-columns: 1fr 2fr;
+}
+
+.sueno-horas label,
+.entreno-fila label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sueno-horas input,
+.entreno-fila input,
+.entreno-fila select {
+  min-width: 0;
+}
+
+/* La barra de la intensidad, del color de Ergon y tan alta como los otros
+   campos (así queda alineada con los minutos) */
+.form-entreno input[type="range"] {
+  height: 42px;
+  margin: 0;
+  accent-color: var(--terracota);
+}
+
+/* Cómo dormí: tres píldoras (Bien, Regular, Mal) como los círculos de los
+   días. La de verdad es un radio invisible: solo se ve la píldora, oliva
+   si está elegida */
+.opciones-calidad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.opciones-calidad legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 0.9rem;
+  color: var(--bronce);
+}
+
+.opciones-calidad label {
+  position: relative;
+  padding: 10px 0;
+  text-align: center;
+  color: var(--bronce);
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.opciones-calidad label:has(input:checked) {
+  color: var(--marmol);
+  background-color: var(--oliva);
+  border-color: var(--oliva);
+}
+
+/* Con el teclado, la píldora que tiene el foco lleva un contorno */
+.opciones-calidad label:has(input:focus-visible) {
+  outline: 2px solid var(--bronce);
+  outline-offset: 2px;
+}
+
+.opciones-calidad input {
+  position: absolute;
+  opacity: 0;
+}
+
+/* Los ejercicios: uno debajo de otro y, al final, sus botones. Hace falta
+   [hidden] porque display: flex ganaría al atributo (se esconden en los
+   entrenos que no son de gimnasio) */
+.entreno-ejercicios,
+#entreno-ejercicios {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.entreno-ejercicios[hidden] {
+  display: none;
+}
+
+/* «Ejercicios» es un párrafo: sin el margen de arriba que trae */
+.entreno-ejercicios .etiqueta-campo {
+  margin-top: 0;
+}
+
+/* Cada ejercicio, en su caja de pergamino (es un fieldset: sin su borde
+   de serie, con uno suave) */
+.ejercicio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  background-color: #fbf6e9;
+  border: 1px solid var(--piedra);
+  border-radius: 6px;
+}
+
+/* Arriba, el nombre y la × para quitarlo */
+.ejercicio-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ejercicio-nombre {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Las × de quitar un ejercicio o una serie: discretas hasta pasar por
+   encima */
+.ejercicio-quitar,
+.serie-quitar {
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.ejercicio-quitar:hover,
+.serie-quitar:hover {
+  color: var(--terracota);
+}
+
+/* Las series: una lista numerada, pero el número lo pone la app (sin el
+   de la lista) */
+.series {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada serie, en una rejilla: número, repeticiones, ×, kilos, kg y la ×
+   de quitar. Los dos campos se reparten el sitio que queda (1fr) */
+.serie {
+  display: grid;
+  grid-template-columns: 18px 1fr auto 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.serie p {
+  margin: 0;
+}
+
+.serie-numero {
+  font-family: "Cinzel", serif;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--bronce);
+}
+
+.serie-por,
+.serie-unidad {
+  font-size: 0.9rem;
+  color: var(--bronce);
+}
+
+/* Los campos de la serie, más bajos y con el número centrado */
+.form-habito .serie input {
+  min-width: 0;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+/* «+ Serie»: botón de texto, a la izquierda */
+.serie-nueva {
+  align-self: flex-start;
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--terracota);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* «+ Ejercicio» y «Copiar el último entreno», en fila y algo más pequeños */
+.entreno-ejercicios-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.entreno-ejercicios-botones .boton-secundario {
+  padding: 8px 12px;
+  font-size: 0.9rem;
 }
 
 /* ==========================================================================
@@ -2505,7 +2813,9 @@ button.recordatorio {
    lab-cian: la luz de holograma (piloto, títulos, pestaña activa)
    lab-datos: las columnas, las barras y la línea del peso
    lab-fuego: lo que destaca (el anillo de hoy y el mejor día)
-   lab-sube y lab-baja: un cambio a mejor y a peor (siempre con su flecha) */
+   lab-sube y lab-baja: un cambio a mejor y a peor (siempre con su flecha)
+   color-scheme: dark pide al navegador sus controles en oscuro (los
+   desplegables, el calendario de las fechas, las barras de bajar…) */
 body.en-prometheus {
   --lab-fondo: #090c10;
   --lab-tarjeta: #0f1419;
@@ -2524,6 +2834,7 @@ body.en-prometheus {
   --lab-datos-letra: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono",
     monospace;
 
+  color-scheme: dark;
   background-color: var(--lab-fondo);
   color: var(--lab-texto);
 }
@@ -3026,9 +3337,21 @@ body.en-prometheus .navegacion-marca {
   transition: filter 0.2s;
 }
 
-/* La semana en curso, más apagada (aún no ha terminado) */
-.lab-columna.en-curso .lab-columna-barra {
+/* Una columna apagada, más clara: la semana en curso (aún no ha
+   terminado) */
+.lab-columna.apagada .lab-columna-barra {
   background-color: color-mix(in srgb, var(--lab-datos) 55%, transparent);
+}
+
+/* Una columna sin dato (una noche sin apuntar): no tiene barra (:empty, el
+   botón está vacío) y en su lugar sale un puntito tenue abajo */
+.lab-columna:empty::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--lab-tenue);
+  opacity: 0.6;
 }
 
 /* Al pasar por encima o llegar con el teclado, la barra se ilumina */
@@ -3115,12 +3438,17 @@ body.en-prometheus .navegacion-marca {
   text-align: right;
 }
 
-/* El peso: la gráfica deja sitio a la izquierda para los números y abajo
-   para las fechas */
+/* El peso y el progreso: la gráfica deja sitio a la izquierda para los
+   números y abajo para las fechas */
 .lab-linea {
   position: relative;
   height: 150px;
   margin: 26px 0 28px 46px;
+}
+
+/* Sin línea que dibujar (menos de dos datos), no ocupa sitio */
+.lab-linea:empty {
+  display: none;
 }
 
 /* El dibujo se estira a todo el ancho y alto; overflow: visible deja ver
@@ -3252,10 +3580,20 @@ body.en-prometheus .navegacion-marca {
   border-bottom: 1px solid var(--lab-rejilla);
 }
 
-/* «Apuntar el peso de hoy»: una píldora de cristal cian */
-.lab-boton {
+/* Los botones de apuntar (sueño, entreno y peso), en fila. Se reparten el
+   ancho (flex: 1) y, si no caben, bajan a otra línea */
+.lab-apuntar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 14px;
+}
+
+/* Cada uno: una píldora de cristal cian */
+.lab-boton {
+  flex: 1;
   padding: 10px 16px;
+  white-space: nowrap;
   font-family: inherit;
   font-size: 0.9rem;
   font-weight: 600;
@@ -3269,6 +3607,107 @@ body.en-prometheus .navegacion-marca {
 .lab-boton:hover {
   background-color: rgba(95, 208, 228, 0.15);
   box-shadow: 0 0 14px rgba(95, 208, 228, 0.25);
+}
+
+/* ---------- Entrenos y progreso en el gimnasio ---------- */
+
+/* Los últimos entrenos: una lista sin puntos */
+.lab-entrenos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada entreno es un botón (al tocarlo, se abre para cambiarlo): el tipo
+   arriba y el detalle debajo, separados por una raya fina. La flecha «›»
+   (::after) dice que se puede abrir */
+.lab-entreno {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 10px 24px 10px 0;
+  font-family: inherit;
+  text-align: left;
+  color: var(--lab-texto);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--lab-rejilla);
+  cursor: pointer;
+}
+
+.lab-entrenos li:last-child .lab-entreno {
+  border-bottom: none;
+}
+
+.lab-entreno::after {
+  content: "›";
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.3rem;
+  color: var(--lab-tenue);
+}
+
+.lab-entreno:hover .lab-entreno-tipo,
+.lab-entreno:hover::after {
+  color: var(--lab-cian);
+}
+
+.lab-entreno:focus-visible {
+  outline: 2px solid var(--lab-cian);
+  outline-offset: 2px;
+}
+
+.laboratorio .lab-entreno-tipo {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.laboratorio .lab-entreno-detalle {
+  margin-top: 2px;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.7rem;
+  color: var(--lab-texto-2);
+}
+
+/* Elegir el ejercicio: el nombre y el desplegable, en fila. Hace falta
+   [hidden] porque display: flex ganaría al atributo */
+.lab-elegir {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 8px;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-tenue);
+}
+
+.lab-elegir[hidden] {
+  display: none;
+}
+
+/* El desplegable, de cristal. Con letra de 16px: si es más pequeña, el
+   iPhone hace zoom al tocarlo */
+.lab-elegir select {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-family: var(--lab-letra);
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--lab-texto);
+  background-color: rgba(95, 208, 228, 0.06);
+  border: 1px solid var(--lab-borde);
+  border-radius: 10px;
+}
+
+.lab-elegir select:focus {
+  outline: none;
+  border-color: var(--lab-cian);
 }
 
 /* ---------- Cada disciplina ---------- */
@@ -3350,6 +3789,96 @@ body.en-prometheus .navegacion-marca {
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   pointer-events: none;
+}
+
+/* ---------- Las ventanas, abiertas desde Prometheus ---------- */
+
+/* Las ventanas que se abren aquí (sueño, entreno, peso y los avisos)
+   también son del laboratorio. En lugar de cambiar cada regla, dentro de
+   la ventana se cambian los colores de Ergon por los del laboratorio:
+   como las variables se heredan, todo lo que usa var(--tinta),
+   var(--bronce)… se pinta con los nuevos. Fuera de Prometheus, las mismas
+   ventanas siguen siendo de mármol */
+body.en-prometheus .ventana {
+  --marmol: var(--lab-tarjeta);
+  --tinta: var(--lab-texto);
+  --bronce: var(--lab-texto-2);
+  --piedra: rgba(147, 167, 177, 0.28);
+  --terracota: var(--lab-datos);
+  --oliva: var(--lab-datos);
+  --oro: var(--lab-fuego);
+
+  font-family: var(--lab-letra);
+  border-color: var(--lab-borde);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(95, 208, 228, 0.08),
+    0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+/* El fondo de detrás, más oscuro (::backdrop no hereda las variables:
+   el color va escrito) */
+body.en-prometheus .ventana::backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* El título, como los de las tarjetas: pequeño, de ancho fijo y cian */
+body.en-prometheus .ventana h2 {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lab-cian);
+}
+
+/* Los campos, de cristal oscuro (su fondo crema iba escrito en la regla) */
+body.en-prometheus .form-habito input[type="text"],
+body.en-prometheus .form-habito input[type="number"],
+body.en-prometheus .form-habito input[type="date"],
+body.en-prometheus .form-habito input[type="time"],
+body.en-prometheus .form-habito select,
+body.en-prometheus .form-habito textarea,
+body.en-prometheus .opciones-calidad label {
+  background-color: rgba(95, 208, 228, 0.05);
+}
+
+body.en-prometheus .form-habito input:focus,
+body.en-prometheus .form-habito select:focus,
+body.en-prometheus .form-habito textarea:focus {
+  border-color: var(--lab-cian);
+}
+
+/* La píldora elegida y el botón principal: letra oscura sobre el cian (la
+   píldora necesita también su fondo: la regla de arriba, más fuerte, se lo
+   quitaría) */
+body.en-prometheus .opciones-calidad label:has(input:checked),
+body.en-prometheus .ventana .boton-principal {
+  font-weight: 600;
+  color: var(--lab-fondo);
+}
+
+body.en-prometheus .opciones-calidad label:has(input:checked) {
+  background-color: var(--lab-datos);
+}
+
+body.en-prometheus .ventana .boton-secundario:hover {
+  background-color: rgba(95, 208, 228, 0.1);
+}
+
+/* Lo que falla y «Borrar», en el rojo suave del laboratorio */
+body.en-prometheus .ventana-error,
+body.en-prometheus .ventana .boton-eliminar {
+  color: var(--lab-baja);
+}
+
+/* Cada ejercicio, en una caja algo más clara que la ventana */
+body.en-prometheus .ejercicio {
+  background-color: rgba(95, 208, 228, 0.03);
+}
+
+body.en-prometheus .serie-numero {
+  font-family: var(--lab-datos-letra);
 }
 
 /* Con «reducir movimiento», nada se mueve: ni el piloto, ni el brillo de
@@ -3590,16 +4119,29 @@ body.conversando .navegacion {
     margin: 0 auto;
   }
 
-  /* Prometheus: las tarjetas en dos columnas. Semana a semana y cada
-     disciplina ocupan las dos (grid-column: 1 / -1, de la primera línea a
-     la última) */
+  /* Prometheus: las tarjetas en dos columnas. Semana a semana, el sueño y
+     cada disciplina ocupan las dos (grid-column: 1 / -1, de la primera
+     línea a la última); los entrenos y el progreso van uno al lado del
+     otro */
   .lab-rejilla {
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
 
   .lab-rejilla .lab-semanas-tarjeta,
+  .lab-rejilla .lab-sueno-tarjeta,
   .lab-rejilla .lab-disciplinas-tarjeta {
     grid-column: 1 / -1;
+  }
+
+  /* La tarjeta de hoy, tan alta como las seis cifras de al lado (con el
+     anillo en medio) */
+  .lab-rejilla .lab-hoy {
+    align-self: stretch;
+  }
+
+  /* Los botones de apuntar, sin estirarse tanto */
+  .lab-boton {
+    flex: none;
   }
 }

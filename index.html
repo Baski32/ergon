@@ -512,10 +512,10 @@
 
       <!-- ============================================================
            PANTALLA PROMETHEUS
-           El laboratorio de Prometheus: mis estadísticas, con estilo
-           futurista (solo en esta pestaña: style.css, bloque 21). Lo
-           calcula y lo dibuja script.js (bloques 27 y 28); aquí solo
-           están las cajas.
+           El laboratorio de Prometheus: mis estadísticas, el sueño, los
+           entrenos y el peso, con estilo futurista (solo en esta pestaña:
+           style.css, bloque 21). Lo calcula y lo dibuja script.js
+           (bloques 27 a 30); aquí solo están las cajas.
            ============================================================ -->
       <div class="pantalla laboratorio" data-pantalla="prometheus" hidden>
         <!-- Cabecera: el piloto encendido y qué es esta pantalla -->
@@ -532,6 +532,19 @@
           <span class="lab-senales-etiqueta">Señal</span>
           <div id="lab-senal" class="lab-senal-caja"></div>
           <span id="lab-senal-cuenta" class="lab-senales-cuenta"></span>
+        </div>
+
+        <!-- Apuntar: el sueño, un entreno y el peso (abren sus ventanas) -->
+        <div class="lab-apuntar">
+          <button id="boton-apuntar-sueno" type="button" class="lab-boton">
+            + Sueño
+          </button>
+          <button id="boton-apuntar-entreno" type="button" class="lab-boton">
+            + Entreno
+          </button>
+          <button id="boton-apuntar-peso" type="button" class="lab-boton">
+            + Peso
+          </button>
         </div>
 
         <!-- Sin hábitos: este aviso sustituye a las secciones de hábitos -->
@@ -606,9 +619,37 @@
               <summary>Ver los datos</summary>
               <table id="lab-peso-tabla" class="lab-tabla"></table>
             </details>
-            <button id="boton-apuntar-peso" type="button" class="lab-boton">
-              Apuntar el peso de hoy
-            </button>
+          </section>
+
+          <!-- Sueño: una columna por noche de las últimas 2 semanas -->
+          <section class="lab-tarjeta lab-sueno-tarjeta">
+            <h2 class="lab-titulo">Sueño</h2>
+            <p id="lab-sueno-resumen" class="lab-subtitulo"></p>
+            <div id="lab-sueno" class="lab-columnas"></div>
+            <details id="lab-sueno-datos" class="lab-datos">
+              <summary>Ver los datos</summary>
+              <table id="lab-sueno-tabla" class="lab-tabla"></table>
+            </details>
+          </section>
+
+          <!-- Entrenos: los de esta semana y los últimos (al tocar uno, se
+               abre para cambiarlo) -->
+          <section class="lab-tarjeta">
+            <h2 class="lab-titulo">Entrenos</h2>
+            <p id="lab-entrenos-resumen" class="lab-subtitulo"></p>
+            <ul id="lab-entrenos" class="lab-entrenos"></ul>
+          </section>
+
+          <!-- Progreso en el gimnasio: la mejor serie de cada sesión del
+               ejercicio elegido -->
+          <section class="lab-tarjeta">
+            <h2 class="lab-titulo">Progreso en el gimnasio</h2>
+            <label class="lab-elegir">
+              <span>Ejercicio</span>
+              <select id="lab-ejercicio"></select>
+            </label>
+            <p id="lab-progreso-resumen" class="lab-subtitulo"></p>
+            <div id="lab-progreso" class="lab-linea"></div>
           </section>
 
           <!-- Cada disciplina: constancia, racha y mejor racha -->
@@ -979,6 +1020,151 @@
         <p id="perfil-error" class="ventana-error"></p>
         <div class="ventana-botones">
           <button type="button" id="perfil-cancelar" class="boton-secundario">
+            Cancelar
+          </button>
+          <button type="submit" class="boton-principal">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============================================================
+         VENTANA DEL SUEÑO
+         Una noche (por el día en que me levanté): a qué hora me acosté y
+         me levanté y cómo dormí. Sirve para apuntarla, cambiarla o
+         borrarla (script.js, bloque 29).
+         ============================================================ -->
+    <dialog id="ventana-sueno" class="ventana">
+      <form id="form-sueno" class="form-habito form-sueno" novalidate>
+        <h2 tabindex="-1" autofocus>Sueño</h2>
+        <label class="etiqueta-campo" for="sueno-dia">
+          Día en que te levantaste
+        </label>
+        <input type="date" id="sueno-dia" />
+        <div class="sueno-horas">
+          <label>
+            <span class="etiqueta-campo">Me acosté</span>
+            <input type="time" id="sueno-acostarse" />
+          </label>
+          <label>
+            <span class="etiqueta-campo">Me levanté</span>
+            <input type="time" id="sueno-levantarse" />
+          </label>
+        </div>
+        <p id="sueno-duracion" class="ventana-nota"></p>
+        <!-- Cómo dormí: tres opciones; solo se puede elegir una (radio) -->
+        <fieldset class="opciones-calidad">
+          <legend>¿Cómo dormiste?</legend>
+          <label>
+            <input type="radio" name="sueno-calidad" value="bien" />Bien
+          </label>
+          <label>
+            <input type="radio" name="sueno-calidad" value="regular" />Regular
+          </label>
+          <label>
+            <input type="radio" name="sueno-calidad" value="mal" />Mal
+          </label>
+        </fieldset>
+        <p id="sueno-error" class="ventana-error"></p>
+        <div class="ventana-botones">
+          <button type="button" id="sueno-eliminar" class="boton-eliminar">
+            Borrar
+          </button>
+          <button type="button" id="sueno-cancelar" class="boton-secundario">
+            Cancelar
+          </button>
+          <button type="submit" class="boton-principal">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============================================================
+         VENTANA DEL ENTRENO
+         Día, tipo, minutos, intensidad, los ejercicios (solo en los de
+         gimnasio: los dibuja script.js, bloque 30), el hábito que marca y
+         una nota. Sirve para apuntarlo, cambiarlo o borrarlo.
+         ============================================================ -->
+    <dialog id="ventana-entreno" class="ventana">
+      <form id="form-entreno" class="form-habito form-entreno" novalidate>
+        <h2 id="entreno-titulo" tabindex="-1" autofocus>Entreno nuevo</h2>
+        <div class="entreno-fila">
+          <label>
+            <span class="etiqueta-campo">Día</span>
+            <input type="date" id="entreno-fecha" />
+          </label>
+          <label>
+            <span class="etiqueta-campo">Tipo</span>
+            <select id="entreno-tipo">
+              <option value="gimnasio">Gimnasio</option>
+              <option value="correr">Correr</option>
+              <option value="caminar">Caminar</option>
+              <option value="bici">Bici</option>
+              <option value="nadar">Nadar</option>
+              <option value="deporte">Deporte de equipo</option>
+              <option value="otro">Otro</option>
+            </select>
+          </label>
+        </div>
+        <div class="entreno-fila entreno-esfuerzo">
+          <label>
+            <span class="etiqueta-campo">Minutos</span>
+            <input
+              type="text"
+              id="entreno-minutos"
+              inputmode="numeric"
+              placeholder="60"
+            />
+          </label>
+          <label>
+            <span class="etiqueta-campo">
+              Intensidad: <span id="entreno-intensidad-texto"></span>
+            </span>
+            <input
+              type="range"
+              id="entreno-intensidad"
+              min="1"
+              max="10"
+              step="1"
+            />
+          </label>
+        </div>
+
+        <!-- Los ejercicios (solo en los de gimnasio) -->
+        <div id="entreno-seccion-ejercicios" class="entreno-ejercicios">
+          <p class="etiqueta-campo">Ejercicios</p>
+          <div id="entreno-ejercicios"></div>
+          <div class="entreno-ejercicios-botones">
+            <button
+              type="button"
+              id="entreno-nuevo-ejercicio"
+              class="boton-secundario"
+            >
+              + Ejercicio
+            </button>
+            <button type="button" id="entreno-copiar" class="boton-secundario">
+              Copiar el último entreno
+            </button>
+          </div>
+          <!-- Las sugerencias del nombre: los ejercicios ya usados -->
+          <datalist id="entreno-lista-ejercicios"></datalist>
+        </div>
+
+        <label class="etiqueta-campo" for="entreno-habito">
+          Marca también el hábito
+        </label>
+        <select id="entreno-habito"></select>
+        <label class="etiqueta-campo" for="entreno-nota">Nota</label>
+        <textarea
+          id="entreno-nota"
+          rows="2"
+          maxlength="300"
+          placeholder="Cómo te has sentido, qué cambiar la próxima vez…"
+        ></textarea>
+        <p id="entreno-error" class="ventana-error"></p>
+        <div class="ventana-botones">
+          <button type="button" id="entreno-eliminar" class="boton-eliminar">
+            Borrar
+          </button>
+          <button type="button" id="entreno-cancelar" class="boton-secundario">
             Cancelar
           </button>
           <button type="submit" class="boton-principal">Guardar</button>
