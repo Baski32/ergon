@@ -463,7 +463,7 @@
            guardadas) y «+ Nueva»; abajo, la conversación abierta y el
            campo para escribir. Las burbujas las dibuja script.js.
            ============================================================ -->
-      <div class="pantalla" data-pantalla="charla" hidden>
+      <div class="pantalla sala" data-pantalla="charla" hidden>
         <!-- Sin cuenta: hablar con Méntor necesita el servidor -->
         <div id="charla-sin-cuenta" class="charla-sin-cuenta" hidden>
           <p class="pie-texto">
@@ -471,15 +471,27 @@
             través del servidor.
           </p>
           <div class="pie-botones">
-            <button id="charla-ir-a-cuenta" type="button">Ir a Archivo</button>
+            <button
+              id="charla-ir-a-cuenta"
+              type="button"
+              class="charla-ir-a-cuenta"
+            >
+              Ir a Archivo
+            </button>
           </div>
         </div>
 
         <div id="charla-barra" class="charla-barra">
-          <button id="boton-conversaciones" type="button">
+          <button
+            id="boton-conversaciones"
+            type="button"
+            class="charla-ver-lista"
+          >
             ‹ Conversaciones
           </button>
-          <button id="boton-nueva-charla" type="button">+ Nueva</button>
+          <button id="boton-nueva-charla" type="button" class="charla-nueva">
+            + Nueva
+          </button>
         </div>
 
         <!-- Las conversaciones guardadas (al tocar «‹ Conversaciones») -->
@@ -503,7 +515,7 @@
         <!-- Debajo: cuántos mensajes van hoy y «Lo que ve Méntor» (el
              resumen de mis datos que recibe con cada mensaje) -->
         <div id="charla-pie" class="charla-pie">
-          <span id="charla-uso"></span>
+          <span id="charla-uso" class="charla-uso"></span>
           <button id="boton-lo-que-ve" type="button" class="charla-ve">
             Lo que ve Méntor
           </button>
@@ -512,10 +524,12 @@
 
       <!-- ============================================================
            PANTALLA PROMETHEUS
-           El laboratorio de Prometheus: mis estadísticas, el sueño, los
-           entrenos y el peso, con estilo futurista (solo en esta pestaña:
-           style.css, bloque 21). Lo calcula y lo dibuja script.js
-           (bloques 27 a 30); aquí solo están las cajas.
+           El laboratorio de Prometheus, con estilo futurista (solo en esta
+           pestaña: style.css, bloque 21). Dos vistas: «Datos» (mis
+           estadísticas, el sueño, los entrenos y el peso; los calcula y los
+           dibuja script.js, bloques 27 a 30) y «Hablar» (la charla con
+           Prometheus, como la de Méntor: bloque 25). Aquí solo están las
+           cajas.
            ============================================================ -->
       <div class="pantalla laboratorio" data-pantalla="prometheus" hidden>
         <!-- Cabecera: el piloto encendido y qué es esta pantalla -->
@@ -526,140 +540,215 @@
           <p class="lab-lema">Tus disciplinas, en números.</p>
         </header>
 
-        <!-- Señales: frases sobre mis datos que van pasando cada 5 segundos
-             (lo mismo que dicen las cifras y las gráficas de abajo) -->
-        <div class="lab-senales">
-          <span class="lab-senales-etiqueta">Señal</span>
-          <div id="lab-senal" class="lab-senal-caja"></div>
-          <span id="lab-senal-cuenta" class="lab-senales-cuenta"></span>
+        <!-- Las dos vistas: los datos o hablar con Prometheus -->
+        <div class="lab-vistas">
+          <button
+            type="button"
+            class="lab-vista activa"
+            data-vista="datos"
+            aria-pressed="true"
+          >
+            Datos
+          </button>
+          <button
+            type="button"
+            class="lab-vista"
+            data-vista="charla"
+            aria-pressed="false"
+          >
+            Hablar
+          </button>
         </div>
 
-        <!-- Apuntar: el sueño, un entreno y el peso (abren sus ventanas) -->
-        <div class="lab-apuntar">
-          <button id="boton-apuntar-sueno" type="button" class="lab-boton">
-            + Sueño
-          </button>
-          <button id="boton-apuntar-entreno" type="button" class="lab-boton">
-            + Entreno
-          </button>
-          <button id="boton-apuntar-peso" type="button" class="lab-boton">
-            + Peso
-          </button>
-        </div>
+        <!-- ===== VISTA «DATOS» ===== -->
+        <div id="lab-vista-datos">
+          <!-- Señales: frases sobre mis datos que van pasando cada 5 segundos
+               (lo mismo que dicen las cifras y las gráficas de abajo) -->
+          <div class="lab-senales">
+            <span class="lab-senales-etiqueta">Señal</span>
+            <div id="lab-senal" class="lab-senal-caja"></div>
+            <span id="lab-senal-cuenta" class="lab-senales-cuenta"></span>
+          </div>
 
-        <!-- Sin hábitos: este aviso sustituye a las secciones de hábitos -->
-        <p id="lab-vacio" class="lab-vacio" hidden>
-          Aún no hay disciplinas que analizar. Crea tu primer hábito en Hoy y,
-          en unos días, aquí verás cómo vas.
-        </p>
+          <!-- Apuntar: el sueño, un entreno y el peso (abren sus ventanas) -->
+          <div class="lab-apuntar">
+            <button id="boton-apuntar-sueno" type="button" class="lab-boton">
+              + Sueño
+            </button>
+            <button id="boton-apuntar-entreno" type="button" class="lab-boton">
+              + Entreno
+            </button>
+            <button id="boton-apuntar-peso" type="button" class="lab-boton">
+              + Peso
+            </button>
+          </div>
 
-        <div class="lab-rejilla">
-          <!-- Hoy: el anillo con lo cumplido y lo que queda -->
-          <section class="lab-tarjeta lab-hoy lab-de-habitos">
-            <div class="lab-anillo">
-              <svg viewBox="0 0 120 120" aria-hidden="true">
-                <circle class="lab-anillo-fondo" cx="60" cy="60" r="52" />
-                <circle
-                  id="lab-anillo-relleno"
-                  class="lab-anillo-relleno"
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  transform="rotate(-90 60 60)"
-                />
-              </svg>
-              <div class="lab-anillo-centro">
-                <span id="lab-hoy-porcentaje" class="lab-hoy-porcentaje"></span>
-                <span class="lab-etiqueta">Hoy</span>
+          <!-- Sin hábitos: este aviso sustituye a las secciones de hábitos -->
+          <p id="lab-vacio" class="lab-vacio" hidden>
+            Aún no hay disciplinas que analizar. Crea tu primer hábito en Hoy y,
+            en unos días, aquí verás cómo vas.
+          </p>
+
+          <div class="lab-rejilla">
+            <!-- Hoy: el anillo con lo cumplido y lo que queda -->
+            <section class="lab-tarjeta lab-hoy lab-de-habitos">
+              <div class="lab-anillo">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                  <circle class="lab-anillo-fondo" cx="60" cy="60" r="52" />
+                  <circle
+                    id="lab-anillo-relleno"
+                    class="lab-anillo-relleno"
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    transform="rotate(-90 60 60)"
+                  />
+                </svg>
+                <div class="lab-anillo-centro">
+                  <span
+                    id="lab-hoy-porcentaje"
+                    class="lab-hoy-porcentaje"
+                  ></span>
+                  <span class="lab-etiqueta">Hoy</span>
+                </div>
               </div>
+              <div class="lab-hoy-texto">
+                <p id="lab-hoy-cuenta" class="lab-hoy-cuenta"></p>
+                <p id="lab-hoy-quedan" class="lab-hoy-quedan"></p>
+              </div>
+            </section>
+
+            <!-- Cifras: seis números y lo que han cambiado (las crea
+                 script.js) -->
+            <section
+              id="lab-cifras"
+              class="lab-cifras"
+              aria-label="Cifras"
+            ></section>
+
+            <!-- Semana a semana: lo cumplido de cada semana, en columnas -->
+            <section class="lab-tarjeta lab-semanas-tarjeta lab-de-habitos">
+              <h2 class="lab-titulo">Semana a semana</h2>
+              <p class="lab-subtitulo">
+                Lo que tocaba y cumpliste cada semana (la de ahora, hasta ayer)
+              </p>
+              <div id="lab-semanas" class="lab-columnas"></div>
+              <details class="lab-datos">
+                <summary>Ver los datos</summary>
+                <table id="lab-semanas-tabla" class="lab-tabla"></table>
+              </details>
+            </section>
+
+            <!-- Tu semana tipo: cada día de la semana, en barras -->
+            <section class="lab-tarjeta lab-de-habitos">
+              <h2 class="lab-titulo">Tu semana tipo</h2>
+              <p class="lab-subtitulo">
+                Cada día de la semana, en las últimas 8 semanas
+              </p>
+              <div id="lab-dias" class="lab-barras"></div>
+              <p id="lab-dias-nota" class="lab-nota"></p>
+            </section>
+
+            <!-- Peso: la línea con los pesos apuntados -->
+            <section class="lab-tarjeta">
+              <h2 class="lab-titulo">Peso</h2>
+              <p id="lab-peso-resumen" class="lab-subtitulo"></p>
+              <div id="lab-peso" class="lab-linea"></div>
+              <details id="lab-peso-datos" class="lab-datos">
+                <summary>Ver los datos</summary>
+                <table id="lab-peso-tabla" class="lab-tabla"></table>
+              </details>
+            </section>
+
+            <!-- Sueño: una columna por noche de las últimas 2 semanas -->
+            <section class="lab-tarjeta lab-sueno-tarjeta">
+              <h2 class="lab-titulo">Sueño</h2>
+              <p id="lab-sueno-resumen" class="lab-subtitulo"></p>
+              <div id="lab-sueno" class="lab-columnas"></div>
+              <details id="lab-sueno-datos" class="lab-datos">
+                <summary>Ver los datos</summary>
+                <table id="lab-sueno-tabla" class="lab-tabla"></table>
+              </details>
+            </section>
+
+            <!-- Entrenos: los de esta semana y los últimos (al tocar uno, se
+                 abre para cambiarlo) -->
+            <section class="lab-tarjeta">
+              <h2 class="lab-titulo">Entrenos</h2>
+              <p id="lab-entrenos-resumen" class="lab-subtitulo"></p>
+              <ul id="lab-entrenos" class="lab-entrenos"></ul>
+            </section>
+
+            <!-- Progreso en el gimnasio: la mejor serie de cada sesión del
+                 ejercicio elegido -->
+            <section class="lab-tarjeta">
+              <h2 class="lab-titulo">Progreso en el gimnasio</h2>
+              <label class="lab-elegir">
+                <span>Ejercicio</span>
+                <select id="lab-ejercicio"></select>
+              </label>
+              <p id="lab-progreso-resumen" class="lab-subtitulo"></p>
+              <div id="lab-progreso" class="lab-linea"></div>
+            </section>
+
+            <!-- Cada disciplina: constancia, racha y mejor racha -->
+            <section class="lab-tarjeta lab-disciplinas-tarjeta lab-de-habitos">
+              <h2 class="lab-titulo">Cada disciplina</h2>
+              <p class="lab-subtitulo">
+                Últimos 30 días (4 semanas en las semanales), racha y récord
+              </p>
+              <ul id="lab-disciplinas" class="lab-disciplinas"></ul>
+            </section>
+          </div>
+        </div>
+
+        <!-- ===== VISTA «HABLAR» =====
+             La charla con Prometheus: las mismas piezas que la de Méntor
+             (script.js las busca por su clase dentro de la sala) -->
+        <div id="lab-vista-charla" class="sala sala-prometheus" hidden>
+          <!-- Sin cuenta: hablar con Prometheus necesita el servidor -->
+          <div class="charla-sin-cuenta" hidden>
+            <p class="pie-texto">
+              Para hablar con Prometheus, entra en tu cuenta: sus respuestas
+              llegan a través del servidor.
+            </p>
+            <div class="pie-botones">
+              <button type="button" class="charla-ir-a-cuenta">
+                Ir a Archivo
+              </button>
             </div>
-            <div class="lab-hoy-texto">
-              <p id="lab-hoy-cuenta" class="lab-hoy-cuenta"></p>
-              <p id="lab-hoy-quedan" class="lab-hoy-quedan"></p>
-            </div>
-          </section>
+          </div>
 
-          <!-- Cifras: cuatro números y lo que han cambiado (las crea
-               script.js) -->
-          <section
-            id="lab-cifras"
-            class="lab-cifras"
-            aria-label="Cifras"
-          ></section>
+          <div class="charla-barra">
+            <button type="button" class="charla-ver-lista">
+              ‹ Conversaciones
+            </button>
+            <button type="button" class="charla-nueva">+ Nueva</button>
+          </div>
 
-          <!-- Semana a semana: lo cumplido de cada semana, en columnas -->
-          <section class="lab-tarjeta lab-semanas-tarjeta lab-de-habitos">
-            <h2 class="lab-titulo">Semana a semana</h2>
-            <p class="lab-subtitulo">
-              Lo que tocaba y cumpliste cada semana (la de ahora, hasta ayer)
-            </p>
-            <div id="lab-semanas" class="lab-columnas"></div>
-            <details class="lab-datos">
-              <summary>Ver los datos</summary>
-              <table id="lab-semanas-tabla" class="lab-tabla"></table>
-            </details>
-          </section>
+          <!-- Las conversaciones guardadas con Prometheus -->
+          <div class="lista-charlas" hidden></div>
 
-          <!-- Tu semana tipo: cada día de la semana, en barras -->
-          <section class="lab-tarjeta lab-de-habitos">
-            <h2 class="lab-titulo">Tu semana tipo</h2>
-            <p class="lab-subtitulo">
-              Cada día de la semana, en las últimas 8 semanas
-            </p>
-            <div id="lab-dias" class="lab-barras"></div>
-            <p id="lab-dias-nota" class="lab-nota"></p>
-          </section>
+          <!-- La conversación abierta -->
+          <div class="conversacion charla"></div>
 
-          <!-- Peso: la línea con los pesos apuntados -->
-          <section class="lab-tarjeta">
-            <h2 class="lab-titulo">Peso</h2>
-            <p id="lab-peso-resumen" class="lab-subtitulo"></p>
-            <div id="lab-peso" class="lab-linea"></div>
-            <details id="lab-peso-datos" class="lab-datos">
-              <summary>Ver los datos</summary>
-              <table id="lab-peso-tabla" class="lab-tabla"></table>
-            </details>
-          </section>
-
-          <!-- Sueño: una columna por noche de las últimas 2 semanas -->
-          <section class="lab-tarjeta lab-sueno-tarjeta">
-            <h2 class="lab-titulo">Sueño</h2>
-            <p id="lab-sueno-resumen" class="lab-subtitulo"></p>
-            <div id="lab-sueno" class="lab-columnas"></div>
-            <details id="lab-sueno-datos" class="lab-datos">
-              <summary>Ver los datos</summary>
-              <table id="lab-sueno-tabla" class="lab-tabla"></table>
-            </details>
-          </section>
-
-          <!-- Entrenos: los de esta semana y los últimos (al tocar uno, se
-               abre para cambiarlo) -->
-          <section class="lab-tarjeta">
-            <h2 class="lab-titulo">Entrenos</h2>
-            <p id="lab-entrenos-resumen" class="lab-subtitulo"></p>
-            <ul id="lab-entrenos" class="lab-entrenos"></ul>
-          </section>
-
-          <!-- Progreso en el gimnasio: la mejor serie de cada sesión del
-               ejercicio elegido -->
-          <section class="lab-tarjeta">
-            <h2 class="lab-titulo">Progreso en el gimnasio</h2>
-            <label class="lab-elegir">
-              <span>Ejercicio</span>
-              <select id="lab-ejercicio"></select>
-            </label>
-            <p id="lab-progreso-resumen" class="lab-subtitulo"></p>
-            <div id="lab-progreso" class="lab-linea"></div>
-          </section>
-
-          <!-- Cada disciplina: constancia, racha y mejor racha -->
-          <section class="lab-tarjeta lab-disciplinas-tarjeta lab-de-habitos">
-            <h2 class="lab-titulo">Cada disciplina</h2>
-            <p class="lab-subtitulo">
-              Últimos 30 días (4 semanas en las semanales), racha y récord
-            </p>
-            <ul id="lab-disciplinas" class="lab-disciplinas"></ul>
-          </section>
+          <!-- El campo para escribir, al final -->
+          <form class="mentor-escribir charla-escribir">
+            <textarea
+              rows="1"
+              maxlength="2000"
+              placeholder="Escribe a Prometheus…"
+              aria-label="Mensaje para Prometheus"
+            ></textarea>
+            <button type="submit" class="boton-principal">Enviar</button>
+          </form>
+          <!-- Debajo: cuántos mensajes van hoy y «Lo que ve Prometheus» -->
+          <div class="charla-pie">
+            <span class="charla-uso"></span>
+            <button type="button" class="charla-ve">
+              Lo que ve Prometheus
+            </button>
+          </div>
         </div>
 
         <!-- El cuadrito con el dato de una columna o de un punto (sale al
@@ -1173,20 +1262,21 @@
     </dialog>
 
     <!-- ============================================================
-         VENTANA «LO QUE VE MÉNTOR»
-         El resumen de mis datos que Méntor recibe con cada mensaje (lo
-         escribe script.js, bloque 26) y la casilla para compartirlo o no.
+         VENTANA «LO QUE VE…»
+         El resumen de mis datos que recibe un consejero (Méntor o
+         Prometheus) con cada mensaje y la casilla para compartirlo o no. Lo
+         escribe script.js (bloque 26), con el nombre del consejero.
          ============================================================ -->
     <dialog id="ventana-contexto" class="ventana">
       <form method="dialog" class="form-habito form-contexto">
-        <h2 tabindex="-1" autofocus>Lo que ve Méntor</h2>
-        <p class="contexto-explicacion">
+        <h2 id="contexto-titulo" tabindex="-1" autofocus>Lo que ve Méntor</h2>
+        <p id="contexto-explicacion" class="contexto-explicacion">
           Con cada mensaje, Méntor recibe este resumen de tus datos de Ergon. Lo
           prepara la app en el momento; no ve nada más.
         </p>
         <label class="contexto-compartir">
           <input type="checkbox" id="compartir-datos" />
-          Compartir mis datos con Méntor
+          <span id="compartir-texto">Compartir mis datos con Méntor</span>
         </label>
         <p id="contexto-texto" class="contexto-texto"></p>
         <div class="ventana-botones">

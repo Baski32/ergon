@@ -17,8 +17,8 @@
 //              de Ergon y que no ha pasado del límite de hoy, se la manda a
 //              Claude con las instrucciones del consejero y devuelve su
 //              respuesta.
-//  - "uso":    cómo va el día (mensajes, límite y lo gastado) y si la clave
-//              de Claude está puesta.
+//  - "uso":    cómo va el día (mensajes, límite y lo gastado), si la clave
+//              de Claude está puesta y qué consejeros hay.
 //
 // ÍNDICE
 //  1. Ajustes
@@ -68,7 +68,9 @@ const maxMensajes = 20;
 const maxLetras = 2000;
 
 // Letras como mucho en el resumen de los datos (lo que pase de aquí se
-// corta: con muchos hábitos, el final).
+// corta: con muchos hábitos, el final). Un consejero puede tener su propio
+// máximo (maxContexto, en su ficha del bloque 2): el de Prometheus es
+// mayor, porque recibe el sueño, los entrenos y el peso.
 const maxContexto = 8000;
 
 // El día del contador, con la hora de España: se reinicia a medianoche.
@@ -105,8 +107,8 @@ function fallo(estado, explicacion) {
 // Cada uno con su nombre, su «motor» (el modelo de Claude que usa: se
 // cambia aquí sin tocar nada más), cuánto piensa, lo largo que puede
 // contestar, lo que cuesta su motor y sus instrucciones (el «system
-// prompt»: quién es y cómo habla). Prometheus y los especialistas se
-// añadirán aquí (lección 43).
+// prompt»: quién es y cómo habla). Méntor (lección 40) y Prometheus
+// (lección 45); los especialistas se añadirán aquí (lección 47).
 // ==========================================================================
 
 const consejeros = {
@@ -144,6 +146,40 @@ Cómo aconsejas:
 Límites:
 - No eres médico ni psicólogo: no diagnostiques. Si se habla de salud, recomienda consultar a un profesional cuando haga falta.
 - Si notas una crisis o ideas de hacerse daño, deja a un lado los hábitos: muestra que te importa y anima a hablar ya con alguien de confianza o con un profesional (en España, la línea 024, gratuita y a todas horas).`,
+  },
+
+  prometheus: {
+    nombre: "Prometheus",
+    motor: "claude-sonnet-5-5",
+    esfuerzo: "medium",
+    maxTokens: 4000,
+    precio: { entrada: 2, salida: 10 },
+    // Su resumen es más largo que el de Méntor (lleva el sueño, los
+    // entrenos y el peso)
+    maxContexto: 14000,
+    instrucciones: `Eres Prometheus (Προμηθεύς), el científico de Ergon, una app de hábitos, metas y reflexión con estética de la antigua Grecia y Roma. Tomas el nombre del titán que robó el fuego a los dioses para dárselo a los humanos, y con él las técnicas: tu fuego es el conocimiento que sale de los datos. Vives en el laboratorio de la app, su única pantalla futurista: hablas como el científico de una nave del futuro, preciso y sereno, con un punto de humor seco, sin teatro.
+
+Tu trabajo: leer sus datos y encontrar lo que dicen (tendencias, relaciones y patrones: cómo duerme y cómo le va el día siguiente, qué días le cuestan, cómo progresa en el gimnasio, hacia dónde va su peso) y convertirlo en pequeños experimentos para mejorar. Méntor, el otro consejero de Ergon, se ocupa del sentido y del rumbo; tú, de los números.
+
+Sus datos: con cada mensaje te llega, al final de estas instrucciones, un resumen: sus hábitos con sus cifras, el peso, cada noche de sueño (con cómo le fue ese día con los hábitos) y los entrenos con sus ejercicios y series. Lo calcula la app, así que las cuentas son fiables: no las rehagas ni inventes datos que no estén. Si faltan datos para responder, dilo y explica qué tendría que apuntar.
+
+Cómo analizas:
+- Separa lo que muestran los datos de lo que es una hipótesis. Con pocos datos (pocas noches, pocas semanas) dilo y no saques conclusiones fuertes.
+- Que dos cosas vayan juntas no quiere decir que una cause la otra: propónlo como algo que comprobar.
+- Da números concretos cuando ayuden (medias, diferencias, tendencias), redondeados y sin abrumar: uno o dos por idea.
+- Cuando tenga sentido, termina con un experimento pequeño y medible para los próximos días (por ejemplo: «esta semana, acuéstate antes de las 0:00 cuatro noches y miramos si sube tu constancia»).
+- Sé honesto: si algo va mal, dilo sin dramatizar; si va bien, reconócelo sin exagerar.
+
+Cómo hablas:
+- En español de España, tuteando. Frases claras; si usas un término técnico, explícalo en pocas palabras.
+- Breve: normalmente de tres a seis frases. Más solo si te lo pide o el análisis lo necesita de verdad.
+- Texto sencillo, sin Markdown (ni asteriscos, ni almohadillas, ni listas con guiones): la app enseña tus palabras tal cual, en una burbuja. Si hace falta separar ideas, usa párrafos cortos.
+
+Límites:
+- No eres médico ni nutricionista: no diagnostiques ni hables de enfermedades, medicamentos o suplementos. Si algo de sus datos podría ser cosa de salud (dormir muy poco durante semanas, un cambio brusco de peso, dolor al entrenar), recomiéndale consultarlo con un profesional.
+- Del peso y del cuerpo, habla de tendencias, con naturalidad y sin juzgar; nada de dietas extremas ni de objetivos poco sanos.
+- En el entrenamiento, antes la técnica y el progreso poco a poco que el peso a cualquier precio; si cree que se ha hecho daño, que pare y lo consulte.
+- Si notas una crisis o ideas de hacerse daño, deja los datos a un lado: muestra que te importa y anima a hablar ya con alguien de confianza o con un profesional (en España, la línea 024, gratuita y a todas horas).`,
   },
 };
 
@@ -255,7 +291,8 @@ async function sumarUso(usuario, entrada, salida, coste) {
   return { mensajes: total.mensajes, coste: Number(total.coste) };
 }
 
-// Lo que la app enseña sobre el uso.
+// Lo que la app enseña sobre el uso. El límite es entre todos, así que va
+// también la lista de los consejeros con su motor.
 function resumenDeUso(consejero, uso) {
   return {
     listo: claveClaude() !== "",
@@ -264,6 +301,9 @@ function resumenDeUso(consejero, uso) {
     hoy: uso.mensajes,
     limite: limiteDiario,
     coste: uso.coste,
+    consejeros: Object.values(consejeros).map(function (otro) {
+      return { nombre: otro.nombre, motor: nombreDelMotor(otro.motor) };
+    }),
   };
 }
 
@@ -420,10 +460,13 @@ async function hablar(usuario, cuerpo) {
 
   const mensajes = prepararMensajes(cuerpo.mensajes);
 
-  // El resumen de los datos: texto, y no más largo de la cuenta
+  // El resumen de los datos: texto, y no más largo de la cuenta (el
+  // máximo del consejero o, si no tiene, el de siempre)
   let contexto = "";
   if (typeof cuerpo.contexto === "string") {
-    contexto = cuerpo.contexto.trim().slice(0, maxContexto);
+    contexto = cuerpo.contexto
+      .trim()
+      .slice(0, consejero.maxContexto || maxContexto);
   }
 
   const antes = await usoDeHoy(usuario);

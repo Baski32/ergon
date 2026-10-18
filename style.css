@@ -20,7 +20,7 @@
    12. Hoy · Semana
    13. Hoy · Constancia
    14. Ventanas (editar hábito, meta y perfil; sueño y entreno; avisos)
-   15. Méntor · Conversación y charla
+   15. Méntor · Conversación y charlas
    16. Mosaico del mes
    17. Metas · Tarjetas
    18. Metas · Laureles (metas cumplidas)
@@ -151,13 +151,25 @@ body {
   display: none;
 }
 
-/* Fecha de hoy. margin-left: auto la empuja a la derecha */
+/* Fecha de hoy. margin-left: auto la empuja a la derecha; nowrap: siempre
+   en una línea */
 .fecha-hoy {
   margin-left: auto;
   font-variant: small-caps;
   letter-spacing: 0.06em;
   font-size: 0.95rem;
+  white-space: nowrap;
   color: var(--bronce);
+}
+
+/* En los móviles más estrechos (un iPhone SE), el nombre de la pantalla,
+   algo más pequeño: si no, «Prometheus», la fecha y el puntito de la nube
+   no caben en una línea */
+@media (max-width: 370px) {
+  .barra-superior h1 {
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+  }
 }
 
 /* ==========================================================================
@@ -1517,7 +1529,9 @@ button.recordatorio {
    15. MÉNTOR · CONVERSACIÓN Y CHARLA
    Burbujas como en un chat: Méntor a la izquierda, mis respuestas a la
    derecha y, debajo de la última pregunta, la forma de responder. Al
-   final, la charla de la pestaña Méntor (que usa las mismas burbujas).
+   final, las charlas (la de la pestaña Méntor y la de Prometheus, que
+   usan las mismas burbujas; la de Prometheus se oscurece en el bloque
+   21).
    ========================================================================== */
 
 /* La conversación: una columna de burbujas */
@@ -1551,9 +1565,10 @@ button.recordatorio {
   }
 }
 
-/* Méntor: a la izquierda, en mármol blanco. margin-left deja sitio a su
-   cara */
-.burbuja-mentor {
+/* Méntor (y Prometheus, en su charla): a la izquierda, en mármol blanco.
+   margin-left deja sitio a su cara */
+.burbuja-mentor,
+.burbuja-prometheus {
   position: relative;
   align-self: flex-start;
   margin-left: 42px;
@@ -1833,7 +1848,7 @@ button.recordatorio {
   border-radius: 18px;
 }
 
-/* ---------- La charla (pestaña Méntor) ---------- */
+/* ---------- Las charlas (Méntor y Prometheus) ---------- */
 
 /* Arriba: «‹ Conversaciones» a la izquierda y «+ Nueva» a la derecha */
 .charla-barra {
@@ -1935,9 +1950,25 @@ button.recordatorio {
   cursor: default;
 }
 
-/* Debajo del campo: cuántos mensajes van hoy · «Lo que ve Méntor» */
+/* En los móviles más estrechos, el campo y «Enviar», con menos relleno: así
+   cabe «Escribe a Prometheus…» en una línea */
+@media (max-width: 370px) {
+  .charla-escribir textarea {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .charla-escribir .boton-principal {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* Debajo del campo: cuántos mensajes van hoy · «Lo que ve Méntor» (si no
+   caben en una línea, el enlace baja a otra) */
 .charla-pie {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: baseline;
   gap: 6px;
@@ -1951,7 +1982,7 @@ button.recordatorio {
 }
 
 /* El punto que los separa, solo si hay cuenta de mensajes */
-#charla-uso:not(:empty)::after {
+.charla-uso:not(:empty)::after {
   content: " ·";
 }
 
@@ -1971,7 +2002,33 @@ button.recordatorio {
   color: var(--terracota);
 }
 
-/* La ventana «Lo que ve Méntor»: la explicación, la casilla y el resumen
+/* Las preguntas para empezar (en una conversación nueva): píldoras a la
+   derecha, como mis respuestas. Al tocar una, se envía */
+.charla-sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.charla-sugerencia {
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  color: var(--terracota);
+  background-color: #fffdf8;
+  border: 1px solid var(--terracota);
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+.charla-sugerencia:hover {
+  color: var(--marmol);
+  background-color: var(--terracota);
+}
+
+/* La ventana «Lo que ve…»: la explicación, la casilla y el resumen
    (en un cuadro que se desplaza si es largo; pre-wrap respeta sus líneas) */
 .contexto-explicacion {
   margin: 0;
@@ -2799,7 +2856,8 @@ button.recordatorio {
    holograma (cian) y el fuego de Prometeo (ámbar). Al salir, todo vuelve a
    ser de mármol. Las letras son las del sistema (en el iPhone, San
    Francisco), sin descargar nada: una normal para el texto y una de ancho
-   fijo para los datos.
+   fijo para los datos. Tiene dos vistas: los datos y la charla con
+   Prometheus (que usa las piezas de la de Méntor, oscurecidas aquí).
    ========================================================================== */
 
 /* Los colores y las letras del laboratorio (solo existen con la clase
@@ -3791,6 +3849,192 @@ body.en-prometheus .navegacion-marca {
   pointer-events: none;
 }
 
+/* ---------- Las dos vistas: «Datos» y «Hablar» ---------- */
+
+/* Los dos botones, juntos en una cápsula de cristal (mitad y mitad) */
+.lab-vistas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 4px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--lab-borde);
+  border-radius: 999px;
+}
+
+/* Cada botón: letras pequeñas de ancho fijo, como los títulos. El de la
+   vista que se ve, encendido en cian */
+.lab-vista {
+  padding: 9px 12px;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-texto-2);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.lab-vista:hover {
+  color: var(--lab-texto);
+}
+
+.lab-vista.activa {
+  color: var(--lab-cian);
+  background-color: rgba(95, 208, 228, 0.12);
+  text-shadow: 0 0 12px rgba(95, 208, 228, 0.6);
+}
+
+.lab-vista:focus-visible {
+  outline: 2px solid var(--lab-cian);
+  outline-offset: 2px;
+}
+
+/* ---------- La charla con Prometheus ---------- */
+
+/* La charla usa las piezas de la de Méntor (bloque 15). Como en las
+   ventanas (abajo), aquí dentro se cambian los colores de Ergon por los
+   del laboratorio; luego, lo que llevaba el color escrito en su regla */
+.sala-prometheus {
+  --marmol: var(--lab-fondo);
+  --tinta: var(--lab-texto);
+  --bronce: var(--lab-texto-2);
+  --piedra: var(--lab-borde);
+  --terracota: var(--lab-datos);
+  --oro: var(--lab-fuego);
+
+  margin-top: 18px;
+}
+
+/* Las burbujas de Prometheus: cristal oscuro con borde cian y un brillo
+   suave. Son párrafos: margin-left hay que repetirlo aquí, porque
+   «.laboratorio p» (más fuerte) les quita el margen que deja sitio a su
+   cara */
+.sala-prometheus .burbuja-prometheus {
+  margin-left: 42px;
+}
+
+.burbuja-prometheus {
+  line-height: 1.45;
+  background-color: var(--lab-tarjeta);
+  border-color: var(--lab-borde);
+  box-shadow: 0 0 18px rgba(95, 208, 228, 0.06);
+}
+
+/* Su cara: la llama de Prometeo en un círculo oscuro con un aro cian,
+   abajo a la izquierda de su burbuja (como la de Méntor). fill pinta la
+   llama; --oro, su corazón, más claro */
+.prometheus-cara {
+  --oro: #f2c27a;
+  position: absolute;
+  left: -42px;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  fill: var(--lab-fuego);
+  background-color: #0b1116;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgba(95, 208, 228, 0.45),
+    0 0 12px rgba(95, 208, 228, 0.25);
+}
+
+/* Si dice dos cosas seguidas, su cara solo sale en la última */
+.burbuja-prometheus:has(+ .burbuja-prometheus) .prometheus-cara {
+  visibility: hidden;
+}
+
+/* Mis mensajes: en el cian de los datos, con la letra oscura */
+.sala-prometheus .burbuja-mia {
+  font-weight: 500;
+}
+
+/* «Prometheus está escribiendo…»: los puntos, en cian */
+.sala-prometheus .escribiendo span {
+  background-color: var(--lab-cian);
+}
+
+/* El día de la conversación, como las etiquetas del laboratorio */
+.sala-prometheus .charla-fecha {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.66rem;
+  font-variant: normal;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-tenue);
+}
+
+/* Lo que falla, en el rojo suave del laboratorio */
+.sala-prometheus .charla-fallo-texto {
+  color: var(--lab-baja);
+}
+
+/* Las preguntas para empezar: píldoras de cristal cian */
+.sala-prometheus .charla-sugerencia {
+  font-size: 0.9rem;
+  color: var(--lab-cian);
+  background-color: rgba(95, 208, 228, 0.05);
+  border-color: rgba(95, 208, 228, 0.35);
+}
+
+.sala-prometheus .charla-sugerencia:hover {
+  color: var(--lab-fondo);
+  background-color: var(--lab-datos);
+}
+
+/* El campo para escribir y «Enviar» */
+.sala-prometheus .charla-escribir textarea {
+  background-color: rgba(95, 208, 228, 0.05);
+  border-color: var(--lab-borde);
+}
+
+.sala-prometheus .charla-escribir textarea:focus {
+  border-color: var(--lab-cian);
+}
+
+.sala-prometheus .boton-principal {
+  font-weight: 600;
+}
+
+/* La lista de conversaciones: tarjetas oscuras */
+.sala-prometheus .charla-fila {
+  background-color: var(--lab-tarjeta);
+  border-radius: 12px;
+}
+
+.sala-prometheus .charla-detalle {
+  margin-top: 2px;
+  font-family: var(--lab-datos-letra);
+  font-size: 0.7rem;
+}
+
+.sala-prometheus .charla-borrar:hover {
+  color: var(--lab-baja);
+}
+
+/* «+ Nueva conversación», como los títulos del laboratorio */
+.sala-prometheus .boton-nuevo {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lab-cian);
+  border-color: rgba(95, 208, 228, 0.35);
+  border-radius: 12px;
+}
+
+.sala-prometheus .boton-nuevo:hover {
+  background-color: rgba(95, 208, 228, 0.06);
+}
+
+/* Sin cuenta: un poco de aire entre el aviso y el botón */
+.sala-prometheus .pie-texto {
+  margin-bottom: 14px;
+}
+
 /* ---------- Las ventanas, abiertas desde Prometheus ---------- */
 
 /* Las ventanas que se abren aquí (sueño, entreno, peso y los avisos)
@@ -3881,6 +4125,20 @@ body.en-prometheus .serie-numero {
   font-family: var(--lab-datos-letra);
 }
 
+/* «Lo que ve Prometheus»: el resumen, en un cuadro de cristal y con la
+   letra de ancho fijo de los datos */
+body.en-prometheus .contexto-texto {
+  font-family: var(--lab-datos-letra);
+  font-size: 0.75rem;
+  background-color: rgba(95, 208, 228, 0.04);
+}
+
+/* «Compartir mis datos con Prometheus», del tamaño del resto de la
+   ventana */
+body.en-prometheus .contexto-compartir {
+  font-size: 1rem;
+}
+
 /* Con «reducir movimiento», nada se mueve: ni el piloto, ni el brillo de
    las señales, ni las frases, ni el anillo */
 @media (prefers-reduced-motion: reduce) {
@@ -3955,11 +4213,11 @@ body.conversando .navegacion {
   display: none;
 }
 
-/* En el móvil, mientras se escribe a Méntor, la barra también se esconde:
-   con el teclado abierto, taparía el campo. :has() mira si el campo tiene
-   el foco */
+/* En el móvil, mientras se escribe a Méntor o a Prometheus, la barra
+   también se esconde: con el teclado abierto, taparía el campo. :has()
+   mira si el campo de una charla tiene el foco */
 @media (max-width: 899px) {
-  body:has(#charla-texto:focus) .navegacion {
+  body:has(.charla-escribir textarea:focus) .navegacion {
     display: none;
   }
 }
@@ -4117,6 +4375,16 @@ body.conversando .navegacion {
   [data-pantalla="charla"] {
     max-width: 680px;
     margin: 0 auto;
+  }
+
+  /* Prometheus: «Datos | Hablar» y la charla, sin estirarse a todo el
+     ancho (a la izquierda, como la cabecera del laboratorio) */
+  .lab-vistas {
+    max-width: 360px;
+  }
+
+  .sala-prometheus {
+    max-width: 680px;
   }
 
   /* Prometheus: las tarjetas en dos columnas. Semana a semana, el sueño y

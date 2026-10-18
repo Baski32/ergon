@@ -28,7 +28,7 @@
 // 22. Nube · Sincronizar
 // 23. Recordatorios
 // 24. Consejeros · Conexión
-// 25. Consejeros · Charla con Méntor
+// 25. Consejeros · Las charlas (Méntor y Prometheus)
 // 26. Consejeros · Lo que ven de mí
 // 27. Prometheus · Estadísticas
 // 28. Prometheus · El laboratorio
@@ -81,14 +81,16 @@ const revisiones = JSON.parse(localStorage.getItem("ergon-revisiones")) || {};
 const recordatorios =
   JSON.parse(localStorage.getItem("ergon-recordatorios")) || {};
 
-// Conversaciones con Méntor (bloque 25), por su id:
+// Conversaciones con los consejeros (bloque 25), por su id. consejero:
+// con quién es ("mentor" o "prometheus"):
 // { "c1760700000000": { id, consejero, creada, actualizada, titulo,
 //   mensajes: [{ de: "yo" o "consejero", texto, hora }] } }
 const conversaciones =
   JSON.parse(localStorage.getItem("ergon-conversaciones")) || {};
 
-// Ajustes de los consejeros (bloque 26): { compartir } (si ven mis datos;
-// sin ajustar, sí). Los mismos en todos los dispositivos.
+// Ajustes de los consejeros (bloque 26): { compartir, compartirPrometheus }
+// (si Méntor y Prometheus ven mis datos; sin ajustar, sí). Los mismos en
+// todos los dispositivos.
 const ajustesConsejeros =
   JSON.parse(localStorage.getItem("ergon-consejeros")) || {};
 
@@ -4532,7 +4534,7 @@ function cerrarSesionAqui(olvidar) {
     localStorage.removeItem("ergon-usuario-nube");
   }
   mostrarCuenta();
-  mostrarCharla();
+  mostrarCharlas();
 }
 
 // Piezas de la sección Cuenta (en Archivo).
@@ -4574,7 +4576,7 @@ formEntrar.addEventListener("submit", async function (evento) {
   errorEntrar.textContent = "";
   formEntrar.reset();
   mostrarCuenta();
-  mostrarCharla();
+  mostrarCharlas();
   // Después de sincronizar, lo de los recordatorios y los consejeros
   // (bloques 23 y 24)
   sincronizar().then(revisarAvisos).then(revisarConsejeros);
@@ -5611,8 +5613,8 @@ document
 
 // ==========================================================================
 // 24. CONSEJEROS · CONEXIÓN
-// Méntor (y, más adelante, los demás consejeros) contestará con la IA de
-// Claude. La app no habla con Claude directamente: habla con la función
+// Méntor y Prometheus (y, más adelante, los especialistas) contestan con la
+// IA de Claude. La app no habla con Claude directamente: habla con la función
 // «consejero» del servidor (supabase/functions/consejero), que guarda la
 // clave de la API. Así la clave nunca está en este archivo, que cualquiera
 // puede leer. La función también pone un límite de mensajes al día y lleva
@@ -5620,7 +5622,7 @@ document
 // ==========================================================================
 
 // Cómo va el día, según el servidor: { listo, nombre, motor, hoy, limite,
-// coste }. null mientras no se sabe.
+// coste, consejeros: [{ nombre, motor }] }. null mientras no se sabe.
 let usoConsejeros = null;
 
 // El último fallo al hablar con la función ("" si ninguno), la última
@@ -5649,6 +5651,11 @@ async function llamarConsejero(cuerpo) {
     if (explicacion === "" && partes[1] === "404") {
       explicacion = "Falta desplegar la función «consejero» en Supabase.";
     }
+    // La función que hay en Supabase es de antes de este consejero
+    if (explicacion === "No conozco a ese consejero.") {
+      explicacion =
+        "Falta desplegar en Supabase la versión nueva de la función «consejero».";
+    }
     if (explicacion === "") {
       explicacion = "El servidor ha fallado (" + partes[1] + ").";
     }
@@ -5656,10 +5663,10 @@ async function llamarConsejero(cuerpo) {
   }
 }
 
-// Manda una conversación a un consejero ("mentor") y devuelve su respuesta.
-// mensajes: [{ de: "yo" o "consejero", texto }]. contexto: el resumen de
-// mis datos (bloque 26), o "" si no se comparten. Lo usa la charla con
-// Méntor (bloque 25).
+// Manda una conversación a un consejero ("mentor" o "prometheus") y
+// devuelve su respuesta. mensajes: [{ de: "yo" o "consejero", texto }].
+// contexto: el resumen de mis datos (bloque 26), o "" si no se comparten.
+// Lo usan las charlas (bloque 25).
 async function hablarConConsejero(consejero, mensajes, contexto) {
   const respuesta = await llamarConsejero({
     accion: "hablar",
@@ -5696,6 +5703,27 @@ async function revisarConsejeros() {
     errorConsejeros = textoErrorConsejero(error);
   }
   mostrarConsejeros();
+}
+
+// Los consejeros con su motor, en una frase: «Méntor y Prometheus · Claude
+// Sonnet 5.5» si usan el mismo; si no, «Méntor (Claude Sonnet 5.5) y
+// Prometheus (Claude Opus 5.5)». Si el servidor no manda la lista (la
+// función de antes de la lección 45), el consejero que contestó.
+function textoConsejeros(uso) {
+  const lista = uso.consejeros || [{ nombre: uso.nombre, motor: uso.motor }];
+  const mismoMotor = lista.every(function (consejero) {
+    return consejero.motor === lista[0].motor;
+  });
+  const nombres = lista.map(function (consejero) {
+    if (mismoMotor) {
+      return consejero.nombre;
+    }
+    return consejero.nombre + " (" + consejero.motor + ")";
+  });
+  if (mismoMotor) {
+    return enFrase(nombres) + " · " + lista[0].motor;
+  }
+  return enFrase(nombres);
 }
 
 // Dinero en texto: "0,03 $" (o "menos de 0,01 $" si es muy poco).
@@ -5759,15 +5787,14 @@ function mostrarConsejeros() {
     estado =
       "Falta la clave de Claude: añádela en Supabase (Edge Functions → Secrets) con el nombre ANTHROPIC_API_KEY.";
   } else if (usoConsejeros) {
-    // «Méntor · Claude Sonnet 5.5 · Hoy: 3 de 30 mensajes (0,04 $).»
+    // «Méntor y Prometheus · Claude Sonnet 5.5 · Hoy: 3 de 30 mensajes
+    // (0,04 $).» (el límite es entre todos)
     let mensajes = " mensajes";
     if (usoConsejeros.limite === 1) {
       mensajes = " mensaje";
     }
     estado =
-      usoConsejeros.nombre +
-      " · " +
-      usoConsejeros.motor +
+      textoConsejeros(usoConsejeros) +
       " · Hoy: " +
       usoConsejeros.hoy +
       " de " +
@@ -5798,38 +5825,111 @@ document
   .addEventListener("click", probarConsejero);
 
 // ==========================================================================
-// 25. CONSEJEROS · CHARLA CON MÉNTOR
-// La pestaña Méntor: hablar con él con mis palabras. Cada conversación se
-// guarda (en «conversaciones», bloque 1) y se sincroniza, así se puede
-// seguir en el móvil o en el ordenador y releer después. Sus respuestas
-// llegan de Claude a través del servidor (hablarConConsejero, bloque 24).
-// Dos vistas: la conversación abierta (con el campo para escribir) y la
-// lista de las conversaciones guardadas.
+// 25. CONSEJEROS · LAS CHARLAS
+// Hablar con un consejero con mis palabras: con Méntor en su pestaña y con
+// Prometheus en la suya (la vista «Hablar» del laboratorio). Las dos
+// charlas funcionan igual, así que el código es el mismo para las dos: lo
+// que cambia de una a otra está en su «sala» (abajo). Cada conversación se
+// guarda (en «conversaciones», bloque 1, con el consejero con el que es) y
+// se sincroniza, así se puede seguir en el móvil o en el ordenador y releer
+// después. Las respuestas llegan de Claude a través del servidor
+// (hablarConConsejero, bloque 24). Cada sala tiene dos vistas: la
+// conversación abierta (con el campo para escribir) y la lista de las
+// conversaciones guardadas.
 // ==========================================================================
 
-// La conversación abierta (su id), o null si es una nueva aún sin
-// mensajes.
-let charlaAbierta = null;
+// Las salas. Cada una tiene:
+//  - consejero y nombre: con quién se habla ("mentor", «Méntor»).
+//  - raiz: su caja en la página. Sus piezas se buscan dentro por su clase
+//    (función pieza), así las dos salas usan las mismas clases.
+//  - saludo: lo primero que dice (lo pone la app; no se guarda).
+//  - burbuja: cómo se dibujan sus mensajes (con su cara).
+//  - resumen: el resumen de mis datos que recibe con cada mensaje (bloque
+//    26), si lo comparto.
+//  - sugerencias: preguntas para empezar con un toque (o ninguna).
+//  - Y cómo va la charla: la conversación abierta (abierta: su id, o null
+//    si es una nueva aún sin mensajes); si ya se ha elegido una (elegida:
+//    en la lista, con «+ Nueva» o al escribir; mientras no, se abre la de
+//    hoy: si hoy ya se habló con él, aquí o en otro dispositivo, se sigue
+//    esa; si no, una nueva); si se está viendo la lista (viendoLista); la
+//    conversación que espera la respuesta (esperando: su id, o null) y el
+//    último fallo (error: { id, texto }, o null).
+const salas = {
+  mentor: {
+    consejero: "mentor",
+    nombre: "Méntor",
+    raiz: document.querySelector('[data-pantalla="charla"]'),
+    saludo: function () {
+      return salve() + " ¿De qué quieres hablar?";
+    },
+    burbuja: burbujaMentor,
+    resumen: resumenParaConsejeros,
+    sugerencias: [],
+    abierta: null,
+    elegida: false,
+    viendoLista: false,
+    esperando: null,
+    error: null,
+  },
+  prometheus: {
+    consejero: "prometheus",
+    nombre: "Prometheus",
+    raiz: document.getElementById("lab-vista-charla"),
+    saludo: function () {
+      let hola = "Hola.";
+      if (perfil.nombre) {
+        hola = "Hola, " + perfil.nombre + ".";
+      }
+      return (
+        hola +
+        " Soy Prometheus: leo tus datos y busco lo que dicen. ¿Qué quieres analizar?"
+      );
+    },
+    burbuja: burbujaPrometheus,
+    resumen: resumenParaPrometheus,
+    sugerencias: [
+      "¿Cómo estoy durmiendo?",
+      "¿Qué días me cuestan más y por qué puede ser?",
+      "¿Cómo voy en el gimnasio?",
+      "Analiza mi última semana",
+    ],
+    abierta: null,
+    elegida: false,
+    viendoLista: false,
+    esperando: null,
+    error: null,
+  },
+};
 
-// ¿Se ha elegido ya una conversación (en la lista, con «+ Nueva» o al
-// escribir)? Mientras no, la pestaña abre la de hoy: si hoy ya se habló
-// con Méntor (aquí o en otro dispositivo, aunque llegue al sincronizar),
-// se sigue esa conversación; si no, se empieza una nueva.
-let charlaElegida = false;
+// Una pieza de una sala, por su clase: pieza(sala, "charla") es la caja de
+// la conversación de esa sala.
+function pieza(sala, clase) {
+  return sala.raiz.querySelector("." + clase);
+}
 
-// ¿Se está viendo la lista de conversaciones? (si no, la abierta)
-let viendoLista = false;
+// El campo para escribir de una sala.
+function campoDe(sala) {
+  return pieza(sala, "charla-escribir").querySelector("textarea");
+}
 
-// La conversación que espera la respuesta de Méntor (su id), o null.
-let charlaEsperando = null;
+// Con quién es una conversación (las de antes de la lección 45 no lo
+// decían todas: eran con Méntor).
+function consejeroDe(conversacion) {
+  return conversacion.consejero || "mentor";
+}
 
-// El último fallo al hablar con Méntor: { id, texto } (o null si ninguno).
-let errorCharla = null;
+// Las conversaciones de una sala (las de su consejero).
+function conversacionesDe(sala) {
+  return Object.values(conversaciones).filter(function (conversacion) {
+    return consejeroDe(conversacion) === sala.consejero;
+  });
+}
 
-// La conversación de hoy más reciente (su id), o null si hoy no ha habido.
-function conversacionDeHoy() {
+// La conversación de hoy más reciente de una sala (su id), o null si hoy no
+// ha habido.
+function conversacionDeHoy(sala) {
   let reciente = null;
-  Object.values(conversaciones).forEach(function (conversacion) {
+  conversacionesDe(sala).forEach(function (conversacion) {
     const dia = new Date(conversacion.actualizada).toLocaleDateString("en-CA");
     if (
       dia === hoy &&
@@ -5864,12 +5964,23 @@ function burbujaYo(texto) {
   return burbuja;
 }
 
-// «Méntor está escribiendo…»: su burbuja con tres puntos (como en el
-// bloque 8, pero hasta que llega la respuesta).
-function burbujaEscribiendo() {
-  const burbuja = burbujaMentor("");
+// Una burbuja de Prometheus, a la izquierda, con su cara: la llama de
+// Prometeo (el símbolo «llama» de index.html) en un círculo oscuro.
+function burbujaPrometheus(texto) {
+  const burbuja = document.createElement("p");
+  burbuja.classList.add("burbuja", "burbuja-prometheus");
+  burbuja.innerHTML =
+    '<svg class="prometheus-cara" viewBox="0 0 40 40" aria-hidden="true"><use href="#llama" x="11" y="6" width="18" height="26"></use></svg>';
+  burbuja.append(texto);
+  return burbuja;
+}
+
+// «Méntor está escribiendo…»: la burbuja del consejero con tres puntos
+// (como en el bloque 8, pero hasta que llega la respuesta).
+function burbujaEscribiendo(sala) {
+  const burbuja = sala.burbuja("");
   burbuja.classList.add("escribiendo");
-  burbuja.setAttribute("aria-label", "Méntor está escribiendo");
+  burbuja.setAttribute("aria-label", sala.nombre + " está escribiendo");
   burbuja.insertAdjacentHTML(
     "beforeend",
     "<span></span><span></span><span></span>",
@@ -5877,27 +5988,44 @@ function burbujaEscribiendo() {
   return burbuja;
 }
 
-// Un aviso dentro de la conversación (un fallo, o que Méntor no llegó a
-// contestar) con el botón «Reintentar».
-function avisoCharla(texto, id) {
+// Un aviso dentro de la conversación (un fallo, o que el consejero no llegó
+// a contestar) con el botón «Reintentar».
+function avisoCharla(sala, texto, id) {
   const aviso = document.createElement("div");
   aviso.classList.add("charla-fallo");
   aviso.append(
     crearParrafo(texto, "charla-fallo-texto"),
     crearBoton("Reintentar", "charla-reintentar", function () {
-      pedirRespuesta(id);
+      pedirRespuesta(sala, id);
     }),
   );
   return aviso;
 }
 
-// Dibuja la conversación abierta: el día, el saludo de Méntor (lo pone la
-// app, no se guarda), los mensajes y, al final, los puntos de «escribiendo»
-// o el aviso de un fallo.
-function dibujarCharla() {
-  const caja = document.getElementById("charla");
+// Las preguntas para empezar (solo en una conversación nueva): al tocar
+// una, se envía tal cual.
+function sugerenciasDe(sala) {
+  const caja = document.createElement("div");
+  caja.classList.add("charla-sugerencias");
+  sala.sugerencias.forEach(function (texto) {
+    caja.append(
+      crearBoton(texto, "charla-sugerencia", function () {
+        if (sala.esperando === null) {
+          enviarACharla(sala, texto);
+        }
+      }),
+    );
+  });
+  return caja;
+}
+
+// Dibuja la conversación abierta de una sala: el día, el saludo (lo pone
+// la app, no se guarda), los mensajes y, al final, los puntos de
+// «escribiendo» o el aviso de un fallo. En una nueva, las sugerencias.
+function dibujarCharla(sala) {
+  const caja = pieza(sala, "charla");
   caja.innerHTML = "";
-  const conversacion = conversaciones[charlaAbierta];
+  const conversacion = conversaciones[sala.abierta];
 
   // El día en que empezó (solo si ya tiene mensajes)
   if (conversacion) {
@@ -5913,9 +6041,12 @@ function dibujarCharla() {
     );
   }
 
-  caja.append(burbujaMentor(salve() + " ¿De qué quieres hablar?"));
+  caja.append(sala.burbuja(sala.saludo()));
 
   if (!conversacion) {
+    if (sala.sugerencias.length > 0) {
+      caja.append(sugerenciasDe(sala));
+    }
     return;
   }
 
@@ -5923,35 +6054,41 @@ function dibujarCharla() {
     if (mensaje.de === "yo") {
       caja.append(burbujaYo(mensaje.texto));
     } else {
-      caja.append(burbujaMentor(mensaje.texto));
+      caja.append(sala.burbuja(mensaje.texto));
     }
   });
 
   const ultimo = conversacion.mensajes[conversacion.mensajes.length - 1];
-  if (charlaEsperando === conversacion.id) {
-    caja.append(burbujaEscribiendo());
-  } else if (errorCharla && errorCharla.id === conversacion.id) {
-    caja.append(avisoCharla(errorCharla.texto, conversacion.id));
+  if (sala.esperando === conversacion.id) {
+    caja.append(burbujaEscribiendo(sala));
+  } else if (sala.error && sala.error.id === conversacion.id) {
+    caja.append(avisoCharla(sala, sala.error.texto, conversacion.id));
   } else if (ultimo && ultimo.de === "yo") {
     // Se cerró la app antes de que contestara (o en otro dispositivo)
-    caja.append(avisoCharla("Méntor no llegó a contestar.", conversacion.id));
+    caja.append(
+      avisoCharla(
+        sala,
+        sala.nombre + " no llegó a contestar.",
+        conversacion.id,
+      ),
+    );
   }
 }
 
-// Dibuja la lista de conversaciones guardadas, de la más reciente a la más
-// antigua: el título, el día y cuántos mensajes; tocar una la abre y la ×
-// la borra.
-function dibujarListaCharlas() {
-  const caja = document.getElementById("lista-charlas");
+// Dibuja la lista de conversaciones guardadas de una sala, de la más
+// reciente a la más antigua: el título, el día y cuántos mensajes; tocar
+// una la abre y la × la borra.
+function dibujarListaCharlas(sala) {
+  const caja = pieza(sala, "lista-charlas");
   caja.innerHTML = "";
 
   caja.append(
     crearBoton("+ Nueva conversación", "boton-nuevo", function () {
-      abrirCharla(null);
+      abrirCharla(sala, null);
     }),
   );
 
-  const lista = Object.values(conversaciones).sort(function (a, b) {
+  const lista = conversacionesDe(sala).sort(function (a, b) {
     if (a.actualizada > b.actualizada) {
       return -1;
     }
@@ -5959,7 +6096,12 @@ function dibujarListaCharlas() {
   });
 
   if (lista.length === 0) {
-    caja.append(crearParrafo("Aún no has hablado con Méntor.", "charla-vacia"));
+    caja.append(
+      crearParrafo(
+        "Aún no has hablado con " + sala.nombre + ".",
+        "charla-vacia",
+      ),
+    );
     return;
   }
 
@@ -5984,7 +6126,7 @@ function dibujarListaCharlas() {
       crearParrafo(dia + " · " + mensajes, "charla-detalle"),
     );
     abrir.addEventListener("click", function () {
-      abrirCharla(conversacion.id);
+      abrirCharla(sala, conversacion.id);
     });
 
     const borrar = crearBoton("×", "charla-borrar", async function () {
@@ -6000,10 +6142,10 @@ function dibujarListaCharlas() {
       }
       delete conversaciones[conversacion.id];
       guardarConversacion(conversacion.id);
-      if (charlaAbierta === conversacion.id) {
-        charlaAbierta = null;
+      if (sala.abierta === conversacion.id) {
+        sala.abierta = null;
       }
-      mostrarCharla();
+      mostrarSala(sala);
     });
     borrar.setAttribute("aria-label", "Borrar la conversación");
 
@@ -6012,50 +6154,57 @@ function dibujarListaCharlas() {
   });
 }
 
-// Dibuja la pestaña Méntor: sin cuenta, lo que falta; con cuenta, la lista
-// o la conversación abierta con el campo para escribir.
-function mostrarCharla() {
+// Dibuja una sala: sin cuenta, lo que falta; con cuenta, la lista o la
+// conversación abierta con el campo para escribir.
+function mostrarSala(sala) {
   const conCuenta = hayNube() && sesion !== null;
-  document.getElementById("charla-sin-cuenta").hidden = conCuenta;
-  document.getElementById("charla-barra").hidden = !conCuenta || viendoLista;
-  document.getElementById("lista-charlas").hidden = !conCuenta || !viendoLista;
-  document.getElementById("charla").hidden = !conCuenta || viendoLista;
-  document.getElementById("form-charla").hidden = !conCuenta || viendoLista;
-  document.getElementById("charla-pie").hidden = !conCuenta || viendoLista;
+  pieza(sala, "charla-sin-cuenta").hidden = conCuenta;
+  pieza(sala, "charla-barra").hidden = !conCuenta || sala.viendoLista;
+  pieza(sala, "lista-charlas").hidden = !conCuenta || !sala.viendoLista;
+  pieza(sala, "charla").hidden = !conCuenta || sala.viendoLista;
+  pieza(sala, "charla-escribir").hidden = !conCuenta || sala.viendoLista;
+  pieza(sala, "charla-pie").hidden = !conCuenta || sala.viendoLista;
   if (!conCuenta) {
     return;
   }
 
   // Si la conversación abierta se ha borrado (aquí o en otro dispositivo)
-  if (charlaAbierta && !conversaciones[charlaAbierta]) {
-    charlaAbierta = null;
+  if (sala.abierta && !conversaciones[sala.abierta]) {
+    sala.abierta = null;
   }
-  if (!charlaElegida) {
-    charlaAbierta = conversacionDeHoy();
+  if (!sala.elegida) {
+    sala.abierta = conversacionDeHoy(sala);
   }
 
   // «‹ Conversaciones (3)»
-  const cuantas = Object.keys(conversaciones).length;
+  const cuantas = conversacionesDe(sala).length;
   let textoLista = "‹ Conversaciones";
   if (cuantas > 0) {
     textoLista = textoLista + " (" + cuantas + ")";
   }
-  document.getElementById("boton-conversaciones").textContent = textoLista;
+  pieza(sala, "charla-ver-lista").textContent = textoLista;
 
-  // Mientras Méntor contesta, no se puede enviar otro mensaje
-  document.querySelector("#form-charla button").disabled =
-    charlaEsperando !== null;
+  // Mientras el consejero contesta, no se puede enviar otro mensaje
+  pieza(sala, "charla-escribir").querySelector("button").disabled =
+    sala.esperando !== null;
   mostrarUsoCharla();
 
-  if (viendoLista) {
-    dibujarListaCharlas();
+  if (sala.viendoLista) {
+    dibujarListaCharlas(sala);
   } else {
-    dibujarCharla();
+    dibujarCharla(sala);
   }
 }
 
-// Debajo del campo, cuántos mensajes van hoy (lo dice el servidor; lo
-// llama también mostrarConsejeros, cada vez que cambia).
+// Dibuja todas las salas (al cambiar algo: al entrar en la cuenta, al
+// llegar conversaciones de la nube…).
+function mostrarCharlas() {
+  Object.values(salas).forEach(mostrarSala);
+}
+
+// Debajo del campo de cada sala, cuántos mensajes van hoy (lo dice el
+// servidor, y el límite es entre todos los consejeros; lo llama también
+// mostrarConsejeros, cada vez que cambia).
 function mostrarUsoCharla() {
   let uso = "";
   if (usoConsejeros && usoConsejeros.listo) {
@@ -6066,52 +6215,60 @@ function mostrarUsoCharla() {
       usoConsejeros.limite +
       " mensajes.";
   }
-  document.getElementById("charla-uso").textContent = uso;
+  Object.values(salas).forEach(function (sala) {
+    pieza(sala, "charla-uso").textContent = uso;
+  });
 }
 
-// Baja hasta el final de la página al momento (al entrar en la pestaña,
+// Baja hasta el final de la página al momento (al entrar en una charla,
 // sin la animación de bajarAlFinal).
 function irAlFinal() {
   window.scrollTo(0, document.body.scrollHeight);
 }
 
-// Abre una conversación (id) o una nueva (null).
-function abrirCharla(id) {
-  charlaAbierta = id;
-  charlaElegida = true;
-  viendoLista = false;
-  mostrarCharla();
+// Abre en una sala una conversación (id) o una nueva (null).
+function abrirCharla(sala, id) {
+  sala.abierta = id;
+  sala.elegida = true;
+  sala.viendoLista = false;
+  mostrarSala(sala);
   irAlFinal();
-  enfocarCampoCharla();
+  enfocarCampoCharla(sala);
 }
 
 // En el PC, deja el cursor en el campo para escribir (en el móvil no:
 // abriría el teclado sin querer).
-function enfocarCampoCharla() {
+function enfocarCampoCharla(sala) {
   if (!window.matchMedia("(pointer: coarse)").matches && sesion) {
-    campoCharla.focus({ preventScroll: true });
+    campoDe(sala).focus({ preventScroll: true });
   }
 }
 
-// Pide a Méntor la respuesta a la conversación (cuando el último mensaje es
-// mío). Mientras, salen los tres puntos; si falla, el aviso con
+// ¿Se está viendo esta sala ahora? (para bajar al final al llegar la
+// respuesta solo si se está mirando): su pantalla y su caja, a la vista.
+function salaALaVista(sala) {
+  return !sala.raiz.closest(".pantalla").hidden && !sala.raiz.hidden;
+}
+
+// Pide al consejero la respuesta a una conversación (cuando el último
+// mensaje es mío). Mientras, salen los tres puntos; si falla, el aviso con
 // «Reintentar». Se puede cambiar de pestaña mientras tanto.
-async function pedirRespuesta(id) {
-  charlaEsperando = id;
-  errorCharla = null;
-  mostrarCharla();
+async function pedirRespuesta(sala, id) {
+  sala.esperando = id;
+  sala.error = null;
+  mostrarSala(sala);
   bajarAlFinal();
 
   try {
     const mensajes = conversaciones[id].mensajes.map(function (mensaje) {
       return { de: mensaje.de, texto: mensaje.texto };
     });
-    // Con el resumen de mis datos, si los comparto (bloque 26)
+    // Con el resumen de mis datos, si los comparto con él (bloque 26)
     let contexto = "";
-    if (compartirDatos()) {
-      contexto = resumenParaConsejeros();
+    if (compartirDatos(sala.consejero)) {
+      contexto = sala.resumen();
     }
-    const texto = await hablarConConsejero("mentor", mensajes, contexto);
+    const texto = await hablarConConsejero(sala.consejero, mensajes, contexto);
 
     // Puede que se haya borrado mientras tanto
     const conversacion = conversaciones[id];
@@ -6126,111 +6283,119 @@ async function pedirRespuesta(id) {
       guardarConversacion(id);
     }
   } catch (error) {
-    errorCharla = { id: id, texto: textoErrorConsejero(error) };
+    sala.error = { id: id, texto: textoErrorConsejero(error) };
   }
 
-  charlaEsperando = null;
-  mostrarCharla();
+  sala.esperando = null;
+  mostrarSala(sala);
   mostrarConsejeros();
-  if (charlaAbierta === id && !viendoLista) {
+  if (sala.abierta === id && !sala.viendoLista && salaALaVista(sala)) {
     bajarAlFinal();
   }
 }
 
-// Envía lo escrito: se añade a la conversación abierta (o crea una nueva) y
-// se pide la respuesta.
-function enviarACharla(texto) {
+// Envía lo escrito: se añade a la conversación abierta de la sala (o crea
+// una nueva, con su consejero) y se pide la respuesta. Al escribir en una,
+// queda elegida: aunque llegue otra más reciente de otro dispositivo, se
+// sigue en esta.
+function enviarACharla(sala, texto) {
   const ahora = new Date().toISOString();
-  let conversacion = conversaciones[charlaAbierta];
+  let conversacion = conversaciones[sala.abierta];
 
   if (!conversacion) {
     const id = "c" + Date.now();
     conversacion = {
       id: id,
-      consejero: "mentor",
+      consejero: sala.consejero,
       creada: ahora,
       actualizada: ahora,
       titulo: tituloDe(texto),
       mensajes: [],
     };
     conversaciones[id] = conversacion;
-    charlaAbierta = id;
-    charlaElegida = true;
+    sala.abierta = id;
   }
+  sala.elegida = true;
 
   conversacion.mensajes.push({ de: "yo", texto: texto, hora: ahora });
   conversacion.actualizada = ahora;
   guardarConversacion(conversacion.id);
-  pedirRespuesta(conversacion.id);
+  pedirRespuesta(sala, conversacion.id);
 }
 
-// El campo para escribir: crece con el texto (hasta unas seis líneas). En
-// el PC, Intro envía y Mayúsculas + Intro hace una línea nueva; en el móvil,
-// Intro hace una línea nueva y se envía con el botón.
-const campoCharla = document.getElementById("charla-texto");
-
-function ajustarCampoCharla() {
-  campoCharla.style.height = "auto";
+// El campo para escribir crece con el texto (hasta unas seis líneas).
+function ajustarCampoCharla(sala) {
+  const campo = campoDe(sala);
+  campo.style.height = "auto";
   // scrollHeight: el alto del texto con su relleno; se le suma el borde
-  const bordes = campoCharla.offsetHeight - campoCharla.clientHeight;
-  campoCharla.style.height =
-    Math.min(campoCharla.scrollHeight + bordes, 160) + "px";
+  const bordes = campo.offsetHeight - campo.clientHeight;
+  campo.style.height = Math.min(campo.scrollHeight + bordes, 160) + "px";
 }
 
-campoCharla.addEventListener("input", ajustarCampoCharla);
+// Conecta los botones y el campo de una sala. En el PC, Intro envía y
+// Mayúsculas + Intro hace una línea nueva; en el móvil, Intro hace una
+// línea nueva y se envía con el botón.
+function conectarSala(sala) {
+  const campo = campoDe(sala);
+  const formulario = pieza(sala, "charla-escribir");
 
-campoCharla.addEventListener("keydown", function (evento) {
-  const esMovil = window.matchMedia("(pointer: coarse)").matches;
-  if (evento.key === "Enter" && !evento.shiftKey && !esMovil) {
-    evento.preventDefault();
-    document.getElementById("form-charla").requestSubmit();
-  }
-});
+  campo.addEventListener("input", function () {
+    ajustarCampoCharla(sala);
+  });
 
-document
-  .getElementById("form-charla")
-  .addEventListener("submit", function (evento) {
+  campo.addEventListener("keydown", function (evento) {
+    const esMovil = window.matchMedia("(pointer: coarse)").matches;
+    if (evento.key === "Enter" && !evento.shiftKey && !esMovil) {
+      evento.preventDefault();
+      formulario.requestSubmit();
+    }
+  });
+
+  formulario.addEventListener("submit", function (evento) {
     evento.preventDefault();
-    const texto = campoCharla.value.trim();
-    if (texto === "" || charlaEsperando !== null) {
+    const texto = campo.value.trim();
+    if (texto === "" || sala.esperando !== null) {
       return;
     }
-    campoCharla.value = "";
-    ajustarCampoCharla();
-    enviarACharla(texto);
+    campo.value = "";
+    ajustarCampoCharla(sala);
+    enviarACharla(sala, texto);
   });
 
-// «‹ Conversaciones» y «+ Nueva».
-document
-  .getElementById("boton-conversaciones")
-  .addEventListener("click", function () {
-    viendoLista = true;
-    mostrarCharla();
+  // «‹ Conversaciones» y «+ Nueva»
+  pieza(sala, "charla-ver-lista").addEventListener("click", function () {
+    sala.viendoLista = true;
+    mostrarSala(sala);
     window.scrollTo(0, 0);
   });
-
-document
-  .getElementById("boton-nueva-charla")
-  .addEventListener("click", function () {
-    abrirCharla(null);
+  pieza(sala, "charla-nueva").addEventListener("click", function () {
+    abrirCharla(sala, null);
   });
 
-// Sin cuenta: «Ir a Archivo» lleva a entrar.
-document
-  .getElementById("charla-ir-a-cuenta")
-  .addEventListener("click", function () {
+  // «Lo que ve…» (bloque 26)
+  pieza(sala, "charla-ve").addEventListener("click", function () {
+    abrirContexto(sala);
+  });
+
+  // Sin cuenta: «Ir a Archivo» lleva a entrar
+  pieza(sala, "charla-ir-a-cuenta").addEventListener("click", function () {
     mostrarPantalla("archivo");
   });
+}
+
+Object.values(salas).forEach(conectarSala);
 
 // ==========================================================================
 // 26. CONSEJEROS · LO QUE VEN DE MÍ
-// Para que Méntor aconseje sabiendo cómo voy, cada mensaje lleva un resumen
-// de mis datos de Ergon escrito en texto: el día y la hora, mi nombre y mi
-// edad, los hábitos (con sus reglas, su racha, su constancia y cómo van
-// hoy), las metas, los rituales de hoy y la última revisión semanal. El
-// peso no va: será cosa de Prometheus. Lo calcula la app en el momento, con
-// las mismas funciones que dibujan las pantallas. Se puede ver tal cual
-// («Lo que ve Méntor», en su pestaña) y dejar de compartir.
+// Para que los consejeros aconsejen sabiendo cómo voy, cada mensaje lleva
+// un resumen de mis datos de Ergon escrito en texto; cada uno, el de su
+// ámbito. Méntor: el día y la hora, mi nombre y mi edad, los hábitos (con
+// sus reglas, su racha, su constancia y cómo van hoy), las metas, los
+// rituales de hoy y la última revisión semanal. Prometheus: los números
+// (las cifras de los hábitos, el peso, el sueño y los entrenos). Lo
+// calcula la app en el momento, con las mismas funciones que dibujan las
+// pantallas. Se puede ver tal cual («Lo que ve…», debajo de cada charla) y
+// dejar de compartir, con cada consejero por separado.
 // ==========================================================================
 
 // Los días de la semana en plural, por getDay() (0 = domingo): «los
@@ -6245,9 +6410,20 @@ const diasEnPlural = [
   "sábados",
 ];
 
-// ¿Ven los consejeros mis datos? (si no se ha tocado el ajuste, sí)
-function compartirDatos() {
-  return ajustesConsejeros.compartir !== false;
+// Dónde se guarda, en los ajustes de los consejeros, si uno ve mis datos:
+// el de Méntor, en «compartir» (lección 42); el de los demás, con su
+// nombre detrás («compartirPrometheus»).
+function claveCompartir(consejero) {
+  if (consejero === "mentor") {
+    return "compartir";
+  }
+  return "compartir" + conMayuscula(consejero);
+}
+
+// ¿Ve un consejero mis datos? (si no se ha tocado su ajuste, sí; sin decir
+// cuál, Méntor)
+function compartirDatos(consejero) {
+  return ajustesConsejeros[claveCompartir(consejero || "mentor")] !== false;
 }
 
 // Una lista en una frase: ["a", "b", "c"] → «a, b y c».
@@ -6462,26 +6638,32 @@ function metasEnTexto() {
   return lineas;
 }
 
+// La primera línea de los resúmenes: el día y la hora («Ahora: viernes,
+// 16 de octubre de 2026, 10:30.»).
+function lineaAhora(ahora) {
+  return (
+    "Ahora: " +
+    ahora.toLocaleDateString("es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }) +
+    ", " +
+    ahora.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }) +
+    "."
+  );
+}
+
 // El resumen entero, en texto, tal como le llega a Méntor.
 function resumenParaConsejeros() {
   const ahora = new Date();
   const lineas = [];
 
-  lineas.push(
-    "Ahora: " +
-      ahora.toLocaleDateString("es-ES", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }) +
-      ", " +
-      ahora.toLocaleTimeString("es-ES", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }) +
-      ".",
-  );
+  lineas.push(lineaAhora(ahora));
 
   // Quién es (sin el peso)
   const quien = [];
@@ -6586,32 +6768,430 @@ function resumenParaConsejeros() {
   return lineas.join("\n");
 }
 
-// La ventana «Lo que ve Méntor»: el resumen tal cual y la casilla para
-// compartirlo o no.
+// ---------- El resumen para Prometheus ----------
+
+// Una fecha corta con su día de la semana: "2026-10-16" → «vie, 16 oct».
+function fechaConDia(clave) {
+  return new Date(clave + "T00:00").toLocaleDateString("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+// «1 noche», «6 noches».
+function textoNoches(cantidad) {
+  if (cantidad === 1) {
+    return "1 noche";
+  }
+  return cantidad + " noches";
+}
+
+// Cómo le fue un día con los hábitos, para ponerlo junto a la noche de
+// antes: «ese día cumplió 5 de 6 hábitos» (hoy: «hoy, de momento, 2 de 6
+// hábitos»).
+function diaEnTexto(clave) {
+  const resumen = resumenDelDia(new Date(clave + "T00:00"));
+  if (resumen.tocan === 0) {
+    return "ese día no tocaba ningún hábito";
+  }
+  const cuenta = resumen.cumplidos + " de " + resumen.tocan + " hábitos";
+  if (clave === hoy) {
+    return "hoy, de momento, " + cuenta;
+  }
+  return "ese día cumplió " + cuenta;
+}
+
+// Una línea por hábito con las cifras del laboratorio: sus reglas, su
+// constancia, su racha, su récord y el total (en templanza, los días sin
+// recaer).
+function habitoEnNumeros(habito) {
+  if (inicioDe(habito) > hoy) {
+    return (
+      "- " +
+      habito.nombre +
+      " (" +
+      reglasEnTexto(habito) +
+      "): empieza el " +
+      fechaLarga(inicioDe(habito))
+    );
+  }
+
+  const datos = numerosDe(habito);
+  const partes = [];
+  if (habito.medida === "abstencion") {
+    partes.push("lleva " + textoDias(datos.racha) + " sin recaer");
+    partes.push("récord: " + textoDias(datos.record));
+    partes.push("en total, " + textoDias(datos.total) + " sin recaer");
+  } else {
+    if (datos.posibles > 0) {
+      let periodo = " días que tocaba, en los últimos 30";
+      if (datos.enSemanas) {
+        periodo = " semanas, en las últimas 4";
+      }
+      partes.push(
+        "constancia: " +
+          textoPorcentaje(datos.porcentaje) +
+          " (" +
+          datos.cumplidos +
+          " de " +
+          datos.posibles +
+          periodo +
+          ")",
+      );
+    }
+    partes.push("racha: " + textoDuracion(datos.racha, datos.enSemanas));
+    partes.push("récord: " + textoDuracion(datos.record, datos.enSemanas));
+    let total = textoDias(datos.total);
+    if (datos.enSemanas) {
+      total = datos.total + " veces";
+      if (datos.total === 1) {
+        total = "1 vez";
+      }
+    }
+    partes.push("en total: " + total);
+  }
+
+  return (
+    "- " +
+    habito.nombre +
+    " (" +
+    reglasEnTexto(habito) +
+    "): " +
+    partes.join("; ")
+  );
+}
+
+// Un entreno en una línea: el día, el tipo, los minutos, la intensidad,
+// cada ejercicio con sus series y la nota.
+function entrenoEnTexto(entreno) {
+  let texto =
+    "- " +
+    fechaConDia(entreno.fecha) +
+    ": " +
+    nombreTipo(entreno.tipo).toLowerCase();
+  if (entreno.minutos) {
+    texto += ", " + entreno.minutos + " min";
+  }
+  texto +=
+    ", intensidad " +
+    entreno.intensidad +
+    " (" +
+    textoIntensidad(entreno.intensidad) +
+    ")";
+  entreno.ejercicios.forEach(function (ejercicio) {
+    let series = "sin series apuntadas";
+    if (ejercicio.series.length > 0) {
+      series = ejercicio.series.map(textoSerie).join(", ");
+    }
+    texto += ". " + ejercicio.nombre + ": " + series;
+  });
+  if (entreno.nota) {
+    texto += ". Nota: «" + entreno.nota + "»";
+  }
+  return texto + ".";
+}
+
+// El resumen para Prometheus: los números. Las cifras de los hábitos (las
+// del laboratorio), el peso, cada noche de sueño (con cómo le fue ese día
+// con los hábitos, para que pueda ver si van juntos), los entrenos con sus
+// series y el progreso de cada ejercicio. Para que no sea demasiado largo:
+// las noches de las últimas 4 semanas, los entrenos de las últimas 8 (30
+// como mucho), los 20 últimos pesos y los 8 ejercicios más recientes, con
+// sus 6 últimas sesiones.
+function resumenParaPrometheus() {
+  const ahora = new Date();
+  const datos = estadisticas();
+  const lineas = [lineaAhora(ahora)];
+
+  // Quién es: nombre, edad y altura
+  const quien = [];
+  if (perfil.nombre) {
+    quien.push("se llama " + perfil.nombre);
+  }
+  if (perfil.nacimiento) {
+    quien.push("tiene " + edadDe(perfil.nacimiento) + " años");
+  }
+  if (perfil.altura) {
+    quien.push("mide " + perfil.altura + " cm");
+  }
+  if (quien.length > 0) {
+    lineas.push(conMayuscula(enFrase(quien)) + ".");
+  }
+
+  // Los hábitos, con las cifras del laboratorio
+  lineas.push("");
+  if (habitos.length === 0) {
+    lineas.push("Hábitos: aún no tiene ninguno.");
+  } else {
+    lineas.push(
+      "Hábitos (hoy lleva " +
+        datos.hoy.cumplidos +
+        " de " +
+        datos.hoy.tocan +
+        " de los que tocan; en las cifras, hoy no cuenta: aún hay tiempo):",
+    );
+    habitos.forEach(function (habito) {
+      lineas.push(habitoEnNumeros(habito));
+    });
+
+    // Los últimos 30 días frente a los 30 de antes
+    const treinta = datos.treinta;
+    if (treinta.ahora.contados > 0) {
+      let linea =
+        "Últimos 30 días: " +
+        treinta.ahora.perfectos +
+        " días perfectos (todo lo que tocaba) de " +
+        treinta.ahora.contados +
+        " y " +
+        textoPorcentaje(
+          porcentaje(treinta.ahora.cumplidos, treinta.ahora.tocan),
+        ) +
+        " de lo que tocaba";
+      if (treinta.antes.contados > 0) {
+        linea +=
+          ". Los 30 de antes: " +
+          treinta.antes.perfectos +
+          " de " +
+          treinta.antes.contados +
+          " y " +
+          textoPorcentaje(
+            porcentaje(treinta.antes.cumplidos, treinta.antes.tocan),
+          );
+      }
+      lineas.push(linea + ".");
+    }
+
+    // Semana a semana y la semana tipo
+    if (datos.semanas.length > 0) {
+      lineas.push(
+        "Semana a semana (lo cumplido de lo que tocaba, por el lunes de cada semana; la última va hasta ayer): " +
+          datos.semanas
+            .map(function (semana) {
+              return (
+                fechaCorta(semana.lunes) +
+                " " +
+                textoPorcentaje(semana.porcentaje)
+              );
+            })
+            .join(", ") +
+          ".",
+      );
+    }
+    const dias = datos.dias.filter(function (dia) {
+      return dia.porcentaje !== null;
+    });
+    if (dias.length > 0) {
+      lineas.push(
+        "Cada día de la semana, en las últimas 8 semanas: " +
+          dias
+            .map(function (dia) {
+              return dia.nombre + " " + textoPorcentaje(dia.porcentaje);
+            })
+            .join(", ") +
+          ".",
+      );
+    }
+  }
+
+  // El peso
+  lineas.push("");
+  const pesos = datos.peso.pesos;
+  if (pesos.length === 0) {
+    lineas.push("Peso: aún no ha apuntado ninguno.");
+  } else {
+    lineas.push(
+      "Peso (del más antiguo al más nuevo): " +
+        pesos
+          .slice(-20)
+          .map(function (apunte) {
+            return fechaCorta(apunte.fecha) + ": " + textoKilos(apunte.kilos);
+          })
+          .join("; ") +
+        ".",
+    );
+    if (pesos.length > 1) {
+      const primero = datos.peso.primero;
+      const ultimo = datos.peso.ultimo;
+      const dias = Math.round(
+        (new Date(ultimo.fecha + "T00:00") -
+          new Date(primero.fecha + "T00:00")) /
+          86400000,
+      );
+      lineas.push(
+        "Del primero al último: " +
+          textoDiferencia(ultimo.kilos - primero.kilos) +
+          " en " +
+          textoDias(dias) +
+          ".",
+      );
+    }
+  }
+
+  // El sueño: cada noche, con cómo le fue el día
+  lineas.push("");
+  const noches = nochesRecientes(28);
+  if (noches.length === 0) {
+    lineas.push("Sueño: aún no ha apuntado ninguna noche.");
+  } else {
+    lineas.push(
+      "Sueño (cada noche va por el día en que se levantó; las de las últimas 4 semanas, de la más antigua a la más nueva):",
+    );
+    const sinApuntar = [];
+    noches.forEach(function (noche) {
+      if (noche.minutos === null) {
+        sinApuntar.push(fechaCorta(noche.dia));
+        return;
+      }
+      lineas.push(
+        "- " +
+          fechaConDia(noche.dia) +
+          ": de " +
+          noche.noche.acostarse +
+          " a " +
+          noche.noche.levantarse +
+          " (" +
+          textoHoras(noche.minutos) +
+          "), durmió " +
+          noche.noche.calidad +
+          "; " +
+          diaEnTexto(noche.dia),
+      );
+    });
+    if (sinApuntar.length > 0) {
+      lineas.push("Noches sin apuntar: " + sinApuntar.join(", ") + ".");
+    }
+    const semana = datos.sueno.semana;
+    const antes = datos.sueno.antes;
+    if (semana.media !== null) {
+      let linea =
+        "Media de los últimos 7 días: " +
+        textoHoras(semana.media) +
+        " (" +
+        textoNoches(semana.noches) +
+        ")";
+      if (antes.media !== null) {
+        linea +=
+          "; de los 7 anteriores: " +
+          textoHoras(antes.media) +
+          " (" +
+          textoNoches(antes.noches) +
+          ")";
+      }
+      lineas.push(linea + ".");
+    }
+  }
+
+  // Los entrenos de las últimas 8 semanas y cuántos cada semana
+  lineas.push("");
+  const todos = entrenosOrdenados();
+  const lunes = lunesDe(ahora);
+  const desde = fechaMas(lunes, -49).toLocaleDateString("en-CA");
+  const recientes = todos.filter(function (entreno) {
+    return entreno.fecha >= desde;
+  });
+  if (todos.length === 0) {
+    lineas.push("Entrenos: aún no ha apuntado ninguno.");
+  } else if (recientes.length === 0) {
+    lineas.push(
+      "Entrenos: ninguno en las últimas 8 semanas (el último, el " +
+        fechaLarga(todos[0].fecha) +
+        ").",
+    );
+  } else {
+    lineas.push(
+      "Entrenos de las últimas 8 semanas (del más reciente al más antiguo; la intensidad va del 1 al 10; cada serie, kilos × repeticiones):",
+    );
+    recientes.slice(0, 30).forEach(function (entreno) {
+      lineas.push(entrenoEnTexto(entreno));
+    });
+    const semanas = [];
+    for (let i = 7; i >= 0; i--) {
+      const inicio = fechaMas(lunes, -7 * i);
+      const suma = entrenosDeLaSemana(inicio);
+      let texto =
+        fechaCorta(inicio.toLocaleDateString("en-CA")) + ": " + suma.cuantos;
+      if (suma.minutos > 0) {
+        texto += " (" + suma.minutos + " min)";
+      }
+      semanas.push(texto);
+    }
+    lineas.push(
+      "Entrenos por semana (por el lunes de cada semana; la última es esta): " +
+        semanas.join(", ") +
+        ".",
+    );
+  }
+
+  // El progreso de cada ejercicio
+  const ejercicios = nombresEjercicios().slice(0, 8);
+  if (ejercicios.length > 0) {
+    lineas.push("");
+    lineas.push(
+      "Progreso en el gimnasio (la mejor serie de cada sesión: más kilos o, con los mismos kilos, más repeticiones; de la más antigua a la más nueva):",
+    );
+    ejercicios.forEach(function (nombre) {
+      lineas.push(
+        "- " +
+          nombre +
+          ": " +
+          historialEjercicio(nombre)
+            .slice(-6)
+            .map(function (sesion) {
+              return fechaCorta(sesion.fecha) + " " + textoSerie(sesion.mejor);
+            })
+            .join("; "),
+      );
+    });
+  }
+
+  return lineas.join("\n");
+}
+
+// La ventana «Lo que ve…»: el resumen que recibe un consejero, tal cual, y
+// la casilla para compartirlo o no. La abre «Lo que ve Méntor» o «Lo que ve
+// Prometheus», debajo de cada charla (bloque 25).
 const ventanaContexto = document.getElementById("ventana-contexto");
 const casillaCompartir = document.getElementById("compartir-datos");
 
-// Pone en la ventana el resumen (o que no se comparte nada).
+// La sala cuya ventana está abierta (salas.mentor o salas.prometheus).
+let salaContexto = null;
+
+// Pone en la ventana el nombre del consejero y su resumen (o que no se
+// comparte nada).
 function mostrarContexto() {
-  casillaCompartir.checked = compartirDatos();
+  const sala = salaContexto;
+  const compartir = compartirDatos(sala.consejero);
+  document.getElementById("contexto-titulo").textContent =
+    "Lo que ve " + sala.nombre;
+  document.getElementById("contexto-explicacion").textContent =
+    "Con cada mensaje, " +
+    sala.nombre +
+    " recibe este resumen de tus datos de Ergon. Lo prepara la app en el momento; no ve nada más.";
+  document.getElementById("compartir-texto").textContent =
+    "Compartir mis datos con " + sala.nombre;
+  casillaCompartir.checked = compartir;
+
   const texto = document.getElementById("contexto-texto");
-  if (compartirDatos()) {
-    texto.textContent = resumenParaConsejeros();
+  if (compartir) {
+    texto.textContent = sala.resumen();
   } else {
     texto.textContent =
-      "No compartes tus datos: Méntor solo ve lo que le escribes.";
+      "No compartes tus datos: " + sala.nombre + " solo ve lo que le escribes.";
   }
 }
 
-document
-  .getElementById("boton-lo-que-ve")
-  .addEventListener("click", function () {
-    mostrarContexto();
-    ventanaContexto.showModal();
-  });
+// Abre la ventana con lo que ve el consejero de una sala.
+function abrirContexto(sala) {
+  salaContexto = sala;
+  mostrarContexto();
+  ventanaContexto.showModal();
+}
 
+// La casilla: se guarda para ese consejero (y se sincroniza).
 casillaCompartir.addEventListener("change", function () {
-  ajustesConsejeros.compartir = casillaCompartir.checked;
+  ajustesConsejeros[claveCompartir(salaContexto.consejero)] =
+    casillaCompartir.checked;
   guardarAjustesConsejeros();
   mostrarContexto();
 });
@@ -7294,10 +7874,12 @@ function senalesDe(datos) {
 // 28. PROMETHEUS · EL LABORATORIO
 // Dibuja la pestaña Prometheus con los números del bloque 27: el anillo de
 // hoy, las cifras, las columnas de cada semana, las barras de la semana
-// tipo, el peso y cada disciplina. Las columnas y los puntos del peso
-// enseñan su dato al pasar por encima o al tocarlos, y cada gráfica tiene
-// sus datos también en una tabla («Ver los datos»). El estilo futurista
-// está en style.css, bloque 21.
+// tipo, el peso, el sueño, los entrenos, el progreso en el gimnasio y cada
+// disciplina. Las columnas y los puntos enseñan su dato al pasar por
+// encima o al tocarlos, y las gráficas tienen sus datos también en una
+// tabla («Ver los datos»). Al final, las dos vistas de la pestaña: los
+// datos y hablar con Prometheus (la charla es la del bloque 25). El estilo
+// futurista está en style.css, bloque 21.
 // ==========================================================================
 
 // El cuadrito con el dato de una columna o de un punto.
@@ -8327,6 +8909,45 @@ document
     dibujarProgreso();
   });
 
+// La vista del laboratorio que se está viendo: "datos" o "charla" (hablar
+// con Prometheus). Al abrir la app, los datos; luego se recuerda mientras
+// la app sigue abierta.
+let vistaLab = "datos";
+
+// Enseña la vista elegida del laboratorio e ilumina su botón (aria-pressed
+// le dice al lector de pantalla cuál está pulsado). En la de hablar, la
+// charla empieza abajo, en lo último que se ha dicho (bloque 25); las
+// señales solo pasan en la de los datos.
+function mostrarVistaLab() {
+  const enCharla = vistaLab === "charla";
+  document.getElementById("lab-vista-datos").hidden = enCharla;
+  document.getElementById("lab-vista-charla").hidden = !enCharla;
+  document.querySelectorAll(".lab-vista").forEach(function (boton) {
+    const activa = boton.dataset.vista === vistaLab;
+    boton.classList.toggle("activa", activa);
+    boton.setAttribute("aria-pressed", String(activa));
+  });
+  esconderDato();
+
+  if (enCharla) {
+    pararSenales();
+    mostrarSala(salas.prometheus);
+    irAlFinal();
+    enfocarCampoCharla(salas.prometheus);
+  } else {
+    iniciarSenales();
+    window.scrollTo(0, 0);
+  }
+}
+
+// Los botones «Datos» y «Hablar».
+document.querySelectorAll(".lab-vista").forEach(function (boton) {
+  boton.addEventListener("click", function () {
+    vistaLab = boton.dataset.vista;
+    mostrarVistaLab();
+  });
+});
+
 // ==========================================================================
 // 29. PROMETHEUS · APUNTAR EL SUEÑO
 // Cada noche se guarda por el día en que me levanté: a qué hora me acosté,
@@ -9117,16 +9738,15 @@ function mostrarPantalla(nombre) {
   // En Prometheus, toda la app se vuelve el laboratorio: la clase
   // «en-prometheus» del body oscurece el fondo y las barras (style.css,
   // bloque 21), y la franja de la hora del móvil (theme-color) pasa a
-  // oscura. Las señales solo van pasando mientras se ve la pantalla
+  // oscura. Las señales solo van pasando mientras se ven los datos (las
+  // pone en marcha mostrarVistaLab, abajo)
   const enPrometheus = nombre === "prometheus";
   document.body.classList.toggle("en-prometheus", enPrometheus);
   document
     .querySelector('meta[name="theme-color"]')
     .setAttribute("content", enPrometheus ? "#090C10" : "#F4F1EA");
   esconderDato();
-  if (enPrometheus) {
-    iniciarSenales();
-  } else {
+  if (!enPrometheus) {
     pararSenales();
   }
 
@@ -9137,11 +9757,13 @@ function mostrarPantalla(nombre) {
   }
 
   // La pestaña Méntor empieza abajo, en lo último que se ha dicho (bloque
-  // 25); las demás, arriba
+  // 25); Prometheus, en la vista que estaba (bloque 28); las demás, arriba
   if (nombre === "charla") {
-    mostrarCharla();
+    mostrarSala(salas.mentor);
     irAlFinal();
-    enfocarCampoCharla();
+    enfocarCampoCharla(salas.mentor);
+  } else if (enPrometheus) {
+    mostrarVistaLab();
   } else {
     window.scrollTo(0, 0);
   }
@@ -9184,7 +9806,7 @@ if ("serviceWorker" in navigator) {
 // Vuelve a dibujar todo. Se llama cada vez que cambia algo.
 function actualizarTodo() {
   mostrarCuenta();
-  mostrarCharla();
+  mostrarCharlas();
   mostrarRituales();
   mostrarRevisionEnHoy();
   mostrarHabitos();
