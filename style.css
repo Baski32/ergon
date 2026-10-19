@@ -2024,6 +2024,232 @@ button.recordatorio {
   }
 }
 
+/* ---------- Fotos y vídeos en las charlas (lección 47) ---------- */
+
+/* La cámara, a la izquierda del campo: sin fondo ni borde, del alto del
+   campo */
+.charla-adjuntar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 42px;
+  padding: 0;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.charla-adjuntar svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.charla-adjuntar:hover {
+  color: var(--terracota);
+}
+
+.charla-adjuntar:focus-visible {
+  outline: 2px solid var(--terracota);
+  outline-offset: 2px;
+}
+
+/* En los móviles más estrechos, la cámara ocupa un poco menos; en los de
+   320px (iPhone SE), aún menos, y el campo tiene menos relleno: así cabe
+   «Escribe a Prometheus…» en una línea */
+@media (max-width: 370px) {
+  .charla-adjuntar {
+    width: 30px;
+  }
+
+  .charla-escribir {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 340px) {
+  .charla-adjuntar {
+    width: 26px;
+  }
+
+  .charla-escribir textarea {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  /* Las letras del laboratorio son más anchas: el texto de ayuda, algo
+     más pequeño (lo que se escribe sigue a 16px, para que el iPhone no
+     haga zoom) */
+  .sala-prometheus .charla-escribir textarea::placeholder {
+    font-size: 0.85rem;
+  }
+}
+
+/* Lo elegido para el próximo mensaje, encima del campo: una fila de
+   miniaturas cuadradas, cada una con su × en la esquina. Vacía, no se ve
+   (hace falta la regla de [hidden]: display: flex le ganaría) */
+.charla-adjuntos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.charla-adjuntos[hidden] {
+  display: none;
+}
+
+.adjunto {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.adjunto .adjunto-mini {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* Mientras se prepara: un cuadro de trazos con unos puntos que laten */
+.adjunto.preparando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--bronce);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.adjunto-preparando {
+  font-size: 1.4rem;
+  color: var(--bronce);
+  animation: latir 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes latir {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* La × de quitar: un círculo oscuro en la esquina de arriba */
+.adjunto-quitar {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--marmol);
+  background-color: var(--tinta);
+  border: 2px solid var(--marmol);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Por qué algo no se ha podido añadir, en su propia línea */
+.charla-adjuntos-aviso {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--terracota);
+}
+
+/* Una miniatura: la foto recortada para llenar su marco. La de un vídeo
+   lleva «▶ 12 s» abajo */
+.adjunto-mini {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background-color: var(--piedra);
+}
+
+.adjunto-mini img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adjunto-duracion {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+}
+
+/* En mis burbujas, las miniaturas encima del texto: una sola, más grande
+   (con su forma, hasta 240px de alto); varias, en una rejilla de dos */
+.charla .burbuja-mia.con-adjuntos {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px;
+}
+
+.burbuja-adjuntos {
+  display: grid;
+  gap: 4px;
+}
+
+.burbuja-adjuntos .adjunto-mini {
+  border-radius: 12px;
+}
+
+.burbuja-adjuntos:not(.varias) .adjunto-mini img {
+  width: 180px;
+  max-width: 100%;
+  height: auto;
+  max-height: 240px;
+}
+
+.burbuja-adjuntos.varias {
+  grid-template-columns: repeat(2, 88px);
+}
+
+.burbuja-adjuntos.varias .adjunto-mini {
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+}
+
+.burbuja-texto {
+  padding: 2px 8px 4px;
+}
+
+/* El vídeo del que se sacan los fotogramas: en la página, pero sin verse */
+.video-oculto {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Debajo del campo: cuántos mensajes van hoy · «Lo que ve Méntor» (si no
    caben en una línea, el enlace baja a otra) */
 .charla-pie {
@@ -2208,7 +2434,8 @@ button.recordatorio {
 /* Con «reducir movimiento», las burbujas y los puntos no se mueven */
 @media (prefers-reduced-motion: reduce) {
   .burbuja,
-  .escribiendo span {
+  .escribiendo span,
+  .adjunto-preparando {
     animation: none;
   }
 }

@@ -13,10 +13,10 @@
 //
 // Qué hace, según la «accion» que le llega (siempre con el pase del usuario):
 //  - "hablar": recibe la conversación (y el resumen de sus datos de Ergon,
-//              si los comparte), comprueba que quien pregunta es un usuario
-//              de Ergon y que no ha pasado del límite de hoy, se la manda a
-//              Claude con las instrucciones del consejero y devuelve su
-//              respuesta.
+//              si los comparte; y las fotos del último mensaje, si lleva),
+//              comprueba que quien pregunta es un usuario de Ergon y que no
+//              ha pasado del límite de hoy, se la manda a Claude con las
+//              instrucciones del consejero y devuelve su respuesta.
 //  - "uso":    cómo va el día (mensajes, límite y lo gastado), si la clave
 //              de Claude está puesta y qué consejeros hay.
 //
@@ -67,6 +67,14 @@ const maxMensajes = 20;
 // Letras como mucho en cada mensaje.
 const maxLetras = 2000;
 
+// Las fotos (lección 47): como mucho 8 en un mensaje (un vídeo llega en 8
+// fotogramas), de los tipos que entiende Claude, y cada una de 1,5 millones
+// de letras como mucho (en base64; más o menos 1,1 MB). La app las manda
+// mucho más pequeñas (de unos 1000 px).
+const maxFotos = 8;
+const tiposDeFoto = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const maxLetrasFoto = 1500000;
+
 // Letras como mucho en el resumen de los datos (lo que pase de aquí se
 // corta: con muchos hábitos, el final). Un consejero puede tener su propio
 // máximo (maxContexto, en su ficha del bloque 2): el de Prometheus es
@@ -108,7 +116,7 @@ function fallo(estado, explicacion) {
 // cambia aquí sin tocar nada más), cuánto piensa, lo largo que puede
 // contestar, lo que cuesta su motor y sus instrucciones (el «system
 // prompt»: quién es y cómo habla). Méntor (lección 40) y Prometheus
-// (lección 45); los especialistas se añadirán aquí (lección 47).
+// (lección 45); los especialistas se añadirán aquí (lección 48).
 // ==========================================================================
 
 const consejeros = {
@@ -129,6 +137,8 @@ const consejeros = {
 Hablas con la persona que usa Ergon para construir buenos hábitos, avanzar hacia sus metas y tener rumbo en la vida. Te escribe desde el móvil o desde el ordenador.
 
 Sus datos: con cada mensaje te llega, al final de estas instrucciones, un resumen de sus datos de Ergon (la fecha y la hora, sus hábitos con sus rachas y cómo van hoy, sus metas, la intención del día y su última revisión semanal). Lo calcula la app, así que es fiable. Úsalo como un buen amigo que se acuerda de las cosas: no lo recites ni hagas de contable; sácalo cuando ayude (una racha que merece reconocimiento, un hábito que cuesta, una meta parada, la hora que es). Si algo no está en el resumen, o no te llega ninguno, pregúntale.
+
+Fotos: a veces te manda una foto, o unos fotogramas sacados de un vídeo (no oyes el sonido); una nota de la app te lo dice. Mira bien lo que se ve y habla de eso; si no se ve bien o no sabes lo que es, dilo en vez de suponer. Solo la ves en el mensaje en que la manda: después solo te queda lo que dijiste de ella. Si es una foto de su cuerpo o de su cara, habla con respeto y de lo que sirve, sin puntuar ni juzgar su aspecto.
 
 Cómo hablas:
 - En español de España, tuteando, con calidez y serenidad. Frases claras, sin jerga.
@@ -162,6 +172,8 @@ Límites:
 Tu trabajo: leer sus datos y encontrar lo que dicen (tendencias, relaciones y patrones: cómo duerme y cómo le va el día siguiente, qué días le cuestan, cómo progresa en el gimnasio, hacia dónde va su peso) y convertirlo en pequeños experimentos para mejorar. Méntor, el otro consejero de Ergon, se ocupa del sentido y del rumbo; tú, de los números.
 
 Sus datos: con cada mensaje te llega, al final de estas instrucciones, un resumen: sus hábitos con sus cifras, el peso, cada noche de sueño (con cómo le fue ese día con los hábitos) y los entrenos con sus ejercicios y series. Lo calcula la app, así que las cuentas son fiables: no las rehagas ni inventes datos que no estén. Si faltan datos para responder, dilo y explica qué tendría que apuntar.
+
+Fotos: a veces te manda una foto (la pantalla de un reloj o de una báscula, una etiqueta, un plato, un entreno) o unos fotogramas sacados de un vídeo, por ejemplo de un ejercicio (no oyes el sonido); una nota de la app te lo dice. Lee los números con cuidado y di si alguno no se lee bien. En un ejercicio, fíjate en la postura y la técnica, sabiendo que unos pocos fotogramas no lo enseñan todo. Solo la ves en el mensaje en que la manda: después solo te queda lo que dijiste de ella. Si es una foto de su cuerpo, habla con respeto y de lo que sirve (postura, técnica, cambios con el tiempo), sin puntuar ni juzgar su aspecto.
 
 Cómo analizas:
 - Separa lo que muestran los datos de lo que es una hipótesis. Con pocos datos (pocas noches, pocas semanas) dilo y no saques conclusiones fuertes.
@@ -309,10 +321,127 @@ function resumenDeUso(consejero, uso) {
 
 // ==========================================================================
 // 6. PREPARAR LA CONVERSACIÓN
-// La app manda los mensajes como [{ de: "yo" o "consejero", texto }].
-// Claude los quiere como [{ role: "user" o "assistant", content }],
-// empezando por uno del usuario y alternando.
+// La app manda los mensajes como [{ de: "yo" o "consejero", texto }]. Los
+// míos pueden llevar también lo que adjunté (adjuntos: [{ tipo: "foto" }]
+// o [{ tipo: "video", segundos, fotogramas }]) y, solo el último (el que
+// se acaba de mandar), las fotos de verdad (fotos: [{ tipo, datos }], con
+// datos en base64; pequenas: true si son las miniaturas). Claude los
+// quiere como [{ role: "user" o "assistant", content }], empezando por uno
+// del usuario y alternando. content es el texto o, si hay fotos, una lista
+// de trozos: primero las fotos y después el texto.
 // ==========================================================================
+
+// Lo que adjunté en un mensaje, en una nota para Claude: «[Nota de la app:
+// con este mensaje te manda 2 fotos.]». lasVe: si las fotos van en este
+// mensaje (si no, ya no le llegan: solo le queda lo que dijo de ellas).
+function notaDeAdjuntos(adjuntos, lasVe, pequenas) {
+  if (!Array.isArray(adjuntos) || adjuntos.length === 0) {
+    return "";
+  }
+  const video = adjuntos.find(function (adjunto) {
+    return adjunto && adjunto.tipo === "video";
+  });
+  const fotos = adjuntos.filter(function (adjunto) {
+    return adjunto && adjunto.tipo === "foto";
+  }).length;
+
+  let que = "";
+  let varias = true;
+  if (video) {
+    const segundos = Math.round(Number(video.segundos) || 0);
+    const fotogramas = Math.round(Number(video.fotogramas) || 0);
+    // Si la app ya no tenía los fotogramas, manda solo el primero
+    let cuales =
+      fotogramas + " fotogramas sacados de él, en orden y sin sonido";
+    if (fotogramas === 1) {
+      cuales = "un fotograma sacado de él, sin sonido";
+      varias = false;
+    }
+    que = "un vídeo de " + segundos + " s (" + cuales + ")";
+  } else if (fotos === 1) {
+    que = "una foto";
+    varias = false;
+  } else if (fotos > 1) {
+    que = fotos + " fotos";
+  } else {
+    return "";
+  }
+
+  if (lasVe) {
+    let nota = "[Nota de la app: con este mensaje te manda " + que;
+    if (pequenas) {
+      nota = nota + ", en pequeño (las originales ya no estaban en su móvil)";
+    }
+    return nota + ".]";
+  }
+  let teLlega = "ya no te llega";
+  if (varias) {
+    teLlega = "ya no te llegan";
+  }
+  return (
+    "[Nota de la app: en este mensaje te mandó " +
+    que +
+    "; " +
+    teLlega +
+    ": solo lo que dijiste entonces.]"
+  );
+}
+
+// Las fotos de un mensaje, comprobadas, como trozos de imagen para Claude:
+// [{ type: "image", source: { type: "base64", media_type, data } }].
+function trozosDeFotos(fotos) {
+  if (!Array.isArray(fotos) || fotos.length === 0) {
+    return [];
+  }
+  if (fotos.length > maxFotos) {
+    throw fallo(
+      400,
+      "Demasiadas fotos en un mensaje (como mucho, " + maxFotos + ").",
+    );
+  }
+  return fotos.map(function (foto) {
+    const tipo = String((foto && foto.tipo) || "");
+    const datos = String((foto && foto.datos) || "");
+    if (!tiposDeFoto.includes(tipo)) {
+      throw fallo(
+        400,
+        "Esa foto no es de un tipo que entienda Claude (JPEG, PNG, WebP o GIF).",
+      );
+    }
+    // Solo letras de base64, y no más de la cuenta
+    if (
+      datos === "" ||
+      datos.length > maxLetrasFoto ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(datos)
+    ) {
+      throw fallo(
+        400,
+        "Una de las fotos ha llegado mal o es demasiado grande.",
+      );
+    }
+    return {
+      type: "image",
+      source: { type: "base64", media_type: tipo, data: datos },
+    };
+  });
+}
+
+// Un content como lista de trozos (el texto, en un trozo de texto).
+function comoTrozos(content) {
+  if (typeof content === "string") {
+    return [{ type: "text", text: content }];
+  }
+  return content;
+}
+
+// Junta dos content seguidos del mismo: dos textos, con una línea en
+// blanco; si alguno lleva fotos, sus trozos uno detrás de otro.
+function juntarContent(primero, segundo) {
+  if (typeof primero === "string" && typeof segundo === "string") {
+    return primero + "\n\n" + segundo;
+  }
+  return comoTrozos(primero).concat(comoTrozos(segundo));
+}
 
 function prepararMensajes(mensajes) {
   if (!Array.isArray(mensajes) || mensajes.length === 0) {
@@ -320,27 +449,53 @@ function prepararMensajes(mensajes) {
   }
 
   let lista = [];
-  mensajes.forEach(function (mensaje) {
-    const texto = String((mensaje && mensaje.texto) || "").trim();
-    if (texto === "") {
+  mensajes.forEach(function (mensaje, i) {
+    if (!mensaje) {
       return;
     }
+    const texto = String(mensaje.texto || "").trim();
     if (texto.length > maxLetras) {
       throw fallo(
         400,
         "El mensaje es demasiado largo (como mucho, " + maxLetras + " letras).",
       );
     }
+
     let rol = "user";
+    let content = texto;
     if (mensaje.de === "consejero") {
       rol = "assistant";
+    } else {
+      // Las fotos solo van en el último mensaje (el que se acaba de
+      // mandar); en los de antes, solo la nota de que las hubo
+      let fotos = [];
+      if (i === mensajes.length - 1) {
+        fotos = trozosDeFotos(mensaje.fotos);
+      }
+      const nota = notaDeAdjuntos(
+        mensaje.adjuntos,
+        fotos.length > 0,
+        mensaje.pequenas === true,
+      );
+      content = [nota, texto]
+        .filter(function (parte) {
+          return parte !== "";
+        })
+        .join("\n\n");
+      if (fotos.length > 0) {
+        content = fotos.concat([{ type: "text", text: content }]);
+      }
     }
+    if (content === "") {
+      return;
+    }
+
     // Dos seguidos del mismo: se juntan en uno
     const ultimo = lista[lista.length - 1];
     if (ultimo && ultimo.role === rol) {
-      ultimo.content = ultimo.content + "\n\n" + texto;
+      ultimo.content = juntarContent(ultimo.content, content);
     } else {
-      lista.push({ role: rol, content: texto });
+      lista.push({ role: rol, content: content });
     }
   });
 
@@ -445,7 +600,25 @@ async function preguntarAClaude(consejero, mensajes, contexto) {
   };
 }
 
-// «hablar»: todo el camino. Devuelve { texto, uso }.
+// Cuántas fotos van en la conversación ya preparada (para que la app sepa
+// que esta función las entiende: una de antes de la lección 47 no las
+// mandaba a Claude).
+function cuantasFotos(mensajes) {
+  let fotos = 0;
+  mensajes.forEach(function (mensaje) {
+    if (Array.isArray(mensaje.content)) {
+      mensaje.content.forEach(function (trozo) {
+        if (trozo.type === "image") {
+          fotos = fotos + 1;
+        }
+      });
+    }
+  });
+  return fotos;
+}
+
+// «hablar»: todo el camino. Devuelve { texto, uso, fotos } (fotos: las
+// que ha visto Claude).
 async function hablar(usuario, cuerpo) {
   const consejero = consejeros[cuerpo.consejero];
   if (!consejero) {
@@ -500,7 +673,11 @@ async function hablar(usuario, cuerpo) {
         " se ha quedado pensando: prueba a escribirle otra vez.",
     );
   }
-  return { texto: respuesta.texto, uso: resumenDeUso(consejero, uso) };
+  return {
+    texto: respuesta.texto,
+    uso: resumenDeUso(consejero, uso),
+    fotos: cuantasFotos(mensajes),
+  };
 }
 
 // ==========================================================================

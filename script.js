@@ -5792,9 +5792,9 @@ function llamarConsejero(cuerpo) {
 }
 
 // Manda una conversación a un consejero ("mentor" o "prometheus") y
-// devuelve su respuesta. mensajes: [{ de: "yo" o "consejero", texto }].
-// contexto: el resumen de mis datos (bloque 26), o "" si no se comparten.
-// Lo usan las charlas (bloque 25).
+// devuelve su respuesta. mensajes: [{ de: "yo" o "consejero", texto }]; el
+// último puede llevar fotos (bloque 25). contexto: el resumen de mis datos
+// (bloque 26), o "" si no se comparten. Lo usan las charlas (bloque 25).
 async function hablarConConsejero(consejero, mensajes, contexto) {
   const respuesta = await llamarConsejero({
     accion: "hablar",
@@ -5803,6 +5803,17 @@ async function hablarConConsejero(consejero, mensajes, contexto) {
     contexto: contexto || "",
   });
   usoConsejeros = respuesta.uso;
+
+  // Si iban fotos y la función no dice cuántas ha visto, es la de antes
+  // de la lección 47: ha contestado sin verlas
+  const conFotos = mensajes.some(function (mensaje) {
+    return mensaje.fotos && mensaje.fotos.length > 0;
+  });
+  if (conFotos && typeof respuesta.fotos !== "number") {
+    throw new Error(
+      "Falta desplegar en Supabase la versión nueva de la función «consejero»: sin ella, no ve las fotos.",
+    );
+  }
   return respuesta.texto;
 }
 
@@ -5963,7 +5974,8 @@ document
 // después. Las respuestas llegan de Claude a través del servidor
 // (hablarConConsejero, bloque 24). Cada sala tiene dos vistas: la
 // conversación abierta (con el campo para escribir) y la lista de las
-// conversaciones guardadas.
+// conversaciones guardadas. Con la cámara de junto al campo se les pueden
+// mandar fotos o un vídeo (lección 47; más abajo, «Fotos y vídeos»).
 // ==========================================================================
 
 // Las salas. Cada una tiene:
@@ -5982,6 +5994,8 @@ document
 //    esa; si no, una nueva); si se está viendo la lista (viendoLista); la
 //    conversación que espera la respuesta (esperando: su id, o null) y el
 //    último fallo (error: { id, texto }, o null).
+//  - Las fotos o el vídeo elegidos para el próximo mensaje (adjuntos) y,
+//    si alguno no se ha podido añadir, por qué (avisoAdjuntos).
 const salas = {
   mentor: {
     consejero: "mentor",
@@ -5998,6 +6012,8 @@ const salas = {
     viendoLista: false,
     esperando: null,
     error: null,
+    adjuntos: [],
+    avisoAdjuntos: "",
   },
   prometheus: {
     consejero: "prometheus",
@@ -6026,6 +6042,8 @@ const salas = {
     viendoLista: false,
     esperando: null,
     error: null,
+    adjuntos: [],
+    avisoAdjuntos: "",
   },
 };
 
@@ -6083,12 +6101,45 @@ function tituloDe(texto) {
   return corte + "…";
 }
 
-// Una burbuja con lo que yo he escrito, a la derecha (como mis respuestas
-// del bloque 8, pero sin poder tocarla para cambiarla).
-function burbujaYo(texto) {
+// El título de una conversación que empieza solo con fotos: «Foto», «3
+// fotos» o «Vídeo».
+function tituloDeAdjuntos(adjuntos) {
+  if (adjuntos[0].tipo === "video") {
+    return "Vídeo";
+  }
+  if (adjuntos.length === 1) {
+    return "Foto";
+  }
+  return adjuntos.length + " fotos";
+}
+
+// Una burbuja con un mensaje mío, a la derecha (como mis respuestas del
+// bloque 8, pero sin poder tocarla para cambiarla): las miniaturas de lo
+// que adjunté, si adjunté algo, y lo que escribí.
+function burbujaYo(mensaje) {
   const burbuja = document.createElement("p");
   burbuja.classList.add("burbuja", "burbuja-mia");
-  burbuja.textContent = texto;
+  if (mensaje.adjuntos && mensaje.adjuntos.length > 0) {
+    burbuja.classList.add("con-adjuntos");
+    const fotos = document.createElement("span");
+    fotos.classList.add("burbuja-adjuntos");
+    if (mensaje.adjuntos.length > 1) {
+      fotos.classList.add("varias");
+    }
+    mensaje.adjuntos.forEach(function (adjunto) {
+      fotos.append(miniaturaAdjunto(adjunto));
+    });
+    burbuja.append(fotos);
+    // El texto, en su caja (la burbuja tiene menos relleno)
+    if (mensaje.texto) {
+      const texto = document.createElement("span");
+      texto.classList.add("burbuja-texto");
+      texto.textContent = mensaje.texto;
+      burbuja.append(texto);
+    }
+    return burbuja;
+  }
+  burbuja.textContent = mensaje.texto;
   return burbuja;
 }
 
@@ -6180,7 +6231,7 @@ function dibujarCharla(sala) {
 
   conversacion.mensajes.forEach(function (mensaje) {
     if (mensaje.de === "yo") {
-      caja.append(burbujaYo(mensaje.texto));
+      caja.append(burbujaYo(mensaje));
     } else {
       caja.append(sala.burbuja(mensaje.texto));
     }
@@ -6292,6 +6343,7 @@ function mostrarSala(sala) {
   pieza(sala, "charla").hidden = !conCuenta || sala.viendoLista;
   pieza(sala, "charla-escribir").hidden = !conCuenta || sala.viendoLista;
   pieza(sala, "charla-pie").hidden = !conCuenta || sala.viendoLista;
+  dibujarAdjuntos(sala);
   if (!conCuenta) {
     return;
   }
@@ -6313,8 +6365,7 @@ function mostrarSala(sala) {
   pieza(sala, "charla-ver-lista").textContent = textoLista;
 
   // Mientras el consejero contesta, no se puede enviar otro mensaje
-  pieza(sala, "charla-escribir").querySelector("button").disabled =
-    sala.esperando !== null;
+  estadoEnviar(sala);
   mostrarUsoCharla();
 
   if (sala.viendoLista) {
@@ -6388,9 +6439,7 @@ async function pedirRespuesta(sala, id) {
   bajarAlFinal();
 
   try {
-    const mensajes = conversaciones[id].mensajes.map(function (mensaje) {
-      return { de: mensaje.de, texto: mensaje.texto };
-    });
+    const mensajes = mensajesParaConsejero(id);
     // Con el resumen de mis datos, si los comparto con él (bloque 26)
     let contexto = "";
     if (compartirDatos(sala.consejero)) {
@@ -6409,6 +6458,9 @@ async function pedirRespuesta(sala, id) {
       });
       conversacion.actualizada = ahora;
       guardarConversacion(id);
+      // Contestado: las fotos enteras ya no hacen falta
+      const mio = conversacion.mensajes[conversacion.mensajes.length - 2];
+      delete fotosEnMemoria[claveFotos(id, mio)];
     }
   } catch (error) {
     sala.error = { id: id, texto: textoErrorConsejero(error) };
@@ -6422,22 +6474,69 @@ async function pedirRespuesta(sala, id) {
   }
 }
 
-// Envía lo escrito: se añade a la conversación abierta de la sala (o crea
-// una nueva, con su consejero) y se pide la respuesta. Al escribir en una,
-// queda elegida: aunque llegue otra más reciente de otro dispositivo, se
-// sigue en esta.
-function enviarACharla(sala, texto) {
+// Los mensajes de una conversación tal como van al consejero (bloque 24):
+// { de, texto } y, si adjunté algo, qué era (adjuntos, sin las miniaturas).
+// El último, si es mío, lleva también las fotos (fotos: [{ tipo, datos }]):
+// las enteras, si la app aún las tiene; si no (se cerró antes de que
+// contestara), las miniaturas, avisando de que son pequeñas.
+function mensajesParaConsejero(id) {
+  const lista = conversaciones[id].mensajes;
+  return lista.map(function (mensaje, i) {
+    const enviar = { de: mensaje.de, texto: mensaje.texto };
+    if (!mensaje.adjuntos || mensaje.adjuntos.length === 0) {
+      return enviar;
+    }
+    enviar.adjuntos = mensaje.adjuntos.map(function (adjunto) {
+      return {
+        tipo: adjunto.tipo,
+        segundos: adjunto.segundos,
+        fotogramas: adjunto.fotogramas,
+      };
+    });
+    if (i === lista.length - 1) {
+      const enteras = fotosEnMemoria[claveFotos(id, mensaje)];
+      if (enteras) {
+        enviar.fotos = enteras;
+      } else {
+        enviar.fotos = mensaje.adjuntos.map(function (adjunto) {
+          return { tipo: "image/jpeg", datos: adjunto.miniatura.split(",")[1] };
+        });
+        enviar.pequenas = true;
+        // De un vídeo solo queda la miniatura del primer fotograma
+        enviar.adjuntos.forEach(function (adjunto) {
+          if (adjunto.tipo === "video") {
+            adjunto.fotogramas = 1;
+          }
+        });
+      }
+    }
+    return enviar;
+  });
+}
+
+// Envía un mensaje: se añade a la conversación abierta de la sala (o crea
+// una nueva, con su consejero) y se pide la respuesta. adjuntos: las fotos
+// o el vídeo ya preparados (o ninguno); del mensaje se guardan sus
+// miniaturas, y las fotos enteras se quedan en memoria hasta que conteste.
+// Al escribir en una conversación, queda elegida: aunque llegue otra más
+// reciente de otro dispositivo, se sigue en esta.
+function enviarACharla(sala, texto, adjuntos) {
   const ahora = new Date().toISOString();
+  const conAdjuntos = Array.isArray(adjuntos) && adjuntos.length > 0;
   let conversacion = conversaciones[sala.abierta];
 
   if (!conversacion) {
     const id = "c" + Date.now();
+    let titulo = tituloDe(texto);
+    if (titulo === "" && conAdjuntos) {
+      titulo = tituloDeAdjuntos(adjuntos);
+    }
     conversacion = {
       id: id,
       consejero: sala.consejero,
       creada: ahora,
       actualizada: ahora,
-      titulo: tituloDe(texto),
+      titulo: titulo,
       mensajes: [],
     };
     conversaciones[id] = conversacion;
@@ -6445,10 +6544,379 @@ function enviarACharla(sala, texto) {
   }
   sala.elegida = true;
 
-  conversacion.mensajes.push({ de: "yo", texto: texto, hora: ahora });
+  const mensaje = { de: "yo", texto: texto, hora: ahora };
+  if (conAdjuntos) {
+    mensaje.adjuntos = adjuntos.map(function (adjunto) {
+      const guardado = { tipo: adjunto.tipo, miniatura: adjunto.miniatura };
+      if (adjunto.tipo === "video") {
+        guardado.segundos = adjunto.segundos;
+        guardado.fotogramas = adjunto.imagenes.length;
+      }
+      return guardado;
+    });
+    fotosEnMemoria[claveFotos(conversacion.id, mensaje)] = adjuntos.flatMap(
+      function (adjunto) {
+        return adjunto.imagenes;
+      },
+    );
+  }
+  conversacion.mensajes.push(mensaje);
   conversacion.actualizada = ahora;
   guardarConversacion(conversacion.id);
   pedirRespuesta(sala, conversacion.id);
+}
+
+// ---------- Fotos y vídeos (lección 47) ----------
+// Con la cámara de junto al campo se eligen fotos (hasta 4) o un vídeo
+// para el próximo mensaje; en el iPhone, de la galería o haciéndolas en el
+// momento; en el ordenador, también pegándolas en el campo. Antes de
+// mandarlas, la app las reduce: cada foto, a 1000 px por el lado largo
+// (Claude las ve bien así y cuestan poco); de un vídeo saca 8 fotogramas
+// repartidos (Claude no recibe vídeo ni sonido). Las fotos solo van a
+// Claude en el mensaje en que se mandan; en la conversación se guarda una
+// miniatura de cada una, para saber de qué se habló (y se sincroniza).
+
+// Lo que mide el lado largo de cada foto que va a Claude, de cada
+// fotograma de un vídeo y de cada miniatura (en píxeles); cuántas fotos
+// caben en un mensaje y cuántos fotogramas se sacan de un vídeo.
+const ladoFoto = 1000;
+const ladoFotograma = 768;
+const ladoMiniatura = 240;
+const maxFotosMensaje = 4;
+const fotogramasVideo = 8;
+
+// Las fotos enteras de los mensajes que esperan respuesta, mientras la app
+// está abierta (no se guardan: solo las miniaturas). Por mensaje, con la
+// clave de claveFotos.
+const fotosEnMemoria = {};
+
+// Las fotos se preparan de una en una (en el iPhone, abrir varias fotos
+// grandes a la vez puede gastar demasiada memoria): cada una espera a que
+// termine la anterior.
+let colaAdjuntos = Promise.resolve();
+
+// La clave de un mensaje en fotosEnMemoria: la conversación y su hora.
+function claveFotos(id, mensaje) {
+  return id + "|" + mensaje.hora;
+}
+
+// Un lienzo (canvas) con una foto o un fotograma reducidos para que su lado
+// largo mida «lado» como mucho (las pequeñas no se agrandan). Con fondo
+// blanco, por si la foto tiene partes transparentes (un PNG): en JPEG
+// saldrían negras.
+function lienzoReducido(fuente, ancho, alto, lado) {
+  const escala = Math.min(1, lado / Math.max(ancho, alto));
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.max(1, Math.round(ancho * escala));
+  lienzo.height = Math.max(1, Math.round(alto * escala));
+  const pincel = lienzo.getContext("2d");
+  pincel.fillStyle = "#ffffff";
+  pincel.fillRect(0, 0, lienzo.width, lienzo.height);
+  pincel.drawImage(fuente, 0, 0, lienzo.width, lienzo.height);
+  return lienzo;
+}
+
+// Un lienzo como foto JPEG en base64, sin el «data:image/jpeg;base64,» del
+// principio (así la quiere Claude). calidad: de 0 a 1.
+function jpegEnBase64(lienzo, calidad) {
+  return lienzo.toDataURL("image/jpeg", calidad).split(",")[1];
+}
+
+// La miniatura de una foto o de un fotograma: una foto JPEG pequeña, como
+// dirección «data:» (se pone tal cual en el src de una <img>).
+function miniaturaDe(fuente, ancho, alto) {
+  return lienzoReducido(fuente, ancho, alto, ladoMiniatura).toDataURL(
+    "image/jpeg",
+    0.7,
+  );
+}
+
+// Qué es un archivo elegido: "foto", "video" o "" (otra cosa). Por su tipo
+// o, si el navegador no lo dice, por cómo acaba su nombre.
+function tipoDeArchivo(archivo) {
+  if (archivo.type.startsWith("image/")) {
+    return "foto";
+  }
+  if (archivo.type.startsWith("video/")) {
+    return "video";
+  }
+  if (/\.(jpe?g|png|gif|webp|heic|heif)$/i.test(archivo.name)) {
+    return "foto";
+  }
+  if (/\.(mov|mp4|m4v|webm)$/i.test(archivo.name)) {
+    return "video";
+  }
+  return "";
+}
+
+// Prepara una foto: { miniatura, imagenes: [la foto reducida] }. Si el
+// navegador no sabe abrirla (una HEIC en el ordenador), falla.
+async function prepararFoto(archivo) {
+  const direccion = URL.createObjectURL(archivo);
+  try {
+    const imagen = new Image();
+    imagen.src = direccion;
+    await imagen.decode();
+    const ancho = imagen.naturalWidth;
+    const alto = imagen.naturalHeight;
+    const reducida = lienzoReducido(imagen, ancho, alto, ladoFoto);
+    return {
+      miniatura: miniaturaDe(imagen, ancho, alto),
+      imagenes: [{ tipo: "image/jpeg", datos: jpegEnBase64(reducida, 0.85) }],
+    };
+  } finally {
+    URL.revokeObjectURL(direccion);
+  }
+}
+
+// Hace algo con un vídeo (accion) y espera a que avise de que ha
+// terminado (el evento «nombre»: "loadedmetadata", "seeked"…). Si el vídeo
+// falla o tarda más de 15 segundos, falla.
+function esperarVideo(video, nombre, accion) {
+  return new Promise(function (resolver, rechazar) {
+    const reloj = setTimeout(function () {
+      terminar(new Error("El vídeo no contesta."));
+    }, 15000);
+    function alLlegar() {
+      terminar(null);
+    }
+    function alFallar() {
+      terminar(new Error("El vídeo no se puede abrir."));
+    }
+    function terminar(error) {
+      clearTimeout(reloj);
+      video.removeEventListener(nombre, alLlegar);
+      video.removeEventListener("error", alFallar);
+      if (error) {
+        rechazar(error);
+      } else {
+        resolver();
+      }
+    }
+    video.addEventListener(nombre, alLlegar);
+    video.addEventListener("error", alFallar);
+    accion();
+  });
+}
+
+// Prepara un vídeo: 8 fotogramas repartidos por todo el vídeo (del centro
+// de cada octava parte), reducidos, y la miniatura del primero.
+// { miniatura, segundos, imagenes }. El vídeo se pone en la página, pero
+// sin que se vea: el iPhone solo dibuja los vídeos que están en ella.
+async function prepararVideo(archivo) {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.classList.add("video-oculto");
+  document.body.append(video);
+  const direccion = URL.createObjectURL(archivo);
+
+  try {
+    await esperarVideo(video, "loadedmetadata", function () {
+      video.src = direccion;
+    });
+    // Que empiece a cargar las imágenes (en el iPhone, sin esto, a veces
+    // salen negras): play y pausa enseguida, sin sonido. Si no deja, sigue
+    try {
+      await Promise.race([
+        video.play(),
+        new Promise(function (resolver) {
+          setTimeout(resolver, 1500);
+        }),
+      ]);
+    } catch (error) {
+      // Sin play: los fotogramas se piden igual
+    }
+    video.pause();
+
+    const segundos = video.duration;
+    const ancho = video.videoWidth;
+    const alto = video.videoHeight;
+    if (!isFinite(segundos) || segundos <= 0 || ancho === 0) {
+      throw new Error("Sin imagen.");
+    }
+
+    const imagenes = [];
+    let miniatura = "";
+    for (let i = 0; i < fotogramasVideo; i++) {
+      const momento = (segundos * (i + 0.5)) / fotogramasVideo;
+      await esperarVideo(video, "seeked", function () {
+        video.currentTime = momento;
+      });
+      const fotograma = lienzoReducido(video, ancho, alto, ladoFotograma);
+      imagenes.push({
+        tipo: "image/jpeg",
+        datos: jpegEnBase64(fotograma, 0.8),
+      });
+      if (i === 0) {
+        miniatura = miniaturaDe(video, ancho, alto);
+      }
+    }
+    return {
+      miniatura: miniatura,
+      segundos: Math.max(1, Math.round(segundos)),
+      imagenes: imagenes,
+    };
+  } finally {
+    video.pause();
+    video.removeAttribute("src");
+    video.remove();
+    URL.revokeObjectURL(direccion);
+  }
+}
+
+// Lo que dura un vídeo, en texto: «12 s» o «1 min 5 s».
+function textoSegundos(segundos) {
+  if (segundos < 60) {
+    return segundos + " s";
+  }
+  const minutos = Math.floor(segundos / 60);
+  const resto = segundos % 60;
+  if (resto === 0) {
+    return minutos + " min";
+  }
+  return minutos + " min " + resto + " s";
+}
+
+// La miniatura de una foto o de un vídeo (con «▶ 12 s» encima), para la
+// fila de antes de enviar y para mis burbujas.
+function miniaturaAdjunto(adjunto) {
+  const marco = document.createElement("span");
+  marco.classList.add("adjunto-mini");
+  const imagen = document.createElement("img");
+  imagen.src = adjunto.miniatura;
+  imagen.alt = "Foto";
+  marco.append(imagen);
+  if (adjunto.tipo === "video") {
+    imagen.alt = "Vídeo";
+    marco.classList.add("adjunto-video");
+    const duracion = document.createElement("span");
+    duracion.classList.add("adjunto-duracion");
+    duracion.textContent = "▶ " + textoSegundos(adjunto.segundos);
+    marco.append(duracion);
+  }
+  return marco;
+}
+
+// ¿Se está preparando todavía alguna foto o vídeo de la sala?
+function preparandoAdjuntos(sala) {
+  return sala.adjuntos.some(function (adjunto) {
+    return adjunto.preparando;
+  });
+}
+
+// «Enviar» se apaga mientras el consejero contesta y mientras se prepara
+// alguna foto.
+function estadoEnviar(sala) {
+  pieza(sala, "charla-escribir").querySelector(
+    'button[type="submit"]',
+  ).disabled = sala.esperando !== null || preparandoAdjuntos(sala);
+}
+
+// Dibuja, encima del campo, lo elegido para el próximo mensaje: cada foto
+// o vídeo con su × para quitarlo (mientras se prepara, unos puntos) y, si
+// algo no se ha podido añadir, por qué. Vacía, no se ve.
+function dibujarAdjuntos(sala) {
+  const caja = pieza(sala, "charla-adjuntos");
+  caja.innerHTML = "";
+
+  sala.adjuntos.forEach(function (adjunto) {
+    const elemento = document.createElement("div");
+    elemento.classList.add("adjunto");
+    if (adjunto.preparando) {
+      elemento.classList.add("preparando");
+      const puntos = document.createElement("span");
+      puntos.classList.add("adjunto-preparando");
+      puntos.textContent = "…";
+      puntos.setAttribute("aria-label", "Preparando");
+      elemento.append(puntos);
+    } else {
+      elemento.append(miniaturaAdjunto(adjunto));
+    }
+    const quitar = crearBoton("×", "adjunto-quitar", function () {
+      sala.adjuntos = sala.adjuntos.filter(function (otro) {
+        return otro !== adjunto;
+      });
+      sala.avisoAdjuntos = "";
+      dibujarAdjuntos(sala);
+    });
+    quitar.setAttribute("aria-label", "Quitar");
+    elemento.append(quitar);
+    caja.append(elemento);
+  });
+
+  if (sala.avisoAdjuntos) {
+    caja.append(crearParrafo(sala.avisoAdjuntos, "charla-adjuntos-aviso"));
+  }
+
+  const conCuenta = hayNube() && sesion !== null;
+  caja.hidden = !conCuenta || sala.viendoLista || caja.childElementCount === 0;
+  estadoEnviar(sala);
+}
+
+// Prepara una foto o un vídeo elegido (en la cola, después de los
+// anteriores). Si sale bien, se ve su miniatura; si no, se quita y se
+// explica.
+function prepararAdjunto(sala, adjunto, archivo) {
+  colaAdjuntos = colaAdjuntos.then(async function () {
+    // Quitado antes de empezar: nada que hacer
+    if (!sala.adjuntos.includes(adjunto)) {
+      return;
+    }
+    try {
+      let listo;
+      if (adjunto.tipo === "video") {
+        listo = await prepararVideo(archivo);
+      } else {
+        listo = await prepararFoto(archivo);
+      }
+      Object.assign(adjunto, listo);
+      adjunto.preparando = false;
+    } catch (error) {
+      sala.adjuntos = sala.adjuntos.filter(function (otro) {
+        return otro !== adjunto;
+      });
+      if (adjunto.tipo === "video") {
+        sala.avisoAdjuntos =
+          "No he podido sacar los fotogramas de «" + archivo.name + "».";
+      } else {
+        sala.avisoAdjuntos = "No he podido abrir «" + archivo.name + "».";
+      }
+    }
+    dibujarAdjuntos(sala);
+  });
+}
+
+// Añade a la sala las fotos o el vídeo elegidos (con la cámara o pegados):
+// como mucho 4 fotos, o un vídeo solo. Lo que no cabe o no es una foto ni
+// un vídeo se queda fuera, y se dice.
+function anadirArchivos(sala, archivos) {
+  sala.avisoAdjuntos = "";
+  Array.from(archivos).forEach(function (archivo) {
+    const tipo = tipoDeArchivo(archivo);
+    if (tipo === "") {
+      sala.avisoAdjuntos = "«" + archivo.name + "» no es una foto ni un vídeo.";
+      return;
+    }
+    const fotos = sala.adjuntos.filter(function (adjunto) {
+      return adjunto.tipo === "foto";
+    }).length;
+    const hayVideo = sala.adjuntos.length > fotos;
+    if (
+      hayVideo ||
+      (tipo === "video" && fotos > 0) ||
+      (tipo === "foto" && fotos >= maxFotosMensaje)
+    ) {
+      sala.avisoAdjuntos =
+        "Como mucho, " + maxFotosMensaje + " fotos o un vídeo por mensaje.";
+      return;
+    }
+    const adjunto = { tipo: tipo, preparando: true };
+    sala.adjuntos.push(adjunto);
+    prepararAdjunto(sala, adjunto, archivo);
+  });
+  dibujarAdjuntos(sala);
 }
 
 // El campo para escribir crece con el texto (hasta unas seis líneas).
@@ -6479,15 +6947,49 @@ function conectarSala(sala) {
     }
   });
 
+  // Se envía con texto, con fotos o con las dos cosas (no mientras se
+  // prepara alguna foto ni mientras el consejero contesta)
   formulario.addEventListener("submit", function (evento) {
     evento.preventDefault();
     const texto = campo.value.trim();
-    if (texto === "" || sala.esperando !== null) {
+    const adjuntos = sala.adjuntos;
+    if (
+      (texto === "" && adjuntos.length === 0) ||
+      sala.esperando !== null ||
+      preparandoAdjuntos(sala)
+    ) {
       return;
     }
     campo.value = "";
     ajustarCampoCharla(sala);
-    enviarACharla(sala, texto);
+    sala.adjuntos = [];
+    sala.avisoAdjuntos = "";
+    dibujarAdjuntos(sala);
+    enviarACharla(sala, texto, adjuntos);
+  });
+
+  // La cámara: abre el selector de archivos (en el iPhone, la galería o la
+  // cámara). value = "" para que se pueda volver a elegir la misma foto
+  const archivos = pieza(sala, "charla-archivos");
+  pieza(sala, "charla-adjuntar").addEventListener("click", function () {
+    archivos.click();
+  });
+  archivos.addEventListener("change", function () {
+    anadirArchivos(sala, archivos.files);
+    archivos.value = "";
+  });
+
+  // En el ordenador: una foto pegada en el campo (Ctrl + V) se adjunta
+  campo.addEventListener("paste", function (evento) {
+    const pegadas = Array.from(evento.clipboardData.files).filter(
+      function (archivo) {
+        return tipoDeArchivo(archivo) !== "";
+      },
+    );
+    if (pegadas.length > 0) {
+      evento.preventDefault();
+      anadirArchivos(sala, pegadas);
+    }
   });
 
   // «‹ Conversaciones» y «+ Nueva»

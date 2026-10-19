@@ -33,7 +33,7 @@
          Se definen una vez aquí y se usan con <use href="#nombre">.
          rama: media corona · laurel: las dos ramas · llama: la de Prometeo
          icono-…: los diez iconos de los hábitos · editar: el lápiz
-         mentor: la cara de Méntor en sus burbujas
+         adjuntar: la cámara de las charlas · mentor: la cara de Méntor
          ============================================================ -->
     <svg class="simbolos" aria-hidden="true">
       <symbol id="rama" viewBox="0 0 100 100">
@@ -331,6 +331,14 @@
         />
         <path d="M14 6.8l3.2 3.2" />
       </symbol>
+
+      <!-- Cámara: adjuntar fotos o un vídeo en las charlas -->
+      <symbol id="adjuntar" viewBox="0 0 24 24">
+        <path
+          d="M4 9a2 2 0 0 1 2-2h2.3l1.5-2.2h4.4L15.7 7H18a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"
+        />
+        <circle cx="12" cy="12.9" r="3.5" />
+      </symbol>
     </svg>
 
     <!-- ============================================================
@@ -500,9 +508,30 @@
         <!-- La conversación abierta -->
         <div id="charla" class="conversacion charla"></div>
 
+        <!-- Las fotos o el vídeo elegidos, antes de enviarlos (los dibuja
+             script.js, bloque 25) -->
+        <div class="charla-adjuntos" hidden></div>
+
         <!-- El campo para escribir, al final (así el iPhone lo deja a la
-             vista sobre el teclado) -->
+             vista sobre el teclado). La cámara abre la de verdad o la
+             galería: fotos o un vídeo para el mensaje -->
         <form id="form-charla" class="mentor-escribir charla-escribir">
+          <button
+            type="button"
+            class="charla-adjuntar"
+            aria-label="Adjuntar fotos o un vídeo"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <use href="#adjuntar"></use>
+            </svg>
+          </button>
+          <input
+            type="file"
+            class="charla-archivos"
+            accept="image/*,video/*"
+            multiple
+            hidden
+          />
           <textarea
             id="charla-texto"
             rows="1"
@@ -732,8 +761,27 @@
           <!-- La conversación abierta -->
           <div class="conversacion charla"></div>
 
-          <!-- El campo para escribir, al final -->
+          <!-- Las fotos o el vídeo elegidos, antes de enviarlos -->
+          <div class="charla-adjuntos" hidden></div>
+
+          <!-- El campo para escribir, al final, con la cámara -->
           <form class="mentor-escribir charla-escribir">
+            <button
+              type="button"
+              class="charla-adjuntar"
+              aria-label="Adjuntar fotos o un vídeo"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="#adjuntar"></use>
+              </svg>
+            </button>
+            <input
+              type="file"
+              class="charla-archivos"
+              accept="image/*,video/*"
+              multiple
+              hidden
+            />
             <textarea
               rows="1"
               maxlength="2000"
@@ -864,7 +912,11 @@
           <h2>Consejeros</h2>
           <p class="pie-texto">
             Méntor y Prometheus contestan con la IA de Claude. La clave de
-            Claude se guarda en el servidor, nunca en la app.
+            Claude se guarda en el servidor, nunca en la app. Con la cámara,
+            junto al campo para escribir, puedes mandarles hasta 4 fotos o un
+            vídeo por mensaje (de un vídeo les llegan 8 fotogramas, sin sonido).
+            Las fotos solo van en ese mensaje; en la conversación se guarda una
+            miniatura.
           </p>
           <p id="consejeros-estado" class="cuenta-estado"></p>
           <div class="pie-botones">
