@@ -780,8 +780,8 @@
 
       <!-- ============================================================
            PANTALLA ARCHIVO
-           Cuenta, recordatorios, consejeros, perfil, revisiones semanales y
-           copia de seguridad.
+           Cuenta, recordatorios, consejeros, sueño desde Salud, perfil,
+           revisiones semanales y copia de seguridad.
            ============================================================ -->
       <div class="pantalla" data-pantalla="archivo" hidden>
         <!-- Cuenta: entrar para tener los datos en la nube y en todos los
@@ -857,14 +857,14 @@
           </div>
         </section>
 
-        <!-- Consejeros: Méntor con la IA de Claude, a través del servidor
-             (solo con la cuenta abierta). El estado y la respuesta los pone
-             script.js -->
+        <!-- Consejeros: Méntor y Prometheus con la IA de Claude, a través del
+             servidor (solo con la cuenta abierta). El estado y la respuesta
+             los pone script.js -->
         <section id="seccion-consejeros" class="consejeros" hidden>
           <h2>Consejeros</h2>
           <p class="pie-texto">
-            Méntor contestará con la IA de Claude. La clave de Claude se guarda
-            en el servidor, nunca en la app.
+            Méntor y Prometheus contestan con la IA de Claude. La clave de
+            Claude se guarda en el servidor, nunca en la app.
           </p>
           <p id="consejeros-estado" class="cuenta-estado"></p>
           <div class="pie-botones">
@@ -877,6 +877,131 @@
             class="consejeros-respuesta"
             hidden
           ></div>
+        </section>
+
+        <!-- Sueño desde Salud: el código para el atajo del iPhone, la casilla
+             de este iPhone y los pasos para crear el atajo (solo con la
+             cuenta abierta). Lo rellena script.js, bloque 31 -->
+        <section id="seccion-salud" class="salud" hidden>
+          <h2>Sueño desde Salud</h2>
+          <p class="pie-texto">
+            Un atajo del iPhone lleva a Ergon el sueño que guarda la app Salud:
+            el rato en cama que apunta el iPhone o lo que mide un reloj. Por la
+            mañana solo tendrás que decir cómo has dormido.
+          </p>
+          <p id="salud-estado" class="cuenta-estado"></p>
+
+          <!-- El código recién creado: solo se ve ahora -->
+          <div id="salud-codigo-caja" class="salud-codigo-caja" hidden>
+            <p class="salud-codigo-nota">
+              Tu código (cópialo en el atajo: no se vuelve a enseñar):
+            </p>
+            <div class="salud-copiable">
+              <code id="salud-codigo"></code>
+              <button
+                type="button"
+                class="salud-copiar"
+                data-copiar="salud-codigo"
+              >
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <div class="pie-botones">
+            <button id="boton-codigo-salud" type="button">
+              Crear mi código
+            </button>
+          </div>
+
+          <label class="salud-aqui">
+            <input type="checkbox" id="salud-aqui" />
+            Este iPhone tiene el atajo: botón «Traer de Salud» en la tarjeta del
+            sueño
+          </label>
+
+          <details class="salud-pasos">
+            <summary>Cómo crear el atajo</summary>
+            <ol>
+              <li>
+                En Salud, activa el <strong>horario de sueño</strong> (Sueño →
+                Horario): así el iPhone apunta el rato en cama.
+              </li>
+              <li>
+                Abre la app <strong>Atajos</strong>, crea uno nuevo (+) y
+                llámalo exactamente <strong>Ergon Salud</strong>.
+              </li>
+              <li>
+                Añade <strong>Buscar muestras de salud</strong>: el tipo,
+                <strong>Análisis del sueño</strong>; un filtro,
+                <strong>Fecha de inicio · está en los últimos · 2 días</strong>;
+                y ordénalas por <strong>Fecha de inicio</strong>.
+              </li>
+              <li>
+                Añade <strong>Repetir con cada</strong> (con esas muestras).
+                Dentro, una acción <strong>Texto</strong> con tres variables del
+                <strong>Elemento repetido</strong>, separadas por una barra:
+                <code>Fecha de inicio|Fecha de finalización|Valor</code>. En las
+                dos fechas, toca la variable y elige el formato
+                <strong>ISO 8601</strong> (con la hora).
+              </li>
+              <li>
+                Todavía dentro, debajo del texto:
+                <strong>Añadir a variable</strong>, con el nombre
+                <strong>Noches</strong>.
+              </li>
+              <li>
+                Después de «Repetir»: <strong>Combinar texto</strong>,
+                <strong>Noches</strong> con <strong>Nueva línea</strong>.
+              </li>
+              <li>
+                Añade <strong>Obtener contenido de la URL</strong> con esta
+                dirección:
+                <span class="salud-copiable">
+                  <code id="salud-url"></code>
+                  <button
+                    type="button"
+                    class="salud-copiar"
+                    data-copiar="salud-url"
+                  >
+                    Copiar
+                  </button>
+                </span>
+                Despliega sus opciones. Método: <strong>POST</strong>.
+                Encabezados: <strong>apikey</strong> con esta clave (no es
+                secreta)
+                <span class="salud-copiable">
+                  <code id="salud-clave"></code>
+                  <button
+                    type="button"
+                    class="salud-copiar"
+                    data-copiar="salud-clave"
+                  >
+                    Copiar
+                  </button>
+                </span>
+                y <strong>x-codigo-salud</strong> con tu código. Cuerpo de la
+                solicitud: <strong>JSON</strong>, con dos campos de texto:
+                <strong>accion</strong> = <code>sueno</code> y
+                <strong>muestras</strong> = el texto combinado.
+              </li>
+              <li>
+                Por último, <strong>Mostrar notificación</strong> con el
+                <strong>Contenido de la URL</strong>: te dirá qué noche ha
+                llegado.
+              </li>
+              <li>
+                Pruébalo (▶). La primera vez, Atajos pide permiso para leer
+                Salud: dale a «Permitir». Luego marca la casilla de arriba.
+              </li>
+            </ol>
+            <p class="salud-nota">
+              Los nombres pueden cambiar un poco según la versión de iOS. Para
+              que vaya solo, en Atajos → Automatización, puedes lanzarlo al
+              apagar la alarma; pero con el iPhone bloqueado Salud no deja leer,
+              y entonces queda el botón «Traer de Salud».
+            </p>
+          </details>
         </section>
 
         <!-- Perfil: los datos los pone script.js -->

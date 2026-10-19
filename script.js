@@ -34,9 +34,10 @@
 // 28. Prometheus · El laboratorio
 // 29. Prometheus · Apuntar el sueño
 // 30. Prometheus · Apuntar los entrenos
-// 31. Barra superior y navegación
-// 32. App instalable (service worker)
-// 33. Inicio
+// 31. Sueño · Desde Salud del iPhone
+// 32. Barra superior y navegación
+// 33. App instalable (service worker)
+// 34. Inicio
 // ==========================================================================
 
 // ==========================================================================
@@ -96,7 +97,10 @@ const ajustesConsejeros =
 
 // El sueño de cada noche, por el día en que me levanté (bloque 29):
 // { "2026-10-16": { acostarse: "23:40", levantarse: "07:30",
-//   calidad: "bien", "regular" o "mal" } }
+//   calidad: "bien", "regular" o "mal" } }. Las que llegan de la app Salud
+// (bloque 31) llevan también fuente: "salud" y dormido (los minutos
+// dormidos de verdad, si los midió un reloj, o null), y no traen calidad
+// hasta que digo cómo dormí.
 const sueno = JSON.parse(localStorage.getItem("ergon-sueno")) || {};
 
 // Los entrenos, por su id (bloque 30):
@@ -790,11 +794,53 @@ function crearSelectorIconos(caja, grupo, marcado, alElegir) {
 
 // ==========================================================================
 // 5. HÁBITOS · LISTA DE HOY
-// Las fichas de la pantalla Hoy.
+// Las fichas de la pantalla Hoy. La del deporte, al marcarla, pregunta si
+// apuntar el entreno.
 // ==========================================================================
 
 // Id del hábito que Méntor acaba de crear: su ficha brilla un momento.
 let habitoRecienCreado = null;
+
+// ¿Pregunta la ficha por el entreno? Sí si es el hábito del deporte (de
+// casilla y con la corona), está marcado hoy, aún no hay un entreno de hoy
+// que lo marque (o sin hábito) y no se ha dicho «Hoy no» (se recuerda en
+// este dispositivo hasta mañana: «ergon-entreno-no»).
+function pideEntreno(habito) {
+  if (iconoDe(habito) !== "corona" || habitosHoy[habito.id] !== true) {
+    return false;
+  }
+  if (habito.medida && habito.medida !== "casilla") {
+    return false;
+  }
+  if (localStorage.getItem("ergon-entreno-no") === hoy) {
+    return false;
+  }
+  return !Object.values(entrenos).some(function (entreno) {
+    return (
+      entreno.fecha === hoy &&
+      (entreno.habito === habito.id || entreno.habito === "")
+    );
+  });
+}
+
+// La pregunta, abajo de la ficha: «¿Apuntas el entreno de hoy?», con
+// «Apuntar» (abre la ventana del entreno, bloque 30, con este hábito) y
+// «Hoy no».
+function avisoEntreno(habito) {
+  const aviso = document.createElement("div");
+  aviso.classList.add("habito-aviso-entreno");
+  aviso.append(
+    crearParrafo("¿Apuntas el entreno de hoy?", "habito-aviso-texto"),
+    crearBoton("Apuntar", "habito-aviso-si", function () {
+      abrirVentanaEntreno(null, habito.id);
+    }),
+    crearBoton("Hoy no", "ritual-hoy-no", function () {
+      localStorage.setItem("ergon-entreno-no", hoy);
+      mostrarHabitos();
+    }),
+  );
+  return aviso;
+}
 
 // Dibuja una ficha por hábito: casilla o campo de cantidad, icono, nombre,
 // detalles, racha y botón de editar.
@@ -1005,6 +1051,11 @@ function mostrarHabitos() {
     } else {
       etiqueta.append(control, icono, nombre, racha);
       item.append(etiqueta, botonEditar);
+    }
+
+    // Recién marcado el hábito del deporte: ¿apuntar el entreno?
+    if (pideEntreno(habito)) {
+      item.append(avisoEntreno(habito));
     }
     lista.append(item);
   });
@@ -2560,9 +2611,9 @@ const conversacionBienvenida = {
 
 // ==========================================================================
 // 12. RITUALES DE MAÑANA Y DE NOCHE
-// Por la mañana, la intención del día y cómo he dormido. Por la noche, el
-// examen de Séneca: Ergon recuerda sus tres preguntas para responderlas en
-// el diario de papel.
+// Por la mañana, la intención del día y cómo he dormido (a mano o con lo
+// que llega de Salud, bloque 31). Por la noche, el examen de Séneca: Ergon
+// recuerda sus tres preguntas para responderlas en el diario de papel.
 // ==========================================================================
 
 // La mañana empieza a las 4 y la noche, a las 20. De madrugada (antes de las
@@ -2706,41 +2757,106 @@ function tarjetaSueno(ritual, dia, horas) {
   const error = crearParrafo("", "ventana-error");
 
   // Los tres botones de cómo dormí: cada uno guarda la noche
+  const botones = botonesCalidad(function (calidad) {
+    const noche = {
+      acostarse: acostarse.querySelector("input").value,
+      levantarse: levantarse.querySelector("input").value,
+      calidad: calidad,
+    };
+    const fallo = falloSueno(noche);
+    if (fallo) {
+      error.textContent = fallo;
+      return;
+    }
+    sueno[dia] = noche;
+    guardarSueno(dia);
+    actualizarTodo();
+  });
+
+  tarjeta.append(crearParrafo("Sueño de anoche", "ritual-titulo"), filaHoras);
+
+  // En el iPhone con el atajo (bloque 31): traer la noche de Salud en vez
+  // de escribir las horas
+  if (atajoSaludAqui()) {
+    tarjeta.append(enlaceAtajoSalud());
+  }
+
+  tarjeta.append(
+    crearParrafo("¿Qué tal has dormido?", "ritual-texto"),
+    botones,
+    error,
+    botonHoyNoSueno(ritual),
+  );
+  return tarjeta;
+}
+
+// Los botones Bien, Regular y Mal. alElegir recibe el id de la calidad
+// («bien», «regular» o «mal»).
+function botonesCalidad(alElegir) {
   const botones = document.createElement("div");
   botones.classList.add("ritual-calidad");
   calidadesSueno.forEach(function (calidad) {
     botones.append(
       crearBoton(calidad.nombre, "ritual-calidad-boton", function () {
-        const noche = {
-          acostarse: acostarse.querySelector("input").value,
-          levantarse: levantarse.querySelector("input").value,
-          calidad: calidad.id,
-        };
-        const fallo = falloSueno(noche);
-        if (fallo) {
-          error.textContent = fallo;
-          return;
-        }
-        sueno[dia] = noche;
-        guardarSueno(dia);
-        actualizarTodo();
+        alElegir(calidad.id);
       }),
     );
   });
+  return botones;
+}
 
-  // «Hoy no»: la tarjeta no vuelve hoy (se apunta en el ritual del día)
-  const hoyNo = crearBoton("Hoy no", "ritual-hoy-no", function () {
+// «Hoy no»: la tarjeta del sueño no vuelve hoy (se apunta en el ritual del
+// día).
+function botonHoyNoSueno(ritual) {
+  return crearBoton("Hoy no", "ritual-hoy-no", function () {
     ritual.sueno = "no";
     guardarRitual(ritual);
   });
+}
+
+// La tarjeta del sueño cuando la noche ya ha llegado de Salud (bloque 31)
+// pero falta decir cómo dormiste: las horas, ya puestas, y los tres
+// botones. «Cambiar las horas» abre su ventana.
+function tarjetaSuenoSalud(ritual, dia, noche) {
+  const tarjeta = document.createElement("div");
+  tarjeta.classList.add("ritual", "ritual-sueno", "ritual-sueno-salud");
+
+  let duracion =
+    textoHoras(minutosDormidos(noche.acostarse, noche.levantarse)) + " en cama";
+  if (typeof noche.dormido === "number") {
+    duracion = textoHoras(noche.dormido) + " dormido";
+  }
+
+  const botones = botonesCalidad(function (calidad) {
+    sueno[dia].calidad = calidad;
+    guardarSueno(dia);
+    actualizarTodo();
+  });
+
+  const acciones = document.createElement("div");
+  acciones.classList.add("ritual-acciones");
+  acciones.append(
+    crearBoton("Cambiar las horas", "ritual-hoy-no", function () {
+      abrirVentanaSueno(dia);
+    }),
+    botonHoyNoSueno(ritual),
+  );
 
   tarjeta.append(
     crearParrafo("Sueño de anoche", "ritual-titulo"),
-    filaHoras,
+    crearParrafo(
+      "Desde Salud: de " +
+        noche.acostarse +
+        " a " +
+        noche.levantarse +
+        " (" +
+        duracion +
+        ").",
+      "ritual-texto",
+    ),
     crearParrafo("¿Qué tal has dormido?", "ritual-texto"),
     botones,
-    error,
-    hoyNo,
+    acciones,
   );
   return tarjeta;
 }
@@ -2857,11 +2973,14 @@ function mostrarRituales() {
     caja.append(linea);
   }
 
-  // El sueño de anoche: si ya está, como recordatorio (al tocarlo se abre
-  // su ventana para cambiarlo); si no, la tarjeta (salvo «Hoy no»)
-  if (sueno[dia]) {
+  // El sueño de anoche: si ya está (y se ha dicho cómo dormí), como
+  // recordatorio (al tocarlo se abre su ventana para cambiarlo); si ha
+  // llegado de Salud sin decir cómo dormí, la tarjeta para decirlo; si no
+  // está, la tarjeta para apuntarla (salvo «Hoy no»)
+  const noche = sueno[dia];
+  if (noche && (noche.calidad || ritual.sueno === "no")) {
     const linea = crearBoton(
-      "Anoche: " + textoNoche(sueno[dia]) + ".",
+      "Anoche: " + textoNoche(noche) + ".",
       "recordatorio",
       function () {
         abrirVentanaSueno(dia);
@@ -2869,6 +2988,8 @@ function mostrarRituales() {
     );
     linea.title = "Cambiar el sueño de anoche";
     caja.append(linea);
+  } else if (noche) {
+    caja.append(tarjetaSuenoSalud(ritual, dia, noche));
   } else if (ritual.sueno !== "no") {
     caja.append(tarjetaSueno(ritual, dia, horas));
   }
@@ -4534,6 +4655,7 @@ function cerrarSesionAqui(olvidar) {
     localStorage.removeItem("ergon-usuario-nube");
   }
   mostrarCuenta();
+  mostrarSalud();
   mostrarCharlas();
 }
 
@@ -4577,9 +4699,9 @@ formEntrar.addEventListener("submit", async function (evento) {
   formEntrar.reset();
   mostrarCuenta();
   mostrarCharlas();
-  // Después de sincronizar, lo de los recordatorios y los consejeros
-  // (bloques 23 y 24)
-  sincronizar().then(revisarAvisos).then(revisarConsejeros);
+  // Después de sincronizar, lo de los recordatorios, los consejeros y Salud
+  // (bloques 23, 24 y 31)
+  sincronizar().then(revisarAvisos).then(revisarConsejeros).then(revisarSalud);
 });
 
 // «Salir»: pregunta, quita los avisos de este dispositivo (si los tenía),
@@ -5631,11 +5753,12 @@ let errorConsejeros = "";
 let respuestaPrueba = "";
 let probandoConsejero = false;
 
-// Llama a la función «consejero» con el pase de la sesión. Si dice que no,
-// su explicación (en castellano) pasa a ser el mensaje del error.
-async function llamarConsejero(cuerpo) {
+// Llama a una función de Supabase («consejero», o «salud» del bloque 31)
+// con el pase de la sesión. Si dice que no, su explicación (en castellano)
+// pasa a ser el mensaje del error.
+async function llamarALaFuncion(nombre, cuerpo) {
   try {
-    return await peticion("POST", "/functions/v1/consejero", cuerpo);
+    return await peticion("POST", "/functions/v1/" + nombre, cuerpo);
   } catch (error) {
     // peticion avisa de los fallos como «servidor 429: {"error": "…"}»
     const partes = /^servidor (\d+): ([\s\S]*)$/.exec(error.message);
@@ -5649,7 +5772,7 @@ async function llamarConsejero(cuerpo) {
       // No era JSON: se queda sin explicación
     }
     if (explicacion === "" && partes[1] === "404") {
-      explicacion = "Falta desplegar la función «consejero» en Supabase.";
+      explicacion = "Falta desplegar la función «" + nombre + "» en Supabase.";
     }
     // La función que hay en Supabase es de antes de este consejero
     if (explicacion === "No conozco a ese consejero.") {
@@ -5661,6 +5784,11 @@ async function llamarConsejero(cuerpo) {
     }
     throw new Error(explicacion);
   }
+}
+
+// Llama a la función «consejero» (la de los consejeros).
+function llamarConsejero(cuerpo) {
+  return llamarALaFuncion("consejero", cuerpo);
 }
 
 // Manda una conversación a un consejero ("mentor" o "prometheus") y
@@ -5679,7 +5807,7 @@ async function hablarConConsejero(consejero, mensajes, contexto) {
 }
 
 // Un error convertido en mensaje para la sección (los del servidor ya
-// vienen explicados).
+// vienen explicados). Lo usa también «Sueño desde Salud» (bloque 31).
 function textoErrorConsejero(error) {
   if (error.message === "sesion") {
     return "Tu sesión ha caducado: vuelve a entrar.";
@@ -6787,6 +6915,34 @@ function textoNoches(cantidad) {
   return cantidad + " noches";
 }
 
+// Lo que duró una noche, para el resumen: «7 h 50 min» (apuntada a mano),
+// «7 h 35 min en cama, según Salud» (el iPhone) o «7 h 5 min dormido de 7
+// h 50 min en cama, según Salud» (un reloj).
+function horasEnTexto(noche) {
+  const enCama = textoHoras(minutosDormidos(noche.acostarse, noche.levantarse));
+  if (noche.fuente !== "salud") {
+    return enCama;
+  }
+  if (typeof noche.dormido === "number") {
+    return (
+      textoHoras(noche.dormido) +
+      " dormido de " +
+      enCama +
+      " en cama, según Salud"
+    );
+  }
+  return enCama + " en cama, según Salud";
+}
+
+// Cómo dijo que durmió: «durmió bien» o, si aún no lo ha dicho, «no ha
+// dicho cómo durmió».
+function calidadEnTexto(noche) {
+  if (noche.calidad) {
+    return "durmió " + noche.calidad;
+  }
+  return "no ha dicho cómo durmió";
+}
+
 // Cómo le fue un día con los hábitos, para ponerlo junto a la noche de
 // antes: «ese día cumplió 5 de 6 hábitos» (hoy: «hoy, de momento, 2 de 6
 // hábitos»).
@@ -7035,7 +7191,7 @@ function resumenParaPrometheus() {
     lineas.push("Sueño: aún no ha apuntado ninguna noche.");
   } else {
     lineas.push(
-      "Sueño (cada noche va por el día en que se levantó; las de las últimas 4 semanas, de la más antigua a la más nueva):",
+      "Sueño (cada noche va por el día en que se levantó; las de las últimas 4 semanas, de la más antigua a la más nueva; las que dicen «según Salud» las midió el iPhone, que solo sabe el rato en cama, o un reloj, que también mide lo dormido; las demás las apuntó él):",
     );
     const sinApuntar = [];
     noches.forEach(function (noche) {
@@ -7051,9 +7207,9 @@ function resumenParaPrometheus() {
           " a " +
           noche.noche.levantarse +
           " (" +
-          textoHoras(noche.minutos) +
-          "), durmió " +
-          noche.noche.calidad +
+          horasEnTexto(noche.noche) +
+          "), " +
+          calidadEnTexto(noche.noche) +
           "; " +
           diaEnTexto(noche.dia),
       );
@@ -7532,7 +7688,7 @@ function nochesRecientes(dias) {
     const noche = sueno[dia] || null;
     let minutos = null;
     if (noche) {
-      minutos = minutosDormidos(noche.acostarse, noche.levantarse);
+      minutos = minutosDeNoche(noche);
     }
     noches.push({ dia: dia, noche: noche, minutos: minutos });
   }
@@ -7555,7 +7711,7 @@ function mediaSueno(desde, dias) {
     const dia = fechaMas(desde, i).toLocaleDateString("en-CA");
     const noche = sueno[dia];
     if (noche && dia <= hoy) {
-      total += minutosDormidos(noche.acostarse, noche.levantarse);
+      total += minutosDeNoche(noche);
       noches++;
     }
   }
@@ -8402,15 +8558,7 @@ function dibujarSueno(datosSueno) {
         altura: (noche.minutos / tope) * 100,
         numero: textoHorasCorto(noche.minutos),
         etiqueta: String(new Date(noche.dia + "T00:00").getDate()),
-        dato:
-          nombre +
-          ": " +
-          textoNoche(noche.noche) +
-          " (" +
-          noche.noche.acostarse +
-          "–" +
-          noche.noche.levantarse +
-          ")",
+        dato: nombre + ": " + textoNocheConHoras(noche.noche),
       };
     }),
     [
@@ -8433,7 +8581,7 @@ function dibujarSueno(datosSueno) {
           noche.noche.acostarse,
           noche.noche.levantarse,
           textoHoras(noche.minutos),
-          noche.noche.calidad,
+          noche.noche.calidad || "—",
         ];
       }),
   );
@@ -8977,6 +9125,16 @@ function minutosDormidos(acostarse, levantarse) {
   return minutos;
 }
 
+// Los minutos de una noche: los dormidos de verdad si los midió un reloj
+// (los trae Salud, bloque 31: «dormido»); si no, de la hora de acostarse
+// a la de levantarse.
+function minutosDeNoche(noche) {
+  if (typeof noche.dormido === "number") {
+    return noche.dormido;
+  }
+  return minutosDormidos(noche.acostarse, noche.levantarse);
+}
+
 // Unos minutos en horas: «7 h 50 min», «8 h» o «45 min».
 function textoHoras(minutos) {
   const horas = Math.floor(minutos / 60);
@@ -9000,13 +9158,33 @@ function textoHorasCorto(minutos) {
   return horas + " h " + String(resto).padStart(2, "0");
 }
 
-// Una noche en una frase: «7 h 50 min, dormiste bien».
+// Una noche en una frase: «7 h 50 min, dormiste bien» (o solo «7 h 50
+// min» si aún no has dicho cómo dormiste: las que llegan de Salud).
 function textoNoche(noche) {
-  return (
-    textoHoras(minutosDormidos(noche.acostarse, noche.levantarse)) +
-    ", dormiste " +
-    noche.calidad
-  );
+  const horas = textoHoras(minutosDeNoche(noche));
+  if (!noche.calidad) {
+    return horas;
+  }
+  return horas + ", dormiste " + noche.calidad;
+}
+
+// Una noche con sus horas, para el dato de la gráfica: «7 h 50 min,
+// dormiste bien (23:20–07:10)». Si llegó de Salud, lo dice y, si un reloj
+// midió lo dormido, también: «7 h 5 min dormido, dormiste bien
+// (23:30–07:20, de Salud)».
+function textoNocheConHoras(noche) {
+  let texto = textoNoche(noche);
+  if (typeof noche.dormido === "number") {
+    texto = textoHoras(noche.dormido) + " dormido";
+    if (noche.calidad) {
+      texto += ", dormiste " + noche.calidad;
+    }
+  }
+  let horas = noche.acostarse + "–" + noche.levantarse;
+  if (noche.fuente === "salud") {
+    horas += ", de Salud";
+  }
+  return texto + " (" + horas + ")";
 }
 
 // El nombre de una noche por el día en que me levanté: «noche del 15 al 16
@@ -9147,6 +9325,19 @@ formSueno.addEventListener("submit", function (evento) {
   if (fallo) {
     errorSueno.textContent = fallo;
     return;
+  }
+
+  // Si la noche llegó de Salud y no se han tocado las horas, sigue siendo
+  // de Salud (con sus minutos dormidos); si se cambian, pasa a ser tuya
+  const antes = sueno[dia];
+  if (
+    antes &&
+    antes.fuente === "salud" &&
+    antes.acostarse === noche.acostarse &&
+    antes.levantarse === noche.levantarse
+  ) {
+    noche.dormido = antes.dormido;
+    noche.fuente = "salud";
   }
 
   sueno[dia] = noche;
@@ -9484,9 +9675,10 @@ function rellenarNombresEjercicios() {
 
 // Abre la ventana: con un entreno para cambiarlo (su id) o vacía para uno
 // nuevo. El nuevo empieza hoy, del tipo y la intensidad del último, con un
-// ejercicio vacío y marcando el hábito del deporte (el de la corona), si
+// ejercicio vacío y marcando el hábito que se diga (habito: al abrirla
+// desde una ficha de Hoy) o, si no, el del deporte (el de la corona), si
 // hay uno de casilla.
-function abrirVentanaEntreno(id) {
+function abrirVentanaEntreno(id, habito) {
   const entreno = entrenos[id] || null;
   entrenoEditado = null;
   if (entreno) {
@@ -9520,7 +9712,7 @@ function abrirVentanaEntreno(id) {
     const deporte = habitosDeCasilla().find(function (habito) {
       return iconoDe(habito) === "corona";
     });
-    rellenarHabitosEntreno((deporte && deporte.id) || "");
+    rellenarHabitosEntreno(habito || (deporte && deporte.id) || "");
     ejerciciosVentana = [ejercicioVacio()];
   }
 
@@ -9691,7 +9883,194 @@ document
   });
 
 // ==========================================================================
-// 31. BARRA SUPERIOR Y NAVEGACIÓN
+// 31. SUEÑO · DESDE SALUD DEL IPHONE
+// Ergon no puede leer la app Salud (solo las apps nativas pueden), pero un
+// atajo de la app Atajos sí: lee el «Análisis del sueño» de los últimos
+// días y lo manda a la función «salud» de Supabase con un código tuyo. La
+// función saca de ahí cada noche y la guarda como si la hubieras apuntado
+// («sueno:<día>», con fuente: "salud"); Ergon la baja al volver a él, y
+// por la mañana solo queda decir cómo dormiste (bloque 12). En Archivo
+// están el código y los pasos para crear el atajo; en la tarjeta del
+// sueño, el botón «Traer de Salud» (en el iPhone que tiene el atajo).
+// ==========================================================================
+
+// El nombre del atajo en la app Atajos: tiene que llamarse así para que el
+// botón lo encuentre.
+const nombreAtajoSalud = "Ergon Salud";
+
+// Cómo está el código, según la función: { codigo, creada, ultima } (null
+// mientras no se sabe); el código recién creado (solo se enseña ahora:
+// después, solo existe su huella) y el último fallo ("" si ninguno).
+let estadoSalud = null;
+let codigoSaludNuevo = "";
+let errorSalud = "";
+
+// ¿Tiene este dispositivo el atajo? (la casilla de Archivo; es de cada
+// dispositivo: no va a la nube ni a la copia)
+function atajoSaludAqui() {
+  return localStorage.getItem("ergon-atajo-salud") === "si";
+}
+
+// ¿Es un iPhone (o un iPad)? Solo ahí están las apps Salud y Atajos.
+function esIphone() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent);
+}
+
+// El botón «Traer de Salud» de la tarjeta del sueño: un enlace que abre el
+// atajo en la app Atajos (las direcciones «shortcuts://» las abre Atajos).
+// Al volver a Ergon, la noche ya está: se baja de la nube al volver.
+function enlaceAtajoSalud() {
+  const enlace = document.createElement("a");
+  enlace.classList.add("ritual-salud");
+  enlace.href =
+    "shortcuts://run-shortcut?name=" + encodeURIComponent(nombreAtajoSalud);
+  enlace.textContent = "Traer de Salud";
+  return enlace;
+}
+
+// Cuándo pasó algo, para leer: «hoy a las 09:02», «ayer a las 22:15» o
+// «16 oct a las 08:00».
+function cuandoFue(momento) {
+  const fecha = new Date(momento);
+  const dia = fecha.toLocaleDateString("en-CA");
+  const hora = fecha.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  if (dia === hoy) {
+    return "hoy a las " + hora;
+  }
+  if (dia === fechaMas(new Date(), -1).toLocaleDateString("en-CA")) {
+    return "ayer a las " + hora;
+  }
+  return fechaCorta(dia) + " a las " + hora;
+}
+
+// Dibuja la sección «Sueño desde Salud» (en Archivo), solo con la cuenta
+// abierta: cómo está el código, el código recién creado, la casilla de
+// este iPhone y, en los pasos del atajo, la dirección de la función y la
+// clave publicable (las mismas del bloque 21; no son secretas).
+function mostrarSalud() {
+  const seccion = document.getElementById("seccion-salud");
+  seccion.hidden = !hayNube() || !sesion;
+  if (seccion.hidden) {
+    return;
+  }
+
+  document.getElementById("salud-url").textContent =
+    nube.url + "/functions/v1/salud";
+  document.getElementById("salud-clave").textContent = nube.clave;
+
+  let estado = "";
+  if (errorSalud) {
+    estado = errorSalud;
+  } else if (estadoSalud && estadoSalud.codigo) {
+    estado =
+      "Tienes un código desde el " +
+      fechaCorta(new Date(estadoSalud.creada).toLocaleDateString("en-CA")) +
+      ".";
+    if (estadoSalud.ultima) {
+      estado +=
+        " Última noche recibida: " + cuandoFue(estadoSalud.ultima) + ".";
+    } else {
+      estado += " Aún no ha llegado ninguna noche.";
+    }
+  } else if (estadoSalud) {
+    estado = "Aún no tienes código.";
+  }
+  document.getElementById("salud-estado").textContent = estado;
+
+  let textoBoton = "Crear mi código";
+  if (estadoSalud && estadoSalud.codigo) {
+    textoBoton = "Cambiar el código";
+  }
+  document.getElementById("boton-codigo-salud").textContent = textoBoton;
+
+  document.getElementById("salud-codigo-caja").hidden = codigoSaludNuevo === "";
+  document.getElementById("salud-codigo").textContent = codigoSaludNuevo;
+  document.getElementById("salud-aqui").checked = atajoSaludAqui();
+}
+
+// Pregunta a la función cómo está el código (al abrir la app, después de
+// sincronizar, y al entrar en la cuenta).
+async function revisarSalud() {
+  if (!hayNube() || !sesion) {
+    return;
+  }
+  try {
+    estadoSalud = await llamarALaFuncion("salud", { accion: "estado" });
+    errorSalud = "";
+  } catch (error) {
+    errorSalud = textoErrorConsejero(error);
+  }
+  mostrarSalud();
+}
+
+// «Crear mi código» (o «Cambiar el código», preguntando antes: el de antes
+// deja de valer). En un iPhone, se marca también la casilla del atajo.
+async function crearCodigoSalud() {
+  if (estadoSalud && estadoSalud.codigo) {
+    const seguro = await preguntar(
+      "¿Cambiar el código de Salud? El de ahora dejará de valer: tendrás que poner el nuevo en el atajo.",
+      "Cambiar",
+      "Cancelar",
+    );
+    if (!seguro) {
+      return;
+    }
+  }
+
+  errorSalud = "";
+  try {
+    const respuesta = await llamarALaFuncion("salud", {
+      accion: "crear-codigo",
+    });
+    codigoSaludNuevo = respuesta.codigo;
+    estadoSalud = respuesta.estado;
+    if (esIphone()) {
+      localStorage.setItem("ergon-atajo-salud", "si");
+    }
+  } catch (error) {
+    errorSalud = textoErrorConsejero(error);
+  }
+  mostrarSalud();
+  mostrarRituales();
+}
+
+document
+  .getElementById("boton-codigo-salud")
+  .addEventListener("click", crearCodigoSalud);
+
+// Los botones «Copiar»: copian el texto de su caja (data-copiar: su id) y,
+// un momento, dicen «Copiado».
+document.querySelectorAll(".salud-copiar").forEach(function (boton) {
+  boton.addEventListener("click", async function () {
+    const texto = document.getElementById(boton.dataset.copiar).textContent;
+    try {
+      await navigator.clipboard.writeText(texto);
+      boton.textContent = "Copiado";
+    } catch (error) {
+      boton.textContent = "No se ha podido";
+    }
+    setTimeout(function () {
+      boton.textContent = "Copiar";
+    }, 1500);
+  });
+});
+
+// La casilla «Este iPhone tiene el atajo»: enseña o quita «Traer de Salud»
+// en la tarjeta del sueño.
+document.getElementById("salud-aqui").addEventListener("change", function () {
+  if (document.getElementById("salud-aqui").checked) {
+    localStorage.setItem("ergon-atajo-salud", "si");
+  } else {
+    localStorage.removeItem("ergon-atajo-salud");
+  }
+  mostrarRituales();
+});
+
+// ==========================================================================
+// 32. BARRA SUPERIOR Y NAVEGACIÓN
 // Arriba, el nombre de la pantalla y la fecha. Abajo, los botones:
 // Hoy · Mosaico · Méntor · Prometheus · Metas · Archivo.
 // ==========================================================================
@@ -9790,7 +10169,7 @@ botonesNavegacion.forEach(function (boton) {
 });
 
 // ==========================================================================
-// 32. APP INSTALABLE (SERVICE WORKER)
+// 33. APP INSTALABLE (SERVICE WORKER)
 // sw.js guarda una copia de la app para poder instalarla y usarla sin conexión.
 // ==========================================================================
 
@@ -9799,13 +10178,14 @@ if ("serviceWorker" in navigator) {
 }
 
 // ==========================================================================
-// 33. INICIO
+// 34. INICIO
 // Lo que pasa al abrir la app.
 // ==========================================================================
 
 // Vuelve a dibujar todo. Se llama cada vez que cambia algo.
 function actualizarTodo() {
   mostrarCuenta();
+  mostrarSalud();
   mostrarCharlas();
   mostrarRituales();
   mostrarRevisionEnHoy();
@@ -9833,8 +10213,9 @@ if (tocaBienvenida()) {
 }
 
 // Con la cuenta abierta, sincronizar nada más abrir y, después, revisar los
-// avisos de este dispositivo (bloque 23) y cómo van los consejeros (24).
-sincronizar().then(revisarAvisos).then(revisarConsejeros);
+// avisos de este dispositivo (bloque 23), cómo van los consejeros (24) y el
+// código de Salud (31).
+sincronizar().then(revisarAvisos).then(revisarConsejeros).then(revisarSalud);
 
 // En el iPhone, la app puede quedarse abierta de fondo y volver horas
 // después. Al volver (visibilitychange): si ya es otro día, se recarga para

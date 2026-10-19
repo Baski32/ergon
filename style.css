@@ -24,7 +24,7 @@
    16. Mosaico del mes
    17. Metas · Tarjetas
    18. Metas · Laureles (metas cumplidas)
-   19. Archivo · Cuenta, recordatorios, consejeros, perfil y revisiones
+   19. Archivo · Cuenta, recordatorios, consejeros, Salud, perfil y revisiones
    20. Archivo · Copia de seguridad
    21. Prometheus · El laboratorio
    22. Navegación
@@ -566,6 +566,32 @@ body {
   background-color: var(--terracota);
 }
 
+/* «Traer de Salud» (en el iPhone con el atajo): un botón de marco oliva a
+   todo el ancho, debajo de las horas */
+.ritual-salud {
+  display: block;
+  padding: 10px 0;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+  color: var(--oliva);
+  background-color: #fffdf8;
+  border: 1px solid var(--oliva);
+  border-radius: 4px;
+}
+
+.ritual-salud:hover {
+  color: var(--marmol);
+  background-color: var(--oliva);
+}
+
+/* Cuando la noche ya ha llegado de Salud: «Cambiar las horas» y «Hoy no»,
+   en fila */
+.ritual-acciones {
+  display: flex;
+  gap: 18px;
+}
+
 /* El examen de la noche: fondo de tinta, letras de mármol y detalles en oro */
 .ritual-noche {
   color: var(--marmol);
@@ -686,7 +712,8 @@ button.recordatorio {
   flex-direction: column;
 }
 
-/* Cada ficha: blanca, con borde de piedra y una sombra suave */
+/* Cada ficha: blanca, con borde de piedra y una sombra suave. flex-wrap:
+   la pregunta del entreno (abajo) baja a su propia línea */
 .lista-habitos li {
   background-color: #fffdf8;
   margin-bottom: 12px;
@@ -694,6 +721,7 @@ button.recordatorio {
   border-radius: 4px;
   box-shadow: 0px 2px 4px rgba(43, 37, 34, 0.06);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
 }
 
@@ -723,6 +751,38 @@ button.recordatorio {
 
 .lista-habitos li.fallado .icono {
   color: var(--terracota);
+}
+
+/* «¿Apuntas el entreno de hoy?», abajo de la ficha del deporte recién
+   marcada: a todo el ancho (flex-basis: 100%), con una raya de puntos
+   encima */
+.habito-aviso-entreno {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 8px 16px 10px;
+  border-top: 1px dashed var(--oliva);
+}
+
+.habito-aviso-texto {
+  margin: 0;
+  flex: 1;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--oliva);
+}
+
+.habito-aviso-si {
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--marmol);
+  background-color: var(--oliva);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 /* Ficha recién creada por Méntor: un brillo dorado que se apaga */
@@ -2523,15 +2583,17 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   19. ARCHIVO · CUENTA, RECORDATORIOS, CONSEJEROS, PERFIL Y REVISIONES
+   19. ARCHIVO · CUENTA, RECORDATORIOS, CONSEJEROS, SALUD, PERFIL Y REVISIONES
    La cuenta de la nube, los recordatorios, la conexión con los consejeros,
-   los datos del perfil, el historial del peso y las revisiones semanales.
+   el sueño desde Salud (el código y los pasos del atajo), los datos del
+   perfil, el historial del peso y las revisiones semanales.
    ========================================================================== */
 
 /* Cada sección, con un hueco debajo */
 .cuenta,
 .recordatorios,
 .consejeros,
+.salud,
 .perfil,
 .revisiones {
   margin-bottom: 32px;
@@ -2541,6 +2603,7 @@ button.recordatorio {
 .cuenta h2,
 .recordatorios h2,
 .consejeros h2,
+.salud h2,
 .perfil h2,
 .revisiones h2 {
   font-family: "Cinzel", serif;
@@ -2716,6 +2779,119 @@ button.recordatorio {
 
 .consejeros-respuesta .burbuja {
   white-space: pre-line;
+}
+
+/* Sueño desde Salud: el texto de arriba, centrado */
+.salud .pie-texto {
+  margin-top: 0;
+  text-align: center;
+}
+
+/* El código recién creado, en una caja con una raya dorada (solo se ve
+   esta vez) */
+.salud-codigo-caja {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background-color: #fffdf8;
+  border-left: 3px solid var(--oro);
+  border-radius: 4px;
+}
+
+.salud-codigo-caja[hidden] {
+  display: none;
+}
+
+.salud-codigo-nota {
+  margin: 0 0 6px;
+  font-size: 0.85rem;
+  color: var(--bronce);
+}
+
+/* Un texto para copiar (el código, la dirección, la clave) y su botón,
+   juntos. El texto, de ancho fijo; si es largo, se parte por donde haga
+   falta (break-all) para no salirse de la pantalla */
+.salud-copiable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.salud-copiable code,
+.salud-pasos code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.salud-copiable code {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  background-color: #fffdf8;
+  border: 1px solid var(--piedra);
+  border-radius: 4px;
+}
+
+.salud-copiar {
+  flex: none;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--bronce);
+  background: none;
+  border: 1px solid var(--bronce);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.salud-copiar:hover {
+  background-color: var(--piedra);
+}
+
+/* La casilla de este iPhone, con su texto al lado */
+.salud-aqui {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.salud-aqui input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--oliva);
+}
+
+/* Los pasos del atajo, plegados */
+.salud-pasos {
+  margin-top: 14px;
+}
+
+.salud-pasos summary {
+  font-size: 0.95rem;
+  color: var(--terracota);
+  cursor: pointer;
+}
+
+.salud-pasos ol {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  line-height: 1.45;
+}
+
+.salud-pasos li {
+  margin-bottom: 8px;
+}
+
+.salud-nota {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--bronce);
 }
 
 /* Cada dato: el nombre a la izquierda y el valor a la derecha */
