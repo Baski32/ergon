@@ -2024,6 +2024,101 @@ button.recordatorio {
   }
 }
 
+/* ---------- Las caras de la pestaña Méntor (lección 48) ---------- */
+
+/* Arriba de la pestaña: Méntor y los especialistas, en fila, cada uno con
+   su medallón y su nombre. Sin cuenta, no se ve (hace falta la regla de
+   [hidden]) */
+.charla-caras {
+  margin-bottom: 16px;
+}
+
+.charla-caras[hidden] {
+  display: none;
+}
+
+.charla-caras-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+/* Cada cara: un botón con el medallón y el nombre en Cinzel. Las que no
+   están elegidas, apagadas */
+.charla-cara {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-family: "Cinzel", serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--bronce);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.charla-cara svg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--oro);
+  opacity: 0.5;
+  transition:
+    opacity 0.2s,
+    box-shadow 0.2s;
+}
+
+.charla-cara:hover svg {
+  opacity: 0.8;
+}
+
+/* La elegida: entera, con un aro de terracota, y su nombre en terracota */
+.charla-cara.elegida {
+  color: var(--terracota);
+}
+
+.charla-cara.elegida svg {
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px var(--marmol),
+    0 0 0 4px var(--terracota);
+}
+
+.charla-cara:focus-visible {
+  outline: 2px solid var(--terracota);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* La de un consejero que está contestando: un puntito de oliva que late,
+   arriba a la derecha de su medallón */
+.charla-cara.ocupada::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 14px);
+  width: 10px;
+  height: 10px;
+  background-color: var(--oliva);
+  border: 2px solid var(--marmol);
+  border-radius: 50%;
+  animation: latir 0.8s ease-in-out infinite alternate;
+}
+
+/* Debajo de la fila: el nombre en griego del elegido y de qué sabe */
+.charla-quien {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  font-style: italic;
+  text-align: center;
+  color: var(--bronce);
+}
+
 /* ---------- Fotos y vídeos en las charlas (lección 47) ---------- */
 
 /* La cámara, a la izquierda del campo: sin fondo ni borde, del alto del
@@ -2435,7 +2530,8 @@ button.recordatorio {
 @media (prefers-reduced-motion: reduce) {
   .burbuja,
   .escribiendo span,
-  .adjunto-preparando {
+  .adjunto-preparando,
+  .charla-cara.ocupada::after {
     animation: none;
   }
 }

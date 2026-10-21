@@ -11,6 +11,7 @@
 - **Hábitos** diarios, de días concretos (por ejemplo, L-X-V), de unas veces por semana (por ejemplo, 3 veces, con la racha en semanas) o por cantidad (por ejemplo, al menos 10.000 pasos o como mucho 300 minutos), con rachas que respetan los días de descanso y la llama de Prometeo.
 - **Iconos clásicos** en SVG para cada hábito (corona de olivo, pergamino, ánfora, lira, búho, rama de olivo, luna, dracma, pluma y tintero, columna). Se eligen solos por el nombre del hábito y se pueden cambiar a mano.
 - **Méntor**: los hábitos y las metas nuevos se crean conversando con Méntor, que pregunta paso a paso (solo lo que toca) y muestra un resumen antes de crearlos. La primera vez da la bienvenida y pregunta lo básico para el perfil. Y en su pestaña se puede hablar con él con tus palabras: contesta con la IA de Claude conociendo tus hábitos, rachas y metas (se puede ver qué recibe y dejar de compartirlo), y las conversaciones se guardan y se sincronizan.
+- **Los especialistas**, en la misma pestaña que Méntor: arriba, una fila con sus caras (medallones de bronce) para elegir con quién hablar, cada uno con sus conversaciones y solo los datos de su ámbito. **Heracles** (Ἡρακλῆς), el entrenador: rutina, técnica, fuerza y físico, con tus entrenos y sus series. **Apolo** (Ἀπόλλων), la imagen: piel, pelo, postura y estilo, de forma sana y sin puntuar a nadie. **Deméter** (Δημήτηρ), la comida: comida de verdad y sin pasar hambre, con las ideas de Ray Peat contadas con honestidad.
 - **Prometheus**, el laboratorio: la única pestaña futurista (oscura, con luz de holograma y el fuego de Prometeo). Enseña las estadísticas: cómo va el día en un anillo, días perfectos y constancia de los últimos 30 días comparados con los 30 anteriores, la mejor racha viva, el peso, el sueño y los entrenos de la semana, la constancia semana a semana, la semana tipo (qué días cuestan más), la línea del peso, las horas de sueño de cada noche, los últimos entrenos, el progreso de cada ejercicio del gimnasio y cada disciplina con su racha y su récord. Cada gráfica enseña su dato al tocarla y tiene sus datos también en una tabla. En su vista «Hablar» se habla con Prometheus, el científico de Ergon: con la IA de Claude, lee los números (hábitos, sueño, entrenos y peso), busca tendencias y relaciones y propone pequeños experimentos.
 - **Fotos y vídeos para los consejeros**: con la cámara de junto al campo se les mandan hasta 4 fotos o un vídeo por mensaje (en el ordenador, también pegándolas). La app reduce cada foto antes de mandarla y de un vídeo saca 8 fotogramas (la IA no recibe vídeo ni sonido). Las fotos solo van en el mensaje en que se mandan; en la conversación se guarda una miniatura.
 - **Sueño**: a qué hora me acosté y me levanté y cómo dormí (bien, regular o mal), con las horas calculadas aunque pase la medianoche. Se apunta por la mañana en Hoy o desde Prometheus, o llega solo de la app **Salud** del iPhone con un atajo (el rato en cama que apunta el iPhone o lo dormido de verdad que mide un reloj): entonces solo queda decir cómo dormí.
@@ -75,7 +76,8 @@ Sin cuenta, los datos se guardan solo en el navegador de cada dispositivo. Con c
 - [x] Hablar con Prometheus con la IA de Claude
 - [x] El sueño desde la app Salud del iPhone
 - [x] Fotos y vídeos para los consejeros
-- [ ] Los especialistas
+- [x] Los especialistas: Heracles, Apolo y Deméter
+- [ ] Atenea y Pluto, con la búsqueda en internet
 
 ## Sobre el proyecto
 

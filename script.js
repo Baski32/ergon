@@ -28,7 +28,7 @@
 // 22. Nube · Sincronizar
 // 23. Recordatorios
 // 24. Consejeros · Conexión
-// 25. Consejeros · Las charlas (Méntor y Prometheus)
+// 25. Consejeros · Las charlas (Méntor, los especialistas y Prometheus)
 // 26. Consejeros · Lo que ven de mí
 // 27. Prometheus · Estadísticas
 // 28. Prometheus · El laboratorio
@@ -5735,8 +5735,8 @@ document
 
 // ==========================================================================
 // 24. CONSEJEROS · CONEXIÓN
-// Méntor y Prometheus (y, más adelante, los especialistas) contestan con la
-// IA de Claude. La app no habla con Claude directamente: habla con la función
+// Méntor, Prometheus y los especialistas (Heracles, Apolo y Deméter)
+// contestan con la IA de Claude. La app no habla con Claude directamente: habla con la función
 // «consejero» del servidor (supabase/functions/consejero), que guarda la
 // clave de la API. Así la clave nunca está en este archivo, que cualquiera
 // puede leer. La función también pone un límite de mensajes al día y lleva
@@ -5965,10 +5965,11 @@ document
 
 // ==========================================================================
 // 25. CONSEJEROS · LAS CHARLAS
-// Hablar con un consejero con mis palabras: con Méntor en su pestaña y con
-// Prometheus en la suya (la vista «Hablar» del laboratorio). Las dos
-// charlas funcionan igual, así que el código es el mismo para las dos: lo
-// que cambia de una a otra está en su «sala» (abajo). Cada conversación se
+// Hablar con un consejero con mis palabras: con Méntor y los especialistas
+// (Heracles, Apolo y Deméter, lección 48) en la pestaña Méntor, eligiendo
+// su cara arriba, y con Prometheus en la suya (la vista «Hablar» del
+// laboratorio). Todas las charlas funcionan igual, así que el código es el
+// mismo para todas: lo que cambia de una a otra está en su «sala» (abajo). Cada conversación se
 // guarda (en «conversaciones», bloque 1, con el consejero con el que es) y
 // se sincroniza, así se puede seguir en el móvil o en el ordenador y releer
 // después. Las respuestas llegan de Claude a través del servidor
@@ -5978,74 +5979,171 @@ document
 // mandar fotos o un vídeo (lección 47; más abajo, «Fotos y vídeos»).
 // ==========================================================================
 
+// Lo que cambia mientras se habla con un consejero, al empezar: la
+// conversación abierta (abierta: su id, o null si es una nueva aún sin
+// mensajes); si ya se ha elegido una (elegida: en la lista, con «+ Nueva» o
+// al escribir; mientras no, se abre la de hoy: si hoy ya se habló con él,
+// aquí o en otro dispositivo, se sigue esa; si no, una nueva); si se está
+// viendo la lista (viendoLista); la conversación que espera la respuesta
+// (esperando: su id, o null); el último fallo (error: { id, texto }, o
+// null); las fotos o el vídeo elegidos para el próximo mensaje (adjuntos)
+// y, si alguno no se ha podido añadir, por qué (avisoAdjuntos).
+function estadoNuevo() {
+  return {
+    abierta: null,
+    elegida: false,
+    viendoLista: false,
+    esperando: null,
+    error: null,
+    adjuntos: [],
+    avisoAdjuntos: "",
+  };
+}
+
+// La pestaña Méntor: la comparten Méntor y los especialistas.
+const pestanaMentor = document.querySelector('[data-pantalla="charla"]');
+
 // Las salas. Cada una tiene:
-//  - consejero y nombre: con quién se habla ("mentor", «Méntor»).
+//  - consejero y nombre: con quién se habla ("mentor", «Méntor»); griego y
+//    ambito: su nombre en griego y de qué sabe (salen bajo las caras).
 //  - raiz: su caja en la página. Sus piezas se buscan dentro por su clase
-//    (función pieza), así las dos salas usan las mismas clases.
+//    (función pieza), así todas usan las mismas clases. Las de la pestaña
+//    Méntor tienen la misma caja: se ve la de la cara elegida.
 //  - saludo: lo primero que dice (lo pone la app; no se guarda).
 //  - burbuja: cómo se dibujan sus mensajes (con su cara).
 //  - resumen: el resumen de mis datos que recibe con cada mensaje (bloque
 //    26), si lo comparto.
 //  - sugerencias: preguntas para empezar con un toque (o ninguna).
-//  - Y cómo va la charla: la conversación abierta (abierta: su id, o null
-//    si es una nueva aún sin mensajes); si ya se ha elegido una (elegida:
-//    en la lista, con «+ Nueva» o al escribir; mientras no, se abre la de
-//    hoy: si hoy ya se habló con él, aquí o en otro dispositivo, se sigue
-//    esa; si no, una nueva); si se está viendo la lista (viendoLista); la
-//    conversación que espera la respuesta (esperando: su id, o null) y el
-//    último fallo (error: { id, texto }, o null).
-//  - Las fotos o el vídeo elegidos para el próximo mensaje (adjuntos) y,
-//    si alguno no se ha podido añadir, por qué (avisoAdjuntos).
+//  - Y cómo va la charla (estadoNuevo, arriba).
 const salas = {
-  mentor: {
-    consejero: "mentor",
-    nombre: "Méntor",
-    raiz: document.querySelector('[data-pantalla="charla"]'),
-    saludo: function () {
-      return salve() + " ¿De qué quieres hablar?";
+  mentor: Object.assign(
+    {
+      consejero: "mentor",
+      nombre: "Méntor",
+      griego: "Μέντωρ",
+      ambito: "el sentido, los hábitos y el rumbo",
+      raiz: pestanaMentor,
+      saludo: function () {
+        return salve() + " ¿De qué quieres hablar?";
+      },
+      burbuja: burbujaMentor,
+      resumen: resumenParaConsejeros,
+      sugerencias: [],
     },
-    burbuja: burbujaMentor,
-    resumen: resumenParaConsejeros,
-    sugerencias: [],
-    abierta: null,
-    elegida: false,
-    viendoLista: false,
-    esperando: null,
-    error: null,
-    adjuntos: [],
-    avisoAdjuntos: "",
-  },
-  prometheus: {
-    consejero: "prometheus",
-    nombre: "Prometheus",
-    raiz: document.getElementById("lab-vista-charla"),
-    saludo: function () {
-      let hola = "Hola.";
-      if (perfil.nombre) {
-        hola = "Hola, " + perfil.nombre + ".";
-      }
-      return (
-        hola +
-        " Soy Prometheus: leo tus datos y busco lo que dicen. ¿Qué quieres analizar?"
-      );
+    estadoNuevo(),
+  ),
+  heracles: Object.assign(
+    {
+      consejero: "heracles",
+      nombre: "Heracles",
+      griego: "Ἡρακλῆς",
+      ambito: "el entreno y el físico",
+      raiz: pestanaMentor,
+      saludo: function () {
+        return salve() + " Soy Heracles, tu entrenador. ¿En qué trabajamos?";
+      },
+      burbuja: burbujaConCara("cara-heracles"),
+      resumen: resumenParaHeracles,
+      sugerencias: [
+        "¿Cómo voy progresando?",
+        "Prepárame la rutina de esta semana",
+        "Quiero ganar fuerza sin lesionarme",
+      ],
     },
-    burbuja: burbujaPrometheus,
-    resumen: resumenParaPrometheus,
-    sugerencias: [
-      "¿Cómo estoy durmiendo?",
-      "¿Qué días me cuestan más y por qué puede ser?",
-      "¿Cómo voy en el gimnasio?",
-      "Analiza mi última semana",
-    ],
-    abierta: null,
-    elegida: false,
-    viendoLista: false,
-    esperando: null,
-    error: null,
-    adjuntos: [],
-    avisoAdjuntos: "",
-  },
+    estadoNuevo(),
+  ),
+  apolo: Object.assign(
+    {
+      consejero: "apolo",
+      nombre: "Apolo",
+      griego: "Ἀπόλλων",
+      ambito: "la piel, el pelo, la postura y el estilo",
+      raiz: pestanaMentor,
+      saludo: function () {
+        return (
+          salve() +
+          " Soy Apolo: piel, pelo, postura y estilo, con salud y sin obsesiones. ¿Por dónde empezamos?"
+        );
+      },
+      burbuja: burbujaConCara("cara-apolo"),
+      resumen: resumenParaApolo,
+      sugerencias: [
+        "¿Qué rutina de piel me recomiendas?",
+        "¿Cómo mejoro la postura?",
+        "Ayúdame a vestir mejor",
+      ],
+    },
+    estadoNuevo(),
+  ),
+  demeter: Object.assign(
+    {
+      consejero: "demeter",
+      nombre: "Deméter",
+      griego: "Δημήτηρ",
+      ambito: "la comida",
+      raiz: pestanaMentor,
+      saludo: function () {
+        return (
+          salve() +
+          " Soy Deméter: hablemos de lo que comes, sin pasar hambre. ¿Qué quieres saber?"
+        );
+      },
+      burbuja: burbujaConCara("cara-demeter"),
+      resumen: resumenParaDemeter,
+      sugerencias: [
+        "¿Qué como antes y después de entrenar?",
+        "Ideas para un desayuno con proteína",
+        "¿Qué opinas de los aceites de semillas?",
+      ],
+    },
+    estadoNuevo(),
+  ),
+  prometheus: Object.assign(
+    {
+      consejero: "prometheus",
+      nombre: "Prometheus",
+      griego: "Προμηθεύς",
+      ambito: "los números",
+      raiz: document.getElementById("lab-vista-charla"),
+      saludo: function () {
+        let hola = "Hola.";
+        if (perfil.nombre) {
+          hola = "Hola, " + perfil.nombre + ".";
+        }
+        return (
+          hola +
+          " Soy Prometheus: leo tus datos y busco lo que dicen. ¿Qué quieres analizar?"
+        );
+      },
+      burbuja: burbujaPrometheus,
+      resumen: resumenParaPrometheus,
+      sugerencias: [
+        "¿Cómo estoy durmiendo?",
+        "¿Qué días me cuestan más y por qué puede ser?",
+        "¿Cómo voy en el gimnasio?",
+        "Analiza mi última semana",
+      ],
+    },
+    estadoNuevo(),
+  ),
 };
+
+// Con quién se habla en la pestaña Méntor: la cara elegida arriba. Se
+// recuerda mientras la app está abierta; al abrirla, Méntor.
+let consejeroDeLaPestana = "mentor";
+
+// ¿Se ve esta sala en su caja? (las de la pestaña Méntor, solo la elegida;
+// la de Prometheus, siempre)
+function salaActiva(sala) {
+  return sala.raiz !== pestanaMentor || sala.consejero === consejeroDeLaPestana;
+}
+
+// La sala que se ve ahora en una caja.
+function salaEn(raiz) {
+  return Object.values(salas).find(function (sala) {
+    return sala.raiz === raiz && salaActiva(sala);
+  });
+}
 
 // Una pieza de una sala, por su clase: pieza(sala, "charla") es la caja de
 // la conversación de esa sala.
@@ -6141,6 +6239,22 @@ function burbujaYo(mensaje) {
   }
   burbuja.textContent = mensaje.texto;
   return burbuja;
+}
+
+// Para un especialista de la pestaña Méntor: una función que dibuja sus
+// burbujas, como las de Méntor, pero con su cara (cara: el id de su dibujo
+// en index.html, «cara-heracles»…).
+function burbujaConCara(cara) {
+  return function (texto) {
+    const burbuja = document.createElement("p");
+    burbuja.classList.add("burbuja", "burbuja-mentor");
+    burbuja.innerHTML =
+      '<svg class="mentor-cara" viewBox="0 0 40 40" aria-hidden="true"><use href="#' +
+      cara +
+      '"></use></svg>';
+    burbuja.append(texto);
+    return burbuja;
+  };
 }
 
 // Una burbuja de Prometheus, a la izquierda, con su cara: la llama de
@@ -6337,6 +6451,23 @@ function dibujarListaCharlas(sala) {
 // conversación abierta con el campo para escribir.
 function mostrarSala(sala) {
   const conCuenta = hayNube() && sesion !== null;
+
+  // En la pestaña Méntor, la fila de caras (aunque esta sala no se vea:
+  // puede que acabe de contestar y haya que quitar su puntito)
+  const caras = pieza(sala, "charla-caras");
+  if (caras) {
+    caras.hidden = !conCuenta;
+    dibujarCaras();
+  }
+  if (!salaActiva(sala)) {
+    return;
+  }
+
+  // Lo que dice el nombre del consejero: el campo y «Lo que ve…»
+  campoDe(sala).placeholder = "Escribe a " + sala.nombre + "…";
+  campoDe(sala).setAttribute("aria-label", "Mensaje para " + sala.nombre);
+  pieza(sala, "charla-ve").textContent = "Lo que ve " + sala.nombre;
+
   pieza(sala, "charla-sin-cuenta").hidden = conCuenta;
   pieza(sala, "charla-barra").hidden = !conCuenta || sala.viendoLista;
   pieza(sala, "lista-charlas").hidden = !conCuenta || !sala.viendoLista;
@@ -6426,7 +6557,11 @@ function enfocarCampoCharla(sala) {
 // ¿Se está viendo esta sala ahora? (para bajar al final al llegar la
 // respuesta solo si se está mirando): su pantalla y su caja, a la vista.
 function salaALaVista(sala) {
-  return !sala.raiz.closest(".pantalla").hidden && !sala.raiz.hidden;
+  return (
+    salaActiva(sala) &&
+    !sala.raiz.closest(".pantalla").hidden &&
+    !sala.raiz.hidden
+  );
 }
 
 // Pide al consejero la respuesta a una conversación (cuando el último
@@ -6809,6 +6944,9 @@ function preparandoAdjuntos(sala) {
 // «Enviar» se apaga mientras el consejero contesta y mientras se prepara
 // alguna foto.
 function estadoEnviar(sala) {
+  if (!salaActiva(sala)) {
+    return;
+  }
   pieza(sala, "charla-escribir").querySelector(
     'button[type="submit"]',
   ).disabled = sala.esperando !== null || preparandoAdjuntos(sala);
@@ -6818,6 +6956,10 @@ function estadoEnviar(sala) {
 // o vídeo con su × para quitarlo (mientras se prepara, unos puntos) y, si
 // algo no se ha podido añadir, por qué. Vacía, no se ve.
 function dibujarAdjuntos(sala) {
+  // Las de una sala que no se ve se dibujan al volver a ella
+  if (!salaActiva(sala)) {
+    return;
+  }
   const caja = pieza(sala, "charla-adjuntos");
   caja.innerHTML = "";
 
@@ -6928,15 +7070,20 @@ function ajustarCampoCharla(sala) {
   campo.style.height = Math.min(campo.scrollHeight + bordes, 160) + "px";
 }
 
-// Conecta los botones y el campo de una sala. En el PC, Intro envía y
-// Mayúsculas + Intro hace una línea nueva; en el móvil, Intro hace una
-// línea nueva y se envía con el botón.
-function conectarSala(sala) {
-  const campo = campoDe(sala);
-  const formulario = pieza(sala, "charla-escribir");
+// Conecta los botones y el campo de una caja (la pestaña Méntor o la charla
+// de Prometheus). Lo que pasa al tocarlos es para la sala que se ve en ese
+// momento (en la pestaña Méntor, la de la cara elegida). En el PC, Intro
+// envía y Mayúsculas + Intro hace una línea nueva; en el móvil, Intro hace
+// una línea nueva y se envía con el botón.
+function conectarCaja(raiz) {
+  function actual() {
+    return salaEn(raiz);
+  }
+  const campo = campoDe(actual());
+  const formulario = pieza(actual(), "charla-escribir");
 
   campo.addEventListener("input", function () {
-    ajustarCampoCharla(sala);
+    ajustarCampoCharla(actual());
   });
 
   campo.addEventListener("keydown", function (evento) {
@@ -6951,6 +7098,7 @@ function conectarSala(sala) {
   // prepara alguna foto ni mientras el consejero contesta)
   formulario.addEventListener("submit", function (evento) {
     evento.preventDefault();
+    const sala = actual();
     const texto = campo.value.trim();
     const adjuntos = sala.adjuntos;
     if (
@@ -6970,12 +7118,12 @@ function conectarSala(sala) {
 
   // La cámara: abre el selector de archivos (en el iPhone, la galería o la
   // cámara). value = "" para que se pueda volver a elegir la misma foto
-  const archivos = pieza(sala, "charla-archivos");
-  pieza(sala, "charla-adjuntar").addEventListener("click", function () {
+  const archivos = pieza(actual(), "charla-archivos");
+  pieza(actual(), "charla-adjuntar").addEventListener("click", function () {
     archivos.click();
   });
   archivos.addEventListener("change", function () {
-    anadirArchivos(sala, archivos.files);
+    anadirArchivos(actual(), archivos.files);
     archivos.value = "";
   });
 
@@ -6988,32 +7136,77 @@ function conectarSala(sala) {
     );
     if (pegadas.length > 0) {
       evento.preventDefault();
-      anadirArchivos(sala, pegadas);
+      anadirArchivos(actual(), pegadas);
     }
   });
 
   // «‹ Conversaciones» y «+ Nueva»
-  pieza(sala, "charla-ver-lista").addEventListener("click", function () {
+  pieza(actual(), "charla-ver-lista").addEventListener("click", function () {
+    const sala = actual();
     sala.viendoLista = true;
     mostrarSala(sala);
     window.scrollTo(0, 0);
   });
-  pieza(sala, "charla-nueva").addEventListener("click", function () {
-    abrirCharla(sala, null);
+  pieza(actual(), "charla-nueva").addEventListener("click", function () {
+    abrirCharla(actual(), null);
   });
 
   // «Lo que ve…» (bloque 26)
-  pieza(sala, "charla-ve").addEventListener("click", function () {
-    abrirContexto(sala);
+  pieza(actual(), "charla-ve").addEventListener("click", function () {
+    abrirContexto(actual());
   });
 
   // Sin cuenta: «Ir a Archivo» lleva a entrar
-  pieza(sala, "charla-ir-a-cuenta").addEventListener("click", function () {
+  pieza(actual(), "charla-ir-a-cuenta").addEventListener("click", function () {
     mostrarPantalla("archivo");
   });
 }
 
-Object.values(salas).forEach(conectarSala);
+conectarCaja(pestanaMentor);
+conectarCaja(salas.prometheus.raiz);
+
+// ---------- Las caras de la pestaña Méntor (lección 48) ----------
+// Arriba de la pestaña, una fila con las caras de Méntor y de los
+// especialistas: al tocar una, se habla con ese consejero (cada uno con sus
+// conversaciones). Debajo, su nombre en griego y de qué sabe.
+
+// Dibuja la fila: la cara elegida, encendida; la de un consejero que está
+// contestando, con un puntito (se puede hablar con otro mientras tanto).
+function dibujarCaras() {
+  document.querySelectorAll(".charla-cara").forEach(function (boton) {
+    const sala = salas[boton.dataset.consejero];
+    const elegida = sala.consejero === consejeroDeLaPestana;
+    boton.classList.toggle("elegida", elegida);
+    boton.setAttribute("aria-pressed", String(elegida));
+    boton.classList.toggle("ocupada", sala.esperando !== null);
+  });
+  const sala = salas[consejeroDeLaPestana];
+  document.getElementById("charla-quien").textContent =
+    sala.griego + " · " + sala.ambito;
+}
+
+// Elige con quién hablar en la pestaña Méntor: se ve su sala, abajo del
+// todo (o en su lista, si la estaba viendo).
+function elegirConsejero(consejero) {
+  if (consejero === consejeroDeLaPestana) {
+    return;
+  }
+  consejeroDeLaPestana = consejero;
+  const sala = salas[consejero];
+  mostrarSala(sala);
+  if (sala.viendoLista) {
+    window.scrollTo(0, 0);
+  } else {
+    irAlFinal();
+  }
+  enfocarCampoCharla(sala);
+}
+
+document.querySelectorAll(".charla-cara").forEach(function (boton) {
+  boton.addEventListener("click", function () {
+    elegirConsejero(boton.dataset.consejero);
+  });
+});
 
 // ==========================================================================
 // 26. CONSEJEROS · LO QUE VEN DE MÍ
@@ -7022,8 +7215,10 @@ Object.values(salas).forEach(conectarSala);
 // ámbito. Méntor: el día y la hora, mi nombre y mi edad, los hábitos (con
 // sus reglas, su racha, su constancia y cómo van hoy), las metas, los
 // rituales de hoy y la última revisión semanal. Prometheus: los números
-// (las cifras de los hábitos, el peso, el sueño y los entrenos). Lo
-// calcula la app en el momento, con las mismas funciones que dibujan las
+// (las cifras de los hábitos, el peso, el sueño y los entrenos). Los
+// especialistas, solo lo suyo (más abajo): Heracles, el entreno y el peso;
+// Apolo, sus hábitos de cuidado; Deméter, la comida y el peso. Lo calcula
+// la app en el momento, con las mismas funciones que dibujan las
 // pantallas. Se puede ver tal cual («Lo que ve…», debajo de cada charla) y
 // dejar de compartir, con cada consejero por separado.
 // ==========================================================================
@@ -7550,19 +7745,12 @@ function entrenoEnTexto(entreno) {
   return texto + ".";
 }
 
-// El resumen para Prometheus: los números. Las cifras de los hábitos (las
-// del laboratorio), el peso, cada noche de sueño (con cómo le fue ese día
-// con los hábitos, para que pueda ver si van juntos), los entrenos con sus
-// series y el progreso de cada ejercicio. Para que no sea demasiado largo:
-// las noches de las últimas 4 semanas, los entrenos de las últimas 8 (30
-// como mucho), los 20 últimos pesos y los 8 ejercicios más recientes, con
-// sus 6 últimas sesiones.
-function resumenParaPrometheus() {
-  const ahora = new Date();
-  const datos = estadisticas();
-  const lineas = [lineaAhora(ahora)];
+// ---------- Trozos de los resúmenes de Prometheus y de los especialistas ----------
+// Cada uno da sus líneas; cada resumen junta los que tocan a su consejero.
 
-  // Quién es: nombre, edad y altura
+// Quién es: «Se llama Joel, tiene 22 años y mide 178 cm.» (o null si no
+// hay nada en el perfil).
+function lineaQuien() {
   const quien = [];
   if (perfil.nombre) {
     quien.push("se llama " + perfil.nombre);
@@ -7573,12 +7761,251 @@ function resumenParaPrometheus() {
   if (perfil.altura) {
     quien.push("mide " + perfil.altura + " cm");
   }
-  if (quien.length > 0) {
-    lineas.push(conMayuscula(enFrase(quien)) + ".");
+  if (quien.length === 0) {
+    return null;
+  }
+  return conMayuscula(enFrase(quien)) + ".";
+}
+
+// El peso: los 20 últimos y cuánto ha cambiado del primero al último.
+// datos: las estadísticas (bloque 27).
+function lineasPeso(datos) {
+  const pesos = datos.peso.pesos;
+  if (pesos.length === 0) {
+    return ["Peso: aún no ha apuntado ninguno."];
+  }
+  const lineas = [
+    "Peso (del más antiguo al más nuevo): " +
+      pesos
+        .slice(-20)
+        .map(function (apunte) {
+          return fechaCorta(apunte.fecha) + ": " + textoKilos(apunte.kilos);
+        })
+        .join("; ") +
+      ".",
+  ];
+  if (pesos.length > 1) {
+    const primero = datos.peso.primero;
+    const ultimo = datos.peso.ultimo;
+    const dias = Math.round(
+      (new Date(ultimo.fecha + "T00:00") - new Date(primero.fecha + "T00:00")) /
+        86400000,
+    );
+    lineas.push(
+      "Del primero al último: " +
+        textoDiferencia(ultimo.kilos - primero.kilos) +
+        " en " +
+        textoDias(dias) +
+        ".",
+    );
+  }
+  return lineas;
+}
+
+// La media de sueño de los últimos 7 días (y de los 7 de antes), o null si
+// no hay noches.
+function lineaMediaSueno(datos) {
+  const semana = datos.sueno.semana;
+  const antes = datos.sueno.antes;
+  if (semana.media === null) {
+    return null;
+  }
+  let linea =
+    "Media de los últimos 7 días: " +
+    textoHoras(semana.media) +
+    " (" +
+    textoNoches(semana.noches) +
+    ")";
+  if (antes.media !== null) {
+    linea +=
+      "; de los 7 anteriores: " +
+      textoHoras(antes.media) +
+      " (" +
+      textoNoches(antes.noches) +
+      ")";
+  }
+  return linea + ".";
+}
+
+// El sueño, noche a noche (las de las últimas 4 semanas, con cómo le fue
+// cada día con los hábitos) y la media.
+function lineasSueno(datos) {
+  const noches = nochesRecientes(28);
+  if (noches.length === 0) {
+    return ["Sueño: aún no ha apuntado ninguna noche."];
+  }
+  const lineas = [
+    "Sueño (cada noche va por el día en que se levantó; las de las últimas 4 semanas, de la más antigua a la más nueva; las que dicen «según Salud» las midió el iPhone, que solo sabe el rato en cama, o un reloj, que también mide lo dormido; las demás las apuntó él):",
+  ];
+  const sinApuntar = [];
+  noches.forEach(function (noche) {
+    if (noche.minutos === null) {
+      sinApuntar.push(fechaCorta(noche.dia));
+      return;
+    }
+    lineas.push(
+      "- " +
+        fechaConDia(noche.dia) +
+        ": de " +
+        noche.noche.acostarse +
+        " a " +
+        noche.noche.levantarse +
+        " (" +
+        horasEnTexto(noche.noche) +
+        "), " +
+        calidadEnTexto(noche.noche) +
+        "; " +
+        diaEnTexto(noche.dia),
+    );
+  });
+  if (sinApuntar.length > 0) {
+    lineas.push("Noches sin apuntar: " + sinApuntar.join(", ") + ".");
+  }
+  const media = lineaMediaSueno(datos);
+  if (media) {
+    lineas.push(media);
+  }
+  return lineas;
+}
+
+// El sueño en una línea (para los especialistas): «Sueño: de media, 7 h
+// 44 min en los últimos 7 días (5 noches); en los 7 anteriores, 7 h 42 min
+// (5 noches).»
+function lineasSuenoEnBreve(datos) {
+  const semana = datos.sueno.semana;
+  const antes = datos.sueno.antes;
+  if (semana.media === null) {
+    return ["Sueño: no hay noches apuntadas en los últimos 7 días."];
+  }
+  let linea =
+    "Sueño: de media, " +
+    textoHoras(semana.media) +
+    " en los últimos 7 días (" +
+    textoNoches(semana.noches) +
+    ")";
+  if (antes.media !== null) {
+    linea +=
+      "; en los 7 anteriores, " +
+      textoHoras(antes.media) +
+      " (" +
+      textoNoches(antes.noches) +
+      ")";
+  }
+  return [linea + "."];
+}
+
+// Cuántos entrenos ha hecho cada semana (las últimas 8; la última es esta).
+function lineaEntrenosPorSemana(ahora) {
+  const lunes = lunesDe(ahora);
+  const semanas = [];
+  for (let i = 7; i >= 0; i--) {
+    const inicio = fechaMas(lunes, -7 * i);
+    const suma = entrenosDeLaSemana(inicio);
+    let texto =
+      fechaCorta(inicio.toLocaleDateString("en-CA")) + ": " + suma.cuantos;
+    if (suma.minutos > 0) {
+      texto += " (" + suma.minutos + " min)";
+    }
+    semanas.push(texto);
+  }
+  return (
+    "Entrenos por semana (por el lunes de cada semana; la última es esta): " +
+    semanas.join(", ") +
+    "."
+  );
+}
+
+// Los entrenos de las últimas 8 semanas (30 como mucho), cada uno con sus
+// ejercicios y series, y cuántos cada semana. Con «enBreve», solo cuántos
+// cada semana.
+function lineasEntrenos(ahora, enBreve) {
+  const todos = entrenosOrdenados();
+  const desde = fechaMas(lunesDe(ahora), -49).toLocaleDateString("en-CA");
+  const recientes = todos.filter(function (entreno) {
+    return entreno.fecha >= desde;
+  });
+  if (todos.length === 0) {
+    return ["Entrenos: aún no ha apuntado ninguno."];
+  }
+  if (recientes.length === 0) {
+    return [
+      "Entrenos: ninguno en las últimas 8 semanas (el último, el " +
+        fechaLarga(todos[0].fecha) +
+        ").",
+    ];
+  }
+  if (enBreve) {
+    return [lineaEntrenosPorSemana(ahora)];
+  }
+  const lineas = [
+    "Entrenos de las últimas 8 semanas (del más reciente al más antiguo; la intensidad va del 1 al 10; cada serie, kilos × repeticiones):",
+  ];
+  recientes.slice(0, 30).forEach(function (entreno) {
+    lineas.push(entrenoEnTexto(entreno));
+  });
+  lineas.push(lineaEntrenosPorSemana(ahora));
+  return lineas;
+}
+
+// El progreso de los 8 ejercicios más recientes, con sus 6 últimas sesiones
+// (o ninguna línea si no hay ejercicios).
+function lineasProgreso() {
+  const ejercicios = nombresEjercicios().slice(0, 8);
+  if (ejercicios.length === 0) {
+    return [];
+  }
+  const lineas = [
+    "Progreso en el gimnasio (la mejor serie de cada sesión: más kilos o, con los mismos kilos, más repeticiones; de la más antigua a la más nueva):",
+  ];
+  ejercicios.forEach(function (nombre) {
+    lineas.push(
+      "- " +
+        nombre +
+        ": " +
+        historialEjercicio(nombre)
+          .slice(-6)
+          .map(function (sesion) {
+            return fechaCorta(sesion.fecha) + " " + textoSerie(sesion.mejor);
+          })
+          .join("; "),
+    );
+  });
+  return lineas;
+}
+
+// Un resumen hecho de trozos: cada trozo es una lista de líneas y entre
+// trozo y trozo va una línea en blanco (los vacíos se saltan).
+function juntarTrozos(trozos) {
+  return trozos
+    .filter(function (trozo) {
+      return trozo.length > 0;
+    })
+    .map(function (trozo) {
+      return trozo.join("\n");
+    })
+    .join("\n\n");
+}
+
+// El resumen para Prometheus: los números. Las cifras de los hábitos (las
+// del laboratorio), el peso, cada noche de sueño (con cómo le fue ese día
+// con los hábitos, para que pueda ver si van juntos), los entrenos con sus
+// series y el progreso de cada ejercicio. Para que no sea demasiado largo:
+// las noches de las últimas 4 semanas, los entrenos de las últimas 8 (30
+// como mucho), los 20 últimos pesos y los 8 ejercicios más recientes, con
+// sus 6 últimas sesiones.
+function resumenParaPrometheus() {
+  const ahora = new Date();
+  const datos = estadisticas();
+
+  // Quién es: nombre, edad y altura
+  const primero = [lineaAhora(ahora)];
+  const quien = lineaQuien();
+  if (quien) {
+    primero.push(quien);
   }
 
   // Los hábitos, con las cifras del laboratorio
-  lineas.push("");
+  const lineas = [];
   if (habitos.length === 0) {
     lineas.push("Hábitos: aún no tiene ninguno.");
   } else {
@@ -7652,167 +8079,146 @@ function resumenParaPrometheus() {
     }
   }
 
-  // El peso
-  lineas.push("");
-  const pesos = datos.peso.pesos;
-  if (pesos.length === 0) {
-    lineas.push("Peso: aún no ha apuntado ninguno.");
-  } else {
-    lineas.push(
-      "Peso (del más antiguo al más nuevo): " +
-        pesos
-          .slice(-20)
-          .map(function (apunte) {
-            return fechaCorta(apunte.fecha) + ": " + textoKilos(apunte.kilos);
-          })
-          .join("; ") +
-        ".",
-    );
-    if (pesos.length > 1) {
-      const primero = datos.peso.primero;
-      const ultimo = datos.peso.ultimo;
-      const dias = Math.round(
-        (new Date(ultimo.fecha + "T00:00") -
-          new Date(primero.fecha + "T00:00")) /
-          86400000,
-      );
-      lineas.push(
-        "Del primero al último: " +
-          textoDiferencia(ultimo.kilos - primero.kilos) +
-          " en " +
-          textoDias(dias) +
-          ".",
-      );
-    }
-  }
+  return juntarTrozos([
+    primero,
+    lineas,
+    lineasPeso(datos),
+    lineasSueno(datos),
+    lineasEntrenos(ahora, false),
+    lineasProgreso(),
+  ]);
+}
 
-  // El sueño: cada noche, con cómo le fue el día
-  lineas.push("");
-  const noches = nochesRecientes(28);
-  if (noches.length === 0) {
-    lineas.push("Sueño: aún no ha apuntado ninguna noche.");
-  } else {
-    lineas.push(
-      "Sueño (cada noche va por el día en que se levantó; las de las últimas 4 semanas, de la más antigua a la más nueva; las que dicen «según Salud» las midió el iPhone, que solo sabe el rato en cama, o un reloj, que también mide lo dormido; las demás las apuntó él):",
-    );
-    const sinApuntar = [];
-    noches.forEach(function (noche) {
-      if (noche.minutos === null) {
-        sinApuntar.push(fechaCorta(noche.dia));
-        return;
-      }
-      lineas.push(
-        "- " +
-          fechaConDia(noche.dia) +
-          ": de " +
-          noche.noche.acostarse +
-          " a " +
-          noche.noche.levantarse +
-          " (" +
-          horasEnTexto(noche.noche) +
-          "), " +
-          calidadEnTexto(noche.noche) +
-          "; " +
-          diaEnTexto(noche.dia),
-      );
-    });
-    if (sinApuntar.length > 0) {
-      lineas.push("Noches sin apuntar: " + sinApuntar.join(", ") + ".");
-    }
-    const semana = datos.sueno.semana;
-    const antes = datos.sueno.antes;
-    if (semana.media !== null) {
-      let linea =
-        "Media de los últimos 7 días: " +
-        textoHoras(semana.media) +
-        " (" +
-        textoNoches(semana.noches) +
-        ")";
-      if (antes.media !== null) {
-        linea +=
-          "; de los 7 anteriores: " +
-          textoHoras(antes.media) +
-          " (" +
-          textoNoches(antes.noches) +
-          ")";
-      }
-      lineas.push(linea + ".");
-    }
-  }
+// ---------- Los resúmenes de los especialistas (lección 48) ----------
+// Cada especialista ve solo lo de su ámbito: Heracles, el entreno y el
+// cuerpo; Apolo, lo que tiene que ver con la imagen; Deméter, la comida y
+// el peso. De los hábitos, los de su ámbito: por su icono o por su nombre
+// (como los iconos del bloque 4: basta el principio de una palabra, sin
+// tildes ni mayúsculas).
 
-  // Los entrenos de las últimas 8 semanas y cuántos cada semana
-  lineas.push("");
-  const todos = entrenosOrdenados();
-  const lunes = lunesDe(ahora);
-  const desde = fechaMas(lunes, -49).toLocaleDateString("en-CA");
-  const recientes = todos.filter(function (entreno) {
-    return entreno.fecha >= desde;
+// Las palabras de los hábitos de cada especialista (además del icono).
+// (prettier-ignore: que Prettier no ponga cada palabra en su propia línea)
+// prettier-ignore
+const ambitos = {
+  heracles: {
+    icono: "corona",
+    palabras: ["proteina", "creatina", "suplement", "musculo", "fuerza"],
+  },
+  apolo: {
+    icono: "",
+    palabras: [
+      "piel", "crema", "facial", "rostro", "skincare", "protector", "solar",
+      "pelo", "cabello", "barba", "afeit", "postura", "espalda", "ropa",
+      "vestir", "estilo", "ducha", "dient", "higiene", "perfume", "colonia",
+      "ceja", "peina", "mewing", "sonris",
+    ],
+  },
+  demeter: {
+    icono: "anfora",
+    palabras: [
+      "ayuno", "picar", "snack", "chuche", "bolleria", "frito", "carne",
+      "pescado", "huevo", "leche", "lacteo", "gelatina", "caldo", "comer",
+      "comida", "cena", "almuerzo", "merienda",
+    ],
+  },
+};
+
+// Los hábitos del ámbito de un especialista: los de su icono, los que
+// tienen una de sus palabras en el nombre y, para Heracles, también los
+// que marcan los entrenos.
+function habitosDeAmbito(especialista) {
+  const ambito = ambitos[especialista];
+  const conEntrenos = Object.values(entrenos).map(function (entreno) {
+    return entreno.habito;
   });
-  if (todos.length === 0) {
-    lineas.push("Entrenos: aún no ha apuntado ninguno.");
-  } else if (recientes.length === 0) {
-    lineas.push(
-      "Entrenos: ninguno en las últimas 8 semanas (el último, el " +
-        fechaLarga(todos[0].fecha) +
-        ").",
-    );
-  } else {
-    lineas.push(
-      "Entrenos de las últimas 8 semanas (del más reciente al más antiguo; la intensidad va del 1 al 10; cada serie, kilos × repeticiones):",
-    );
-    recientes.slice(0, 30).forEach(function (entreno) {
-      lineas.push(entrenoEnTexto(entreno));
-    });
-    const semanas = [];
-    for (let i = 7; i >= 0; i--) {
-      const inicio = fechaMas(lunes, -7 * i);
-      const suma = entrenosDeLaSemana(inicio);
-      let texto =
-        fechaCorta(inicio.toLocaleDateString("en-CA")) + ": " + suma.cuantos;
-      if (suma.minutos > 0) {
-        texto += " (" + suma.minutos + " min)";
-      }
-      semanas.push(texto);
+  return habitos.filter(function (habito) {
+    if (ambito.icono && iconoDe(habito) === ambito.icono) {
+      return true;
     }
-    lineas.push(
-      "Entrenos por semana (por el lunes de cada semana; la última es esta): " +
-        semanas.join(", ") +
-        ".",
-    );
-  }
-
-  // El progreso de cada ejercicio
-  const ejercicios = nombresEjercicios().slice(0, 8);
-  if (ejercicios.length > 0) {
-    lineas.push("");
-    lineas.push(
-      "Progreso en el gimnasio (la mejor serie de cada sesión: más kilos o, con los mismos kilos, más repeticiones; de la más antigua a la más nueva):",
-    );
-    ejercicios.forEach(function (nombre) {
-      lineas.push(
-        "- " +
-          nombre +
-          ": " +
-          historialEjercicio(nombre)
-            .slice(-6)
-            .map(function (sesion) {
-              return fechaCorta(sesion.fecha) + " " + textoSerie(sesion.mejor);
-            })
-            .join("; "),
-      );
+    if (especialista === "heracles" && conEntrenos.includes(habito.id)) {
+      return true;
+    }
+    const palabrasNombre = sinTildes(habito.nombre).split(/[^a-z0-9]+/);
+    return ambito.palabras.some(function (palabra) {
+      return palabrasNombre.some(function (palabraNombre) {
+        return palabraNombre.startsWith(palabra);
+      });
     });
-  }
+  });
+}
 
-  return lineas.join("\n");
+// Las líneas de los hábitos de un especialista (como en el resumen de
+// Méntor: reglas, racha, constancia y cómo va hoy). que: cómo se llaman
+// en la frase («del deporte»).
+function lineasHabitosDeAmbito(especialista, que) {
+  const suyos = habitosDeAmbito(especialista);
+  if (suyos.length === 0) {
+    return ["Hábitos " + que + ": no tiene ninguno en Ergon."];
+  }
+  return ["Hábitos " + que + ":"].concat(suyos.map(habitoEnTexto));
+}
+
+// La primera parte de los tres: el día y la hora, y quién es.
+function lineasPrincipio() {
+  const lineas = [lineaAhora(new Date())];
+  const quien = lineaQuien();
+  if (quien) {
+    lineas.push(quien);
+  }
+  return lineas;
+}
+
+// Heracles, el entrenador: quién es, sus hábitos del deporte, el peso, los
+// entrenos con sus series, el progreso de cada ejercicio y lo que duerme
+// (para el descanso).
+function resumenParaHeracles() {
+  const ahora = new Date();
+  const datos = estadisticas();
+  return juntarTrozos([
+    lineasPrincipio(),
+    lineasHabitosDeAmbito("heracles", "del deporte"),
+    lineasPeso(datos),
+    lineasEntrenos(ahora, false),
+    lineasProgreso(),
+    lineasSuenoEnBreve(datos),
+  ]);
+}
+
+// Apolo, la imagen: quién es, sus hábitos de cuidado, lo que duerme y
+// cuánto entrena.
+function resumenParaApolo() {
+  const ahora = new Date();
+  const datos = estadisticas();
+  return juntarTrozos([
+    lineasPrincipio(),
+    lineasHabitosDeAmbito("apolo", "de cuidado personal"),
+    lineasSuenoEnBreve(datos),
+    lineasEntrenos(ahora, true),
+  ]);
+}
+
+// Deméter, la comida: quién es, sus hábitos de comida y bebida, el peso,
+// cuánto entrena y lo que duerme.
+function resumenParaDemeter() {
+  const ahora = new Date();
+  const datos = estadisticas();
+  return juntarTrozos([
+    lineasPrincipio(),
+    lineasHabitosDeAmbito("demeter", "de comida y bebida"),
+    lineasPeso(datos),
+    lineasEntrenos(ahora, true),
+    lineasSuenoEnBreve(datos),
+  ]);
 }
 
 // La ventana «Lo que ve…»: el resumen que recibe un consejero, tal cual, y
-// la casilla para compartirlo o no. La abre «Lo que ve Méntor» o «Lo que ve
-// Prometheus», debajo de cada charla (bloque 25).
+// la casilla para compartirlo o no. La abre «Lo que ve Méntor» (o el
+// consejero que sea), debajo de cada charla (bloque 25).
 const ventanaContexto = document.getElementById("ventana-contexto");
 const casillaCompartir = document.getElementById("compartir-datos");
 
-// La sala cuya ventana está abierta (salas.mentor o salas.prometheus).
+// La sala cuya ventana está abierta (la de un consejero: salas.mentor,
+// salas.heracles…).
 let salaContexto = null;
 
 // Pone en la ventana el nombre del consejero y su resumen (o que no se
@@ -10640,9 +11046,9 @@ function mostrarPantalla(nombre) {
   // La pestaña Méntor empieza abajo, en lo último que se ha dicho (bloque
   // 25); Prometheus, en la vista que estaba (bloque 28); las demás, arriba
   if (nombre === "charla") {
-    mostrarSala(salas.mentor);
+    mostrarSala(salas[consejeroDeLaPestana]);
     irAlFinal();
-    enfocarCampoCharla(salas.mentor);
+    enfocarCampoCharla(salas[consejeroDeLaPestana]);
   } else if (enPrometheus) {
     mostrarVistaLab();
   } else {
