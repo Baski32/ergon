@@ -69,7 +69,9 @@ const metas = JSON.parse(localStorage.getItem("ergon-metas")) || [];
 // opcional: lo que no se ha rellenado, no está.
 const perfil = JSON.parse(localStorage.getItem("ergon-perfil")) || {};
 
-// Rituales de cada día: { "2026-10-16": { intencion, examen } }
+// Rituales de cada día: { "2026-10-16": { intencion, examen } }. «examen»:
+// si ya escribí el diario de esa noche (se llama así desde la lección 32,
+// cuando eran las preguntas de Séneca)
 const rituales = JSON.parse(localStorage.getItem("ergon-rituales")) || {};
 
 // Revisiones de cada semana, por el lunes de esa semana:
@@ -2612,22 +2614,14 @@ const conversacionBienvenida = {
 // ==========================================================================
 // 12. RITUALES DE MAÑANA Y DE NOCHE
 // Por la mañana, la intención del día y cómo he dormido (a mano o con lo
-// que llega de Salud, bloque 31). Por la noche, el examen de Séneca: Ergon
-// recuerda sus tres preguntas para responderlas en el diario de papel.
+// que llega de Salud, bloque 31). Por la noche, el recordatorio de escribir
+// en el diario de papel (desde el 22 oct, sin las preguntas de Séneca).
 // ==========================================================================
 
 // La mañana empieza a las 4 y la noche, a las 20. De madrugada (antes de las
 // 4) todavía es la noche del día anterior. Cambia estas horas si quieres.
 const horaManana = 4;
 const horaNoche = 20;
-
-// Las tres preguntas que Séneca se hacía cada noche (las tomó del filósofo
-// Sextio). Están en «Sobre la ira», libro III, capítulo 36.
-const preguntasSeneca = [
-  "¿Qué mal tuyo has curado hoy?",
-  "¿A qué vicio te has resistido?",
-  "¿En qué eres mejor?",
-];
 
 // ¿Se está cambiando la intención? (al tocarla para corregirla)
 let cambiandoIntencion = false;
@@ -2861,28 +2855,18 @@ function tarjetaSuenoSalud(ritual, dia, noche) {
   return tarjeta;
 }
 
-// La tarjeta de la noche: las preguntas de Séneca, la intención de la
-// mañana, cómo ha ido el día y «Examen hecho».
-function tarjetaNoche(ritual, dia) {
+// La tarjeta de la noche: escribir en el diario antes de dormir, con la
+// intención de la mañana (si la hay) por si ayuda, y «Ya lo he escrito».
+function tarjetaNoche(ritual) {
   const tarjeta = document.createElement("div");
   tarjeta.classList.add("ritual", "ritual-noche");
 
-  const lista = document.createElement("ol");
-  lista.classList.add("ritual-preguntas");
-  preguntasSeneca.forEach(function (pregunta) {
-    const item = document.createElement("li");
-    item.textContent = pregunta;
-    lista.append(item);
-  });
-
   tarjeta.append(
-    crearParrafo("Examen de la noche", "ritual-titulo"),
+    crearParrafo("Diario de la noche", "ritual-titulo"),
     crearParrafo(
-      "Antes de dormir, Séneca repasaba su día con tres preguntas. Respóndelas en tu diario:",
+      "Antes de dormir, escribe en tu diario lo que piensas.",
       "ritual-texto",
     ),
-    lista,
-    crearParrafo("— Séneca, Sobre la ira, III 36", "ritual-fuente"),
   );
 
   if (ritual.intencion) {
@@ -2894,19 +2878,8 @@ function tarjetaNoche(ritual, dia) {
     );
   }
 
-  // Cómo ha ido el día con los hábitos
-  const resumen = resumenDelDia(new Date(dia + "T00:00"));
-  if (resumen.tocan > 0) {
-    tarjeta.append(
-      crearParrafo(
-        "Hábitos cumplidos: " + resumen.cumplidos + " de " + resumen.tocan,
-        "ritual-recuerdo",
-      ),
-    );
-  }
-
   tarjeta.append(
-    crearBoton("Examen hecho", "boton-principal", function () {
+    crearBoton("Ya lo he escrito", "boton-principal", function () {
       ritual.examen = true;
       guardarRitual(ritual);
     }),
@@ -2933,7 +2906,7 @@ function valorEnRituales(caja, selector) {
 
 // Dibuja lo que toca según la hora: por la mañana, la tarjeta de la
 // intención (o la intención ya escrita) y la del sueño (o lo que dormí); por
-// la noche, el examen (hasta que se marca hecho).
+// la noche, la del diario (hasta que digo que ya lo he escrito).
 function mostrarRituales() {
   const caja = document.getElementById("ritual");
 
@@ -2951,7 +2924,7 @@ function mostrarRituales() {
 
   if (esDeNoche()) {
     if (!ritual.examen) {
-      caja.append(tarjetaNoche(ritual, dia));
+      caja.append(tarjetaNoche(ritual));
     }
     caja.hidden = caja.children.length === 0;
     return;
@@ -5352,8 +5325,8 @@ const tiposRecordatorio = [
   },
   {
     tipo: "noche",
-    nombre: "Examen de la noche",
-    cuando: "Si aún no lo has hecho.",
+    nombre: "Diario de la noche",
+    cuando: "Si aún no lo has escrito.",
     hora: "22:30",
   },
   {
@@ -7681,7 +7654,7 @@ function resumenParaConsejeros() {
     });
   }
 
-  // Los rituales de hoy (la intención; de noche, también el examen)
+  // Los rituales de hoy (la intención; de noche, también el diario)
   lineas.push("");
   const ritual = rituales[diaDelRitual()] || {};
   if (ritual.intencion === undefined) {
@@ -7694,11 +7667,11 @@ function resumenParaConsejeros() {
   if (esDeNoche()) {
     if (ritual.examen) {
       lineas.push(
-        "Examen de la noche (las preguntas de Séneca, en su diario de papel): ya lo ha hecho.",
+        "Diario de la noche (lo escribe en papel, fuera de la app): ya lo ha escrito.",
       );
     } else {
       lineas.push(
-        "Examen de la noche (las preguntas de Séneca, en su diario de papel): aún no.",
+        "Diario de la noche (lo escribe en papel, fuera de la app): aún no.",
       );
     }
   }

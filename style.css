@@ -427,7 +427,7 @@ body {
 
 /* ==========================================================================
    8. HOY · RITUALES Y RECORDATORIOS
-   La intención de la mañana, el sueño de anoche, el examen de la noche (en
+   La intención de la mañana, el sueño de anoche, el diario de la noche (en
    tinta y oro, como un templo a la luz de las antorchas), la revisión del
    domingo y las líneas que recuerdan la intención, la noche apuntada y el
    propósito de la semana.
@@ -457,7 +457,7 @@ body {
   border-radius: 6px;
 }
 
-/* «Intención del día», «Examen de la noche»… */
+/* «Intención del día», «Diario de la noche»… */
 .ritual-titulo {
   margin: 0;
   font-family: "Cinzel", serif;
@@ -592,39 +592,25 @@ body {
   gap: 18px;
 }
 
-/* El examen de la noche: fondo de tinta, letras de mármol y detalles en oro */
+/* El diario de la noche: fondo de tinta, letras de mármol y detalles en oro */
 .ritual-noche {
   color: var(--marmol);
   background-color: var(--tinta);
   border-color: var(--oro);
 }
 
-.ritual-noche .ritual-titulo,
-.ritual-noche .ritual-fuente {
+.ritual-noche .ritual-titulo {
   color: var(--oro);
 }
 
-/* Las tres preguntas de Séneca, en cursiva */
-.ritual-preguntas {
-  margin: 0;
-  padding-left: 22px;
-  font-style: italic;
-  line-height: 1.5;
-}
-
-.ritual-fuente {
-  margin: 0;
-  font-size: 0.8rem;
-}
-
-/* La intención de la mañana y los hábitos del día, más pequeños */
+/* La intención de la mañana (en la tarjeta de la noche), más pequeña */
 .ritual-recuerdo {
   margin: 0;
   font-size: 0.85rem;
   opacity: 0.85;
 }
 
-/* «Examen hecho», en oro sobre la tinta */
+/* «Ya lo he escrito», en oro sobre la tinta */
 .ritual-noche .boton-principal {
   align-self: flex-start;
   color: var(--tinta);

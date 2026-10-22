@@ -378,7 +378,7 @@ function frase(nombres) {
 // intención).
 // ==========================================================================
 
-// La mañana empieza a las 4 (como en script.js): un examen recordado a las
+// La mañana empieza a las 4 (como en script.js): el diario recordado a las
 // 00:30 es el del día que se acaba de vivir.
 const horaManana = 4;
 
@@ -435,7 +435,8 @@ const recordatorios = {
     };
   },
 
-  // El examen de la noche, si aún no lo ha marcado hecho
+  // El diario de la noche, si aún no ha dicho que lo ha escrito (en los
+  // datos se sigue llamando «examen»)
   noche: function (datos, ahora, ajuste) {
     let dia = ahora.dia;
     if (minutosDe(ajuste.hora) < horaManana * 60) {
@@ -446,9 +447,8 @@ const recordatorios = {
       return null;
     }
     return {
-      titulo: "Examen de la noche",
-      texto:
-        "Antes de dormir, Séneca se preguntaba: ¿qué mal tuyo has curado hoy?",
+      titulo: "Diario de la noche",
+      texto: "Antes de dormir, escribe en tu diario lo que piensas.",
     };
   },
 

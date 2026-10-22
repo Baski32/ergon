@@ -16,7 +16,7 @@
 - **Fotos y vídeos para los consejeros**: con la cámara de junto al campo se les mandan hasta 4 fotos o un vídeo por mensaje (en el ordenador, también pegándolas). La app reduce cada foto antes de mandarla y de un vídeo saca 8 fotogramas (la IA no recibe vídeo ni sonido). Las fotos solo van en el mensaje en que se mandan; en la conversación se guarda una miniatura.
 - **Sueño**: a qué hora me acosté y me levanté y cómo dormí (bien, regular o mal), con las horas calculadas aunque pase la medianoche. Se apunta por la mañana en Hoy o desde Prometheus, o llega solo de la app **Salud** del iPhone con un atajo (el rato en cama que apunta el iPhone o lo dormido de verdad que mide un reloj): entonces solo queda decir cómo dormí.
 - **Entrenos**: día, tipo (gimnasio, correr, caminar…), minutos, intensidad del 1 al 10 y una nota. En los de gimnasio, cada ejercicio con sus series (repeticiones × kilos), con sugerencias de los ejercicios ya usados y «Copiar el último entreno». Pueden marcar a la vez el hábito del deporte, y al marcar ese hábito en Hoy, Ergon pregunta si apuntar el entreno.
-- **Rituales**: por la mañana, la intención del día y cómo dormí; por la noche, el examen de Séneca (sus tres preguntas, para responderlas en el diario).
+- **Rituales**: por la mañana, la intención del día y cómo dormí; por la noche, el recordatorio de escribir en el diario.
 - **Revisión semanal** el domingo con Méntor: los datos de la semana, tres preguntas y un propósito que se recuerda toda la semana siguiente.
 - **Perfil** opcional (nombre, edad, altura y peso con su historial).
 - **Editar hábitos** sin perder la racha: las reglas antiguas se guardan con fecha y los días pasados se siguen juzgando con ellas.
@@ -29,7 +29,7 @@
 - **Cita del día** de filósofos clásicos (Marco Aurelio, Séneca, Epicteto, Aristóteles…), con la obra de la que procede.
 - **Copia de seguridad** para descargar y restaurar los datos, con aviso si hace una semana o más de la última.
 - **Cuenta y sincronización** (opcional): al entrar con email y contraseña, los datos se guardan también en la nube y son los mismos en el móvil y en el ordenador. Sin conexión, los cambios esperan y se suben al volver.
-- **Recordatorios** en el móvil aunque la app esté cerrada: intención de la mañana, hábitos sin marcar, examen de la noche y revisión del domingo, cada uno a su hora y solo si hace falta.
+- **Recordatorios** en el móvil aunque la app esté cerrada: intención de la mañana, hábitos sin marcar, diario de la noche y revisión del domingo, cada uno a su hora y solo si hace falta.
 - **Pestañas** con navegación inferior pensada para el móvil y barra lateral en el ordenador.
 - **Avisos propios** con el estilo de la app, en lugar de los del navegador.
 - **Instalable en el móvil** como una app (PWA) y funciona sin conexión.
