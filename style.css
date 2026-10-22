@@ -2027,8 +2027,9 @@ button.recordatorio {
 /* ---------- Las caras de la pestaña Méntor (lección 48) ---------- */
 
 /* Arriba de la pestaña: Méntor y los especialistas, en fila, cada uno con
-   su medallón y su nombre. Sin cuenta, no se ve (hace falta la regla de
-   [hidden]) */
+   su medallón y su nombre (en el móvil no caben los seis nombres: solo los
+   medallones; quién es el elegido lo dice la línea de debajo). Sin cuenta,
+   no se ve (hace falta la regla de [hidden]) */
 .charla-caras {
   margin-bottom: 16px;
 }
@@ -2063,8 +2064,8 @@ button.recordatorio {
 }
 
 .charla-cara svg {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--oro);
   opacity: 0.5;
@@ -2110,13 +2111,48 @@ button.recordatorio {
   animation: latir 0.8s ease-in-out infinite alternate;
 }
 
-/* Debajo de la fila: el nombre en griego del elegido y de qué sabe */
+/* En el móvil, los nombres no se ven (los lectores de pantalla sí los
+   leen); desde 600px de ancho, sí */
+@media (max-width: 599px) {
+  .charla-cara span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Debajo de la fila: el nombre del elegido, en griego y de qué sabe */
 .charla-quien {
   margin: 10px 0 0;
   font-size: 0.95rem;
   font-style: italic;
   text-align: center;
   color: var(--bronce);
+}
+
+/* Las fuentes de una respuesta con búsqueda (lección 49): debajo de la
+   burbuja, a la altura de su texto, en letra pequeña; cada fuente es un
+   enlace */
+.charla-fuentes {
+  align-self: flex-start;
+  max-width: 82%;
+  margin: -4px 0 0 42px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--bronce);
+}
+
+.charla-fuentes a {
+  color: var(--bronce);
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.charla-fuentes a:hover {
+  color: var(--terracota);
 }
 
 /* ---------- Fotos y vídeos en las charlas (lección 47) ---------- */

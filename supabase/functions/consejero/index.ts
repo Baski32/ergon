@@ -16,7 +16,8 @@
 //              si los comparte; y las fotos del último mensaje, si lleva),
 //              comprueba que quien pregunta es un usuario de Ergon y que no
 //              ha pasado del límite de hoy, se la manda a Claude con las
-//              instrucciones del consejero y devuelve su respuesta.
+//              instrucciones del consejero (algunos pueden buscar en
+//              internet) y devuelve su respuesta, con sus fuentes.
 //  - "uso":    cómo va el día (mensajes, límite y lo gastado), si la clave
 //              de Claude está puesta y qué consejeros hay.
 //
@@ -81,6 +82,25 @@ const maxLetrasFoto = 1500000;
 // mayor, porque recibe el sueño, los entrenos y el peso.
 const maxContexto = 8000;
 
+// La búsqueda en internet (lección 49), para los consejeros con «buscar»:
+// la herramienta de búsqueda de la API de Claude, con 3 búsquedas como
+// mucho por mensaje y los resultados de España. Cada búsqueda cuesta 1
+// céntimo de dólar (10 $ cada 1000), además de los tokens de lo que lee.
+const herramientaBusqueda = {
+  type: "web_search_20250305",
+  name: "web_search",
+  max_uses: 3,
+  user_location: {
+    type: "approximate",
+    country: "ES",
+    timezone: "Europe/Madrid",
+  },
+};
+const precioBusqueda = 10 / 1000;
+
+// Las fuentes que se devuelven a la app, como mucho.
+const maxFuentes = 6;
+
 // El día del contador, con la hora de España: se reinicia a medianoche.
 const zonaDelContador = "Europe/Madrid";
 
@@ -116,7 +136,9 @@ function fallo(estado, explicacion) {
 // cambia aquí sin tocar nada más), cuánto piensa, lo largo que puede
 // contestar, lo que cuesta su motor y sus instrucciones (el «system
 // prompt»: quién es y cómo habla). Méntor (lección 40), Prometheus
-// (lección 45) y los especialistas: Heracles, Apolo y Deméter (lección 48).
+// (lección 45) y los especialistas: Heracles, Apolo y Deméter (lección 48),
+// y Atenea y Pluto (lección 49). Los que tienen «buscar: true» pueden
+// buscar en internet (bloque 7).
 // Las instrucciones están en un repositorio público: sin datos personales.
 // ==========================================================================
 
@@ -267,6 +289,8 @@ Límites:
     esfuerzo: "medium",
     maxTokens: 3000,
     precio: { entrada: 2, salida: 10 },
+    // Puede buscar en internet (lección 49: estudios, alimentos…)
+    buscar: true,
     instrucciones: `Eres Deméter (Δημήτηρ), la consejera de la comida de Ergon, una app de hábitos, metas y reflexión con estética de la antigua Grecia y Roma. Tomas el nombre de la diosa de las cosechas y del pan: para ti, comer bien es comer comida de verdad, con gusto y sin pasar hambre.
 
 Tu trabajo: ayudarle a comer bien: qué comer, cuánto y cuándo, para tener energía, entrenar, dormir bien y estar en un peso sano. En Ergon hay más consejeros: Méntor se ocupa del sentido y de los hábitos; Prometheus, de los números; Heracles, del entreno y del físico; Apolo, de la imagen. Si te preguntan de lo suyo, contesta lo básico y dile que con ellos puede profundizar (están en la misma pestaña: basta tocar su cara).
@@ -292,6 +316,71 @@ Límites:
 - Nada de dietas de hambre, ni de pesos poco sanos, ni de compensar lo que ha comido.
 - Si notas una relación difícil con la comida (miedo a comer, atracones, compensar con ejercicio o vomitando, obsesión con las calorías), no des cifras ni planes: muestra que te importa y anímale a hablarlo con su médico o con un psicólogo.
 - Si notas una crisis o ideas de hacerse daño, deja la comida a un lado: muestra que te importa y anima a hablar ya con alguien de confianza o con un profesional (en España, la línea 024, gratuita y a todas horas).`,
+  },
+  atenea: {
+    nombre: "Atenea",
+    motor: "claude-sonnet-5-5",
+    esfuerzo: "medium",
+    maxTokens: 4000,
+    precio: { entrada: 2, salida: 10 },
+    // Puede buscar en internet (convocatorias, cursos, plazos…)
+    buscar: true,
+    instrucciones: `Eres Atenea (Ἀθηνᾶ), la consejera de los estudios y de la carrera de Ergon, una app de hábitos, metas y reflexión con estética de la antigua Grecia y Roma. Tomas el nombre de la diosa de la sabiduría, la estrategia y los oficios; fuiste tú quien tomó la figura de Méntor para guiar a Telémaco, así que conoces bien al consejero principal de la app. Hablas con claridad y buen juicio, como una profesora sabia que también sabe de estrategia: sin rodeos, pero con calidez.
+
+Tu trabajo: ayudarle a aprender y a progresar: cómo estudiar (planificar, repasar, concentrarse, recordar), los idiomas, los cursos y los títulos, las oposiciones, la formación profesional y la universidad, y su carrera (cómo crecer en su trabajo, cambiar de puesto, preparar un currículum o una entrevista). En Ergon hay más consejeros: Méntor se ocupa del sentido y de los hábitos; Prometheus, de los números; Heracles, del entreno; Apolo, de la imagen; Deméter, de la comida; Pluto, del dinero. Si te preguntan de lo suyo, contesta lo básico y dile que con ellos puede profundizar (están en la misma pestaña: basta tocar su cara).
+
+Sus datos: con cada mensaje te llega, al final de estas instrucciones, un resumen: su edad, sus hábitos de estudio y de aprendizaje y sus metas de carrera. Lo calcula la app, así que es fiable. Si te falta algo para aconsejar (qué estudia o quiere estudiar, en qué trabaja, cuánto tiempo tiene, su nivel), pregúntalo.
+
+Fotos: a veces te manda una foto (unos apuntes, un ejercicio, un temario, una oferta de trabajo); una nota de la app te lo dice. Léela con cuidado y di si algo no se lee bien.
+
+Cómo aconsejas:
+- Estrategia antes que horas: un plan realista, con pasos pequeños y fechas, vale más que estudiar mucho sin rumbo.
+- Métodos que funcionan: practicar recordando sin mirar, repasar espaciado, intercalar temas, explicarlo con sus palabras, y descansar y dormir.
+- Si te pide un ejercicio o un trabajo de clase, ayúdale a hacerlo él (explica, pon ejemplos, corrige) en vez de dárselo hecho, salvo que te diga que solo quiere la solución para comprobar la suya.
+- Honesta: si un plan no es realista, dilo con tacto y propón uno mejor.
+
+Cómo hablas:
+- En español de España, tuteando. Frases claras.
+- Breve: normalmente de tres a seis frases. Si te pide un plan de estudio, puedes alargarte: una cosa por línea.
+- Texto sencillo, sin Markdown (ni asteriscos, ni almohadillas, ni listas con guiones): la app enseña tus palabras tal cual, en una burbuja. Si hace falta separar ideas, usa párrafos cortos.
+
+Límites:
+- Si el estudio o el trabajo le agobian de verdad (no duerme, tiene ansiedad, se siente quemado), muestra que te importa y anímale a hablarlo con alguien de confianza o con un profesional.
+- Si notas una crisis o ideas de hacerse daño, deja los estudios a un lado: muestra que te importa y anima a hablar ya con alguien de confianza o con un profesional (en España, la línea 024, gratuita y a todas horas).`,
+  },
+
+  pluto: {
+    nombre: "Pluto",
+    motor: "claude-sonnet-5-5",
+    esfuerzo: "medium",
+    maxTokens: 4000,
+    precio: { entrada: 2, salida: 10 },
+    // Puede buscar en internet (precios, tipos de interés, impuestos…)
+    buscar: true,
+    instrucciones: `Eres Pluto (Πλοῦτος), el consejero del dinero de Ergon, una app de hábitos, metas y reflexión con estética de la antigua Grecia y Roma. Tomas el nombre del dios de la riqueza, al que Zeus dejó ciego para que repartiera sin mirar a quién; tú, en cambio, miras bien antes de mover un euro. Hablas con calma y sentido común, como un amigo que sabe de dinero y no quiere venderte nada.
+
+Tu trabajo: ayudarle con sus finanzas personales: ahorrar, hacer un presupuesto, el fondo de emergencia, las deudas, y aprender a invertir a largo plazo (qué son la bolsa, los fondos indexados, la diversificación, las comisiones, el riesgo y el interés compuesto), con los productos y los impuestos de España. En Ergon hay más consejeros: Méntor se ocupa del sentido y de los hábitos; Prometheus, de los números de sus hábitos; Heracles, del entreno; Apolo, de la imagen; Deméter, de la comida; Atenea, de los estudios y de la carrera. Si te preguntan de lo suyo, contesta lo básico y dile que con ellos puede profundizar (están en la misma pestaña: basta tocar su cara).
+
+Sus datos: con cada mensaje te llega, al final de estas instrucciones, un resumen: su edad, sus hábitos de dinero y sus metas de finanzas. No ves sus cuentas ni sus inversiones: si hace falta, pregúntale lo que necesites saber, pero nunca le pidas números de cuenta o de tarjeta, contraseñas ni datos de acceso.
+
+Fotos: a veces te manda una foto (un extracto, una nómina, una factura, una gráfica); una nota de la app te lo dice. Léela con cuidado, di si algo no se lee bien y no repitas números de cuenta o de tarjeta que se vean.
+
+Cómo aconsejas:
+- Primero lo básico: gastar menos de lo que entra, tener un fondo de emergencia y no arrastrar deudas caras; después, invertir.
+- Para invertir: largo plazo, diversificación y costes bajos. Explica los riesgos (se puede perder dinero) y que lo que pasó no asegura lo que vendrá.
+- Honesto: si una idea es arriesgada o huele a estafa, dilo claro.
+
+Cómo hablas:
+- En español de España, tuteando. Frases claras; si usas un término financiero, explícalo en pocas palabras.
+- Breve: normalmente de tres a seis frases. Más solo si te lo pide o el tema lo necesita de verdad.
+- Texto sencillo, sin Markdown (ni asteriscos, ni almohadillas, ni listas con guiones): la app enseña tus palabras tal cual, en una burbuja. Si hace falta separar ideas, usa párrafos cortos.
+
+Límites:
+- No eres asesor financiero: das información para que decida él. No le digas que compre o venda una acción, un fondo o una criptomoneda concretos, ni prometas rentabilidades; si te lo pide, explícale cómo analizarlo y qué riesgos tiene.
+- Nada de apalancamiento, de trading diario, de opciones ni de otros productos complejos como forma de ganar dinero rápido: si te pregunta, explica sus riesgos con claridad.
+- Para decisiones grandes (una hipoteca, unos impuestos complicados, una herencia), anímale a consultarlo con un profesional.
+- Si notas que el juego, las apuestas o el trading le están haciendo daño, o que el dinero le angustia de verdad, muestra que te importa y anímale a pedir ayuda a un profesional.
+- Si notas una crisis o ideas de hacerse daño, deja el dinero a un lado: muestra que te importa y anima a hablar ya con alguien de confianza o con un profesional (en España, la línea 024, gratuita y a todas horas).`,
   },
 };
 
@@ -626,6 +715,9 @@ function explicarFallo(estado, mensaje) {
   if (estado === 402 || /credit balance/i.test(mensaje)) {
     return "No queda saldo en tu cuenta de Claude: añade crédito en platform.claude.com.";
   }
+  if (/web search/i.test(mensaje) && /not enabled|disabled/i.test(mensaje)) {
+    return "La búsqueda en internet está desactivada en tu cuenta de Claude: actívala en platform.claude.com (Settings → Capabilities).";
+  }
   if (/specified API usage limits/i.test(mensaje)) {
     return "Has llegado al límite de gasto que pusiste en la consola de Claude.";
   }
@@ -638,26 +730,70 @@ function explicarFallo(estado, mensaje) {
   return "Claude no ha aceptado la petición (" + estado + ": " + mensaje + ").";
 }
 
-// Las instrucciones que recibe Claude: las del consejero y, al final, el
-// resumen de los datos (si llega).
+// Lo que se añade a las instrucciones de los que pueden buscar.
+const instruccionesBusqueda = `Búsqueda: puedes buscar en internet. Hazlo solo cuando haga falta información actual o que no sepas con seguridad (precios, normas, plazos, convocatorias, productos, estudios recientes); para lo demás, contesta sin buscar. No digas que vas a buscar: busca y contesta. La app enseña debajo de tu respuesta las páginas que cites, así que no pegues enlaces en el texto. Prefiere fuentes oficiales y fiables, di de cuándo son los datos si importa, y si lo que encuentras no es seguro o se contradice, dilo.`;
+
+// Las instrucciones que recibe Claude: las del consejero (con las de la
+// búsqueda, si puede buscar) y, al final, el resumen de los datos (si
+// llega).
 function instruccionesCon(consejero, contexto) {
+  let instrucciones = consejero.instrucciones;
+  if (consejero.buscar) {
+    instrucciones = instrucciones + "\n\n" + instruccionesBusqueda;
+  }
   if (!contexto) {
     return (
-      consejero.instrucciones +
+      instrucciones +
       "\n\nEsta vez no te llega ningún resumen de sus datos de Ergon."
     );
   }
   return (
-    consejero.instrucciones +
+    instrucciones +
     "\n\nResumen de sus datos de Ergon, ahora mismo:\n\n" +
     contexto
   );
 }
 
-// Manda la conversación a Claude. Devuelve { texto, entrada, salida }
-// (texto: su respuesta; entrada y salida: los tokens que cobra).
-// contexto: el resumen de los datos ("" si no se comparten).
-async function preguntarAClaude(consejero, mensajes, contexto) {
+// Lo que escribe Claude, de los trozos de su respuesta (content): solo los
+// de texto (ni lo que ha pensado ni las búsquedas). Si ha buscado, solo lo
+// de después de la última búsqueda (lo de antes suele ser «voy a
+// buscar…»). Y las páginas que cita, sin repetir: [{ titulo, url }].
+function textoYFuentes(contenido) {
+  let desde = 0;
+  contenido.forEach(function (trozo, i) {
+    if (trozo.type === "web_search_tool_result") {
+      desde = i + 1;
+    }
+  });
+  const textos = contenido.slice(desde).filter(function (trozo) {
+    return trozo.type === "text";
+  });
+
+  const fuentes = [];
+  textos.forEach(function (trozo) {
+    (trozo.citations || []).forEach(function (cita) {
+      const yaEsta = fuentes.some(function (fuente) {
+        return fuente.url === cita.url;
+      });
+      if (cita.url && !yaEsta && fuentes.length < maxFuentes) {
+        fuentes.push({ titulo: cita.title || cita.url, url: cita.url });
+      }
+    });
+  });
+
+  return {
+    texto: textos
+      .map(function (trozo) {
+        return trozo.text;
+      })
+      .join("")
+      .trim(),
+    fuentes: fuentes,
+  };
+}
+
+// Una petición a Claude. Si falla, lo explica para la app.
+async function peticionAClaude(cuerpo) {
   const respuesta = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -665,38 +801,65 @@ async function preguntarAClaude(consejero, mensajes, contexto) {
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      model: consejero.motor,
-      max_tokens: consejero.maxTokens,
-      system: instruccionesCon(consejero, contexto),
-      messages: mensajes,
-      output_config: { effort: consejero.esfuerzo },
-    }),
+    body: JSON.stringify(cuerpo),
   });
-
   const datos = await respuesta.json();
   if (!respuesta.ok) {
     const mensaje = (datos.error && datos.error.message) || "";
     console.error("Claude contestó " + respuesta.status + ":", mensaje);
     throw fallo(502, explicarFallo(respuesta.status, mensaje));
   }
+  return datos;
+}
 
-  // La respuesta llega en trozos (content): lo que ha pensado (thinking)
-  // y lo que escribe (text). Solo se queda lo que escribe
-  const texto = datos.content
-    .filter(function (trozo) {
-      return trozo.type === "text";
-    })
-    .map(function (trozo) {
-      return trozo.text;
-    })
-    .join("")
-    .trim();
+// Manda la conversación a Claude. Devuelve { texto, fuentes, entrada,
+// salida, busquedas } (texto: su respuesta; fuentes: las páginas que
+// cita; entrada y salida: los tokens que cobra; busquedas: las que ha
+// hecho). contexto: el resumen de los datos ("" si no se comparten).
+// Con la búsqueda, una respuesta larga puede llegar en pausa
+// («pause_turn»): se le devuelve tal cual para que siga (3 veces como
+// mucho).
+async function preguntarAClaude(consejero, mensajes, contexto) {
+  const cuerpo = {
+    model: consejero.motor,
+    max_tokens: consejero.maxTokens,
+    system: instruccionesCon(consejero, contexto),
+    messages: mensajes,
+    output_config: { effort: consejero.esfuerzo },
+  };
+  if (consejero.buscar) {
+    cuerpo.tools = [herramientaBusqueda];
+  }
 
+  let contenido = [];
+  let entrada = 0;
+  let salida = 0;
+  let busquedas = 0;
+  for (let vuelta = 0; vuelta < 4; vuelta++) {
+    const datos = await peticionAClaude(cuerpo);
+    contenido = contenido.concat(datos.content);
+    entrada = entrada + datos.usage.input_tokens;
+    salida = salida + datos.usage.output_tokens;
+    if (datos.usage.server_tool_use) {
+      busquedas =
+        busquedas + (datos.usage.server_tool_use.web_search_requests || 0);
+    }
+    if (datos.stop_reason !== "pause_turn") {
+      break;
+    }
+    // En pausa: lo que lleva hecho vuelve como mensaje suyo, y sigue
+    cuerpo.messages = mensajes.concat([
+      { role: "assistant", content: contenido },
+    ]);
+  }
+
+  const escrito = textoYFuentes(contenido);
   return {
-    texto: texto,
-    entrada: datos.usage.input_tokens,
-    salida: datos.usage.output_tokens,
+    texto: escrito.texto,
+    fuentes: escrito.fuentes,
+    entrada: entrada,
+    salida: salida,
+    busquedas: busquedas,
   };
 }
 
@@ -717,8 +880,9 @@ function cuantasFotos(mensajes) {
   return fotos;
 }
 
-// «hablar»: todo el camino. Devuelve { texto, uso, fotos } (fotos: las
-// que ha visto Claude).
+// «hablar»: todo el camino. Devuelve { texto, uso, fotos, fuentes }
+// (fotos: las que ha visto Claude; fuentes: las páginas que cita, si ha
+// buscado en internet).
 async function hablar(usuario, cuerpo) {
   const consejero = consejeros[cuerpo.consejero];
   if (!consejero) {
@@ -754,11 +918,12 @@ async function hablar(usuario, cuerpo) {
 
   const respuesta = await preguntarAClaude(consejero, mensajes, contexto);
 
-  // Lo que ha costado: tokens × precio por millón
+  // Lo que ha costado: tokens × precio por millón, y las búsquedas
   const coste =
     (respuesta.entrada * consejero.precio.entrada +
       respuesta.salida * consejero.precio.salida) /
-    1000000;
+      1000000 +
+    respuesta.busquedas * precioBusqueda;
   const uso = await sumarUso(
     usuario,
     respuesta.entrada,
@@ -777,6 +942,7 @@ async function hablar(usuario, cuerpo) {
     texto: respuesta.texto,
     uso: resumenDeUso(consejero, uso),
     fotos: cuantasFotos(mensajes),
+    fuentes: respuesta.fuentes,
   };
 }
 
@@ -791,14 +957,23 @@ Deno.serve(async function (peticion) {
   }
 
   try {
+    // Lo que manda la app. Si no se puede leer entero (un mensaje con
+    // fotos que pesa demasiado llega cortado), se dice
     let cuerpo = {};
+    let ilegible = false;
     try {
       cuerpo = await peticion.json();
     } catch (error) {
-      // Sin cuerpo o sin JSON: se queda vacío
+      ilegible = true;
     }
 
     const usuario = await usuarioDe(peticion);
+    if (ilegible) {
+      throw fallo(
+        413,
+        "No he podido leer tu mensaje entero: seguramente las fotos o el vídeo pesan demasiado. Prueba con menos fotos o con un vídeo más corto.",
+      );
+    }
 
     if (cuerpo.accion === "uso") {
       const consejero = consejeros[cuerpo.consejero || "mentor"];

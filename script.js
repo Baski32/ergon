@@ -5735,8 +5735,9 @@ document
 
 // ==========================================================================
 // 24. CONSEJEROS · CONEXIÓN
-// Méntor, Prometheus y los especialistas (Heracles, Apolo y Deméter)
-// contestan con la IA de Claude. La app no habla con Claude directamente: habla con la función
+// Méntor, Prometheus y los especialistas (Heracles, Apolo, Deméter, Atenea
+// y Pluto) contestan con la IA de Claude; algunos pueden buscar en
+// internet. La app no habla con Claude directamente: habla con la función
 // «consejero» del servidor (supabase/functions/consejero), que guarda la
 // clave de la API. Así la clave nunca está en este archivo, que cualquiera
 // puede leer. La función también pone un límite de mensajes al día y lleva
@@ -5774,6 +5775,11 @@ async function llamarALaFuncion(nombre, cuerpo) {
     if (explicacion === "" && partes[1] === "404") {
       explicacion = "Falta desplegar la función «" + nombre + "» en Supabase.";
     }
+    // El servidor no ha aceptado algo tan grande (fotos o un vídeo)
+    if (explicacion === "" && partes[1] === "413") {
+      explicacion =
+        "El mensaje pesa demasiado para el servidor: prueba con menos fotos o con un vídeo más corto.";
+    }
     // La función que hay en Supabase es de antes de este consejero
     if (explicacion === "No conozco a ese consejero.") {
       explicacion =
@@ -5791,10 +5797,12 @@ function llamarConsejero(cuerpo) {
   return llamarALaFuncion("consejero", cuerpo);
 }
 
-// Manda una conversación a un consejero ("mentor" o "prometheus") y
-// devuelve su respuesta. mensajes: [{ de: "yo" o "consejero", texto }]; el
-// último puede llevar fotos (bloque 25). contexto: el resumen de mis datos
-// (bloque 26), o "" si no se comparten. Lo usan las charlas (bloque 25).
+// Manda una conversación a un consejero ("mentor", "prometheus",
+// "heracles"…) y devuelve su respuesta: { texto, fuentes } (fuentes: las
+// páginas que cita, si ha buscado en internet; si no, ninguna).
+// mensajes: [{ de: "yo" o "consejero", texto }]; el último puede llevar
+// fotos (bloque 25). contexto: el resumen de mis datos (bloque 26), o "" si
+// no se comparten. Lo usan las charlas (bloque 25).
 async function hablarConConsejero(consejero, mensajes, contexto) {
   const respuesta = await llamarConsejero({
     accion: "hablar",
@@ -5814,7 +5822,7 @@ async function hablarConConsejero(consejero, mensajes, contexto) {
       "Falta desplegar en Supabase la versión nueva de la función «consejero»: sin ella, no ve las fotos.",
     );
   }
-  return respuesta.texto;
+  return { texto: respuesta.texto, fuentes: respuesta.fuentes || [] };
 }
 
 // Un error convertido en mensaje para la sección (los del servidor ya
@@ -5886,13 +5894,14 @@ async function probarConsejero() {
   mostrarConsejeros();
 
   try {
-    respuestaPrueba = await hablarConConsejero("mentor", [
+    const respuesta = await hablarConConsejero("mentor", [
       {
         de: "yo",
         texto:
           "Salve, Méntor. Es una prueba de conexión desde Ergon: preséntate en una o dos frases.",
       },
     ]);
+    respuestaPrueba = respuesta.texto;
   } catch (error) {
     errorConsejeros = textoErrorConsejero(error);
   }
@@ -5966,8 +5975,8 @@ document
 // ==========================================================================
 // 25. CONSEJEROS · LAS CHARLAS
 // Hablar con un consejero con mis palabras: con Méntor y los especialistas
-// (Heracles, Apolo y Deméter, lección 48) en la pestaña Méntor, eligiendo
-// su cara arriba, y con Prometheus en la suya (la vista «Hablar» del
+// (Heracles, Apolo y Deméter, lección 48; Atenea y Pluto, lección 49) en la
+// pestaña Méntor, eligiendo su cara arriba, y con Prometheus en la suya (la vista «Hablar» del
 // laboratorio). Todas las charlas funcionan igual, así que el código es el
 // mismo para todas: lo que cambia de una a otra está en su «sala» (abajo). Cada conversación se
 // guarda (en «conversaciones», bloque 1, con el consejero con el que es) y
@@ -6094,6 +6103,52 @@ const salas = {
         "¿Qué como antes y después de entrenar?",
         "Ideas para un desayuno con proteína",
         "¿Qué opinas de los aceites de semillas?",
+      ],
+    },
+    estadoNuevo(),
+  ),
+  atenea: Object.assign(
+    {
+      consejero: "atenea",
+      nombre: "Atenea",
+      griego: "Ἀθηνᾶ",
+      ambito: "los estudios y la carrera",
+      raiz: pestanaMentor,
+      saludo: function () {
+        return (
+          salve() +
+          " Soy Atenea: estudios, idiomas y carrera, con estrategia. ¿Qué quieres aprender o conseguir?"
+        );
+      },
+      burbuja: burbujaConCara("cara-atenea"),
+      resumen: resumenParaAtenea,
+      sugerencias: [
+        "Hazme un plan de estudio para esta semana",
+        "¿Cómo memorizo mejor?",
+        "¿Qué cursos me ayudarían en mi trabajo?",
+      ],
+    },
+    estadoNuevo(),
+  ),
+  pluto: Object.assign(
+    {
+      consejero: "pluto",
+      nombre: "Pluto",
+      griego: "Πλοῦτος",
+      ambito: "el dinero",
+      raiz: pestanaMentor,
+      saludo: function () {
+        return (
+          salve() +
+          " Soy Pluto: hablemos de dinero con calma, sin prisas por hacerse rico. ¿Qué quieres saber?"
+        );
+      },
+      burbuja: burbujaConCara("cara-pluto"),
+      resumen: resumenParaPluto,
+      sugerencias: [
+        "¿Cómo empiezo a ahorrar?",
+        "Explícame los fondos indexados",
+        "¿Cuánto debería tener de fondo de emergencia?",
       ],
     },
     estadoNuevo(),
@@ -6268,6 +6323,39 @@ function burbujaPrometheus(texto) {
   return burbuja;
 }
 
+// Las páginas que citó un consejero al buscar en internet (lección 49),
+// debajo de su burbuja: «Fuentes: Título (boe.es), Título (sepe.es)». Se
+// abren aparte. Solo direcciones http o https.
+function fuentesDe(fuentes) {
+  const caja = document.createElement("p");
+  caja.classList.add("charla-fuentes");
+  caja.append("Fuentes: ");
+  const buenas = fuentes.filter(function (fuente) {
+    return /^https?:\/\//.test(fuente.url);
+  });
+  buenas.forEach(function (fuente, i) {
+    const enlace = document.createElement("a");
+    enlace.href = fuente.url;
+    enlace.target = "_blank";
+    enlace.rel = "noopener";
+    let web = "";
+    try {
+      web = new URL(fuente.url).hostname.replace(/^www\./, "");
+    } catch (error) {
+      // Una dirección rara: sin la web entre paréntesis
+    }
+    enlace.textContent = fuente.titulo;
+    if (web && web !== fuente.titulo) {
+      enlace.textContent = fuente.titulo + " (" + web + ")";
+    }
+    if (i > 0) {
+      caja.append(", ");
+    }
+    caja.append(enlace);
+  });
+  return caja;
+}
+
 // «Méntor está escribiendo…»: la burbuja del consejero con tres puntos
 // (como en el bloque 8, pero hasta que llega la respuesta).
 function burbujaEscribiendo(sala) {
@@ -6348,6 +6436,9 @@ function dibujarCharla(sala) {
       caja.append(burbujaYo(mensaje));
     } else {
       caja.append(sala.burbuja(mensaje.texto));
+      if (mensaje.fuentes && mensaje.fuentes.length > 0) {
+        caja.append(fuentesDe(mensaje.fuentes));
+      }
     }
   });
 
@@ -6580,17 +6671,22 @@ async function pedirRespuesta(sala, id) {
     if (compartirDatos(sala.consejero)) {
       contexto = sala.resumen();
     }
-    const texto = await hablarConConsejero(sala.consejero, mensajes, contexto);
+    const respuesta = await hablarConConsejero(
+      sala.consejero,
+      mensajes,
+      contexto,
+    );
 
     // Puede que se haya borrado mientras tanto
     const conversacion = conversaciones[id];
     if (conversacion) {
       const ahora = new Date().toISOString();
-      conversacion.mensajes.push({
-        de: "consejero",
-        texto: texto,
-        hora: ahora,
-      });
+      const suyo = { de: "consejero", texto: respuesta.texto, hora: ahora };
+      // Si buscó en internet, las páginas que cita (lección 49)
+      if (respuesta.fuentes.length > 0) {
+        suyo.fuentes = respuesta.fuentes;
+      }
+      conversacion.mensajes.push(suyo);
       conversacion.actualizada = ahora;
       guardarConversacion(id);
       // Contestado: las fotos enteras ya no hacen falta
@@ -6720,6 +6816,14 @@ const ladoMiniatura = 240;
 const maxFotosMensaje = 4;
 const fotogramasVideo = 8;
 
+// Lo que puede pesar, como mucho, cada foto y cada fotograma (en letras de
+// base64): así un mensaje con 4 fotos o con un vídeo no pasa de unas
+// 600.000 letras, y el servidor lo puede leer (si pesa demasiado, la
+// función no lo lee entero). Una foto con mucho detalle se guarda con algo
+// menos de calidad o algo más pequeña hasta que cabe.
+const maxLetrasFoto = 150000;
+const maxLetrasFotograma = 60000;
+
 // Las fotos enteras de los mensajes que esperan respuesta, mientras la app
 // está abierta (no se guardan: solo las miniaturas). Por mensaje, con la
 // clave de claveFotos.
@@ -6755,6 +6859,24 @@ function lienzoReducido(fuente, ancho, alto, lado) {
 // principio (así la quiere Claude). calidad: de 0 a 1.
 function jpegEnBase64(lienzo, calidad) {
   return lienzo.toDataURL("image/jpeg", calidad).split(",")[1];
+}
+
+// Una foto o un fotograma en JPEG (base64) que no pase de «maxLetras»:
+// primero con el lado de «lado» y buena calidad; si pesa demasiado, con
+// menos calidad y, si aún no cabe, cada vez un poco más pequeña.
+function jpegQueQuepa(fuente, ancho, alto, lado, maxLetras) {
+  let medida = lado;
+  for (let intento = 0; intento < 6; intento++) {
+    const lienzo = lienzoReducido(fuente, ancho, alto, medida);
+    for (const calidad of [0.85, 0.7, 0.55]) {
+      const datos = jpegEnBase64(lienzo, calidad);
+      if (datos.length <= maxLetras) {
+        return datos;
+      }
+    }
+    medida = Math.round(medida * 0.8);
+  }
+  return jpegEnBase64(lienzoReducido(fuente, ancho, alto, medida), 0.5);
 }
 
 // La miniatura de una foto o de un fotograma: una foto JPEG pequeña, como
@@ -6794,10 +6916,14 @@ async function prepararFoto(archivo) {
     await imagen.decode();
     const ancho = imagen.naturalWidth;
     const alto = imagen.naturalHeight;
-    const reducida = lienzoReducido(imagen, ancho, alto, ladoFoto);
     return {
       miniatura: miniaturaDe(imagen, ancho, alto),
-      imagenes: [{ tipo: "image/jpeg", datos: jpegEnBase64(reducida, 0.85) }],
+      imagenes: [
+        {
+          tipo: "image/jpeg",
+          datos: jpegQueQuepa(imagen, ancho, alto, ladoFoto, maxLetrasFoto),
+        },
+      ],
     };
   } finally {
     URL.revokeObjectURL(direccion);
@@ -6879,10 +7005,15 @@ async function prepararVideo(archivo) {
       await esperarVideo(video, "seeked", function () {
         video.currentTime = momento;
       });
-      const fotograma = lienzoReducido(video, ancho, alto, ladoFotograma);
       imagenes.push({
         tipo: "image/jpeg",
-        datos: jpegEnBase64(fotograma, 0.8),
+        datos: jpegQueQuepa(
+          video,
+          ancho,
+          alto,
+          ladoFotograma,
+          maxLetrasFotograma,
+        ),
       });
       if (i === 0) {
         miniatura = miniaturaDe(video, ancho, alto);
@@ -7168,7 +7299,8 @@ conectarCaja(salas.prometheus.raiz);
 // ---------- Las caras de la pestaña Méntor (lección 48) ----------
 // Arriba de la pestaña, una fila con las caras de Méntor y de los
 // especialistas: al tocar una, se habla con ese consejero (cada uno con sus
-// conversaciones). Debajo, su nombre en griego y de qué sabe.
+// conversaciones). Debajo, su nombre, su nombre en griego y de qué sabe
+// (en el móvil, los nombres no caben bajo las seis caras).
 
 // Dibuja la fila: la cara elegida, encendida; la de un consejero que está
 // contestando, con un puntito (se puede hablar con otro mientras tanto).
@@ -7182,7 +7314,7 @@ function dibujarCaras() {
   });
   const sala = salas[consejeroDeLaPestana];
   document.getElementById("charla-quien").textContent =
-    sala.griego + " · " + sala.ambito;
+    sala.nombre + " · " + sala.griego + " · " + sala.ambito;
 }
 
 // Elige con quién hablar en la pestaña Méntor: se ve su sala, abajo del
@@ -7217,7 +7349,8 @@ document.querySelectorAll(".charla-cara").forEach(function (boton) {
 // rituales de hoy y la última revisión semanal. Prometheus: los números
 // (las cifras de los hábitos, el peso, el sueño y los entrenos). Los
 // especialistas, solo lo suyo (más abajo): Heracles, el entreno y el peso;
-// Apolo, sus hábitos de cuidado; Deméter, la comida y el peso. Lo calcula
+// Apolo, sus hábitos de cuidado; Deméter, la comida y el peso; Atenea, los
+// estudios y la carrera; Pluto, el dinero. Lo calcula
 // la app en el momento, con las mismas funciones que dibujan las
 // pantallas. Se puede ver tal cual («Lo que ve…», debajo de cada charla) y
 // dejar de compartir, con cada consejero por separado.
@@ -7415,13 +7548,18 @@ function habitoEnTexto(habito) {
 }
 
 // Una línea por meta pendiente (pasos hechos, el siguiente y el hábito que
-// la impulsa) y, al final, las últimas cumplidas.
-function metasEnTexto() {
+// la impulsa) y, al final, las últimas cumplidas. area: solo las de esa
+// parte de la vida («Carrera», «Finanzas»…), para los especialistas; sin
+// ella, todas.
+function metasEnTexto(area) {
   const lineas = [];
-  const pendientes = metas.filter(function (meta) {
+  const deLaArea = metas.filter(function (meta) {
+    return !area || meta.area === area;
+  });
+  const pendientes = deLaArea.filter(function (meta) {
     return !metaCumplida(meta);
   });
-  const cumplidas = metas.filter(metaCumplida);
+  const cumplidas = deLaArea.filter(metaCumplida);
 
   pendientes.forEach(function (meta) {
     const hechos = meta.pasos.filter(function (paso) {
@@ -8092,7 +8230,8 @@ function resumenParaPrometheus() {
 // ---------- Los resúmenes de los especialistas (lección 48) ----------
 // Cada especialista ve solo lo de su ámbito: Heracles, el entreno y el
 // cuerpo; Apolo, lo que tiene que ver con la imagen; Deméter, la comida y
-// el peso. De los hábitos, los de su ámbito: por su icono o por su nombre
+// el peso; Atenea, los estudios y la carrera; Pluto, el dinero (lección
+// 49). Y sus metas: las de la parte de la vida que le toca. De los hábitos, los de su ámbito: por su icono o por su nombre
 // (como los iconos del bloque 4: basta el principio de una palabra, sin
 // tildes ni mayúsculas).
 
@@ -8119,6 +8258,19 @@ const ambitos = {
       "ayuno", "picar", "snack", "chuche", "bolleria", "frito", "carne",
       "pescado", "huevo", "leche", "lacteo", "gelatina", "caldo", "comer",
       "comida", "cena", "almuerzo", "merienda",
+    ],
+  },
+  atenea: {
+    icono: "pergamino",
+    palabras: [
+      "certific", "master", "grado", "univers", "formacion", "curriculum",
+      "entrevista", "linkedin", "carrera", "practica",
+    ],
+  },
+  pluto: {
+    icono: "dracma",
+    palabras: [
+      "deuda", "hucha", "banco", "nomina", "factura", "compra", "precio",
     ],
   },
 };
@@ -8158,7 +8310,18 @@ function lineasHabitosDeAmbito(especialista, que) {
   return ["Hábitos " + que + ":"].concat(suyos.map(habitoEnTexto));
 }
 
-// La primera parte de los tres: el día y la hora, y quién es.
+// Las metas de una parte de la vida («Salud», «Carrera», «Finanzas»), con
+// su título: «Metas de carrera:» y una línea por meta.
+function lineasMetasDeArea(area) {
+  const lineas = metasEnTexto(area);
+  const titulo = "Metas de " + area.toLowerCase();
+  if (lineas.length === 0) {
+    return [titulo + ": no tiene ninguna en Ergon."];
+  }
+  return [titulo + ":"].concat(lineas);
+}
+
+// La primera parte de todos: el día y la hora, y quién es.
 function lineasPrincipio() {
   const lineas = [lineaAhora(new Date())];
   const quien = lineaQuien();
@@ -8168,15 +8331,16 @@ function lineasPrincipio() {
   return lineas;
 }
 
-// Heracles, el entrenador: quién es, sus hábitos del deporte, el peso, los
-// entrenos con sus series, el progreso de cada ejercicio y lo que duerme
-// (para el descanso).
+// Heracles, el entrenador: quién es, sus hábitos del deporte, sus metas de
+// salud, el peso, los entrenos con sus series, el progreso de cada
+// ejercicio y lo que duerme (para el descanso).
 function resumenParaHeracles() {
   const ahora = new Date();
   const datos = estadisticas();
   return juntarTrozos([
     lineasPrincipio(),
     lineasHabitosDeAmbito("heracles", "del deporte"),
+    lineasMetasDeArea("Salud"),
     lineasPeso(datos),
     lineasEntrenos(ahora, false),
     lineasProgreso(),
@@ -8197,17 +8361,38 @@ function resumenParaApolo() {
   ]);
 }
 
-// Deméter, la comida: quién es, sus hábitos de comida y bebida, el peso,
-// cuánto entrena y lo que duerme.
+// Deméter, la comida: quién es, sus hábitos de comida y bebida, sus metas
+// de salud, el peso, cuánto entrena y lo que duerme.
 function resumenParaDemeter() {
   const ahora = new Date();
   const datos = estadisticas();
   return juntarTrozos([
     lineasPrincipio(),
     lineasHabitosDeAmbito("demeter", "de comida y bebida"),
+    lineasMetasDeArea("Salud"),
     lineasPeso(datos),
     lineasEntrenos(ahora, true),
     lineasSuenoEnBreve(datos),
+  ]);
+}
+
+// Atenea, los estudios y la carrera: quién es, sus hábitos de estudio y
+// de aprendizaje y sus metas de carrera.
+function resumenParaAtenea() {
+  return juntarTrozos([
+    lineasPrincipio(),
+    lineasHabitosDeAmbito("atenea", "de estudio y aprendizaje"),
+    lineasMetasDeArea("Carrera"),
+  ]);
+}
+
+// Pluto, el dinero: quién es, sus hábitos de dinero y sus metas de
+// finanzas (Ergon no sabe nada de sus cuentas).
+function resumenParaPluto() {
+  return juntarTrozos([
+    lineasPrincipio(),
+    lineasHabitosDeAmbito("pluto", "de dinero"),
+    lineasMetasDeArea("Finanzas"),
   ]);
 }
 
