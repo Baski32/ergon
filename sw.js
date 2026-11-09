@@ -23,6 +23,24 @@ self.addEventListener("activate", function (evento) {
     evento.waitUntil(self.clients.claim());
 });
 
+// Los archivos de Ergon se piden con «no-cache»: el navegador pregunta
+// siempre a GitHub Pages si han cambiado (si no, le contesta enseguida «sin
+// cambios» y usa el que ya tenía). Sin esto, durante 10 minutos después de
+// subir algo el navegador podía mezclar un index.html nuevo con un script.js
+// viejo (GitHub Pages le deja guardar cada archivo 10 minutos), y un botón
+// nuevo no hacía nada. Lo de fuera (las fuentes de Google) se pide normal.
+function peticionFresca(peticion) {
+    if (new URL(peticion.url).origin !== self.location.origin) {
+        return peticion;
+    }
+    // Al abrir la app (navigate), con la dirección: una petición de ese tipo
+    // no se puede copiar cambiándole opciones
+    if (peticion.mode === "navigate") {
+        return new Request(peticion.url, { cache: "no-cache", credentials: "same-origin" });
+    }
+    return new Request(peticion, { cache: "no-cache" });
+}
+
 self.addEventListener("fetch", function (evento) {
     if (evento.request.method !== "GET") {
         return;
@@ -35,7 +53,7 @@ self.addEventListener("fetch", function (evento) {
     }
 
     evento.respondWith(
-        fetch(evento.request)
+        fetch(peticionFresca(evento.request))
             .then(function (respuesta) {
                 const copia = respuesta.clone();
                 caches.open(CACHE).then(function (cache) {
