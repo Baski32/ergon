@@ -28,6 +28,7 @@
 - **Laureles**: las metas cumplidas reciben su corona de laurel y la fecha de la victoria.
 - **Cita del día** de filósofos clásicos (Marco Aurelio, Séneca, Epicteto, Aristóteles…), con la obra de la que procede.
 - **Copia de seguridad** para descargar y restaurar los datos, con aviso si hace una semana o más de la última.
+- **Empezar de cero**: borrar todos los datos (antes ofrece la copia), también de la nube y de los demás dispositivos, sin perder la cuenta ni los ajustes.
 - **Cuenta y sincronización** (opcional): al entrar con email y contraseña, los datos se guardan también en la nube y son los mismos en el móvil y en el ordenador. Sin conexión, los cambios esperan y se suben al volver.
 - **Recordatorios** en el móvil aunque la app esté cerrada: intención de la mañana, hábitos sin marcar, diario de la noche y revisión del domingo, cada uno a su hora y solo si hace falta.
 - **Pestañas** con navegación inferior pensada para el móvil y barra lateral en el ordenador.
@@ -78,6 +79,7 @@ Sin cuenta, los datos se guardan solo en el navegador de cada dispositivo. Con c
 - [x] Fotos y vídeos para los consejeros
 - [x] Los especialistas: Heracles, Apolo y Deméter
 - [x] Atenea y Pluto, con la búsqueda en internet
+- [x] Empezar de cero (borrar todos los datos)
 
 ## Sobre el proyecto
 

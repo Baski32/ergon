@@ -25,7 +25,7 @@
    17. Metas · Tarjetas
    18. Metas · Laureles (metas cumplidas)
    19. Archivo · Cuenta, recordatorios, consejeros, Salud, perfil y revisiones
-   20. Archivo · Copia de seguridad
+   20. Archivo · Copia de seguridad y empezar de cero
    21. Prometheus · El laboratorio
    22. Navegación
    23. Escritorio (pantallas anchas)
@@ -3309,7 +3309,7 @@ button.recordatorio {
 }
 
 /* ==========================================================================
-   20. ARCHIVO · COPIA DE SEGURIDAD
+   20. ARCHIVO · COPIA DE SEGURIDAD Y EMPEZAR DE CERO
    ========================================================================== */
 
 /* La sección de la copia, centrada */
@@ -3367,6 +3367,14 @@ button.recordatorio {
   margin-top: 16px;
   font-size: 0.85rem;
   color: var(--bronce);
+}
+
+/* Empezar de cero: separado de la copia por una línea, con el botón de
+   borrar en terracota (el mismo estilo que «Eliminar» en las ventanas) */
+.empezar-de-cero {
+  margin-top: 32px;
+  padding-top: 8px;
+  border-top: 1px solid var(--piedra);
 }
 
 /* ==========================================================================

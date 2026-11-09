@@ -1274,7 +1274,7 @@
       <!-- ============================================================
            PANTALLA ARCHIVO
            Cuenta, recordatorios, consejeros, sueño desde Salud, perfil,
-           revisiones semanales y copia de seguridad.
+           revisiones semanales, copia de seguridad y empezar de cero.
            ============================================================ -->
       <div class="pantalla" data-pantalla="archivo" hidden>
         <!-- Cuenta: entrar para tener los datos en la nube y en todos los
@@ -1536,6 +1536,20 @@
           </div>
           <!-- «Última copia: hace N días»: lo pone script.js -->
           <p id="ultima-copia" class="ultima-copia"></p>
+
+          <!-- Empezar de cero: borra todos mis datos (script.js, bloque 20).
+               Antes ofrece descargar una copia y pregunta dos veces -->
+          <div class="empezar-de-cero">
+            <h2>Empezar de cero</h2>
+            <p class="pie-texto">
+              Borra tus hábitos, tus metas, tu perfil y todo lo que has
+              apuntado, también en la nube si has entrado en tu cuenta. La
+              cuenta y los ajustes se quedan.
+            </p>
+            <button id="boton-borrar-todo" type="button" class="boton-eliminar">
+              Borrar todos mis datos
+            </button>
+          </div>
         </footer>
       </div>
 

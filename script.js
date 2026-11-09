@@ -23,7 +23,7 @@
 // 17. Metas · Tarjetas
 // 18. Metas · Ventana de editar meta
 // 19. Perfil
-// 20. Copia de seguridad
+// 20. Copia de seguridad y empezar de cero
 // 21. Nube · Cuenta
 // 22. Nube · Sincronizar
 // 23. Recordatorios
@@ -4309,9 +4309,10 @@ document
 cerrarAlTocarFuera(ventanaPerfil);
 
 // ==========================================================================
-// 20. COPIA DE SEGURIDAD
+// 20. COPIA DE SEGURIDAD Y EMPEZAR DE CERO
 // Descargar todos los datos en un archivo y restaurarlos después. Ergon
 // recuerda el día de la última copia y avisa si hace una semana o más.
+// «Borrar todos mis datos» los borra para empezar de cero.
 // ==========================================================================
 
 // Datos que entran en la copia.
@@ -4460,6 +4461,140 @@ document
       avisar("El archivo no es una copia válida de Ergon.");
     }
   });
+
+// Lo que se queda al empezar de cero: la cuenta, los ajustes (los
+// recordatorios y lo que ven los consejeros, iguales en todos los
+// dispositivos) y lo que es de este dispositivo (los avisos, la casilla del
+// atajo de Salud, el día de la última copia…). Estos son los ajustes que
+// también están en la nube.
+const ajustesQueSeQuedan = ["ergon-recordatorios", "ergon-consejeros"];
+
+// «Borrar todos mis datos» (Empezar de cero). Borra lo mismo que va en la
+// copia (claves) y lo que se guardó aparte al traer los de la cuenta.
+// Antes ofrece descargar una copia y pregunta si seguro. Con la cuenta
+// unida, borra primero en la nube y, solo si eso va bien, aquí. Al acabar
+// recarga la app: como ya no hay datos, Méntor da la bienvenida otra vez.
+async function borrarTodo() {
+  const unido = localStorage.getItem("ergon-usuario-nube");
+
+  // Unido a la cuenta pero sin sesión (ha caducado): sin entrar no se puede
+  // tocar la nube, y al volver a entrar traería otra vez lo de antes
+  if (unido && !sesion) {
+    avisar(
+      "Para borrar también lo de la nube, entra antes en tu cuenta (Archivo → Cuenta). No se ha borrado nada.",
+    );
+    return;
+  }
+
+  // Primero, la copia (si hoy aún no se ha descargado ninguna)
+  if (diasDesdeLaCopia() !== 0) {
+    const copiar = await preguntar(
+      "Antes de borrar, descarga una copia: con ella podrás recuperarlo todo si te arrepientes.",
+      "Descargar copia",
+      "Seguir sin copia",
+    );
+    if (copiar) {
+      descargarCopia();
+    }
+  }
+
+  // Después, la pregunta de verdad: el botón del sí es el que borra (así
+  // Escape o tocar fuera nunca borran nada sin querer)
+  let pregunta =
+    "¿Seguro? Se borrarán todos tus datos, aquí y en la nube, y desaparecerán también de tus otros dispositivos. No se puede deshacer.";
+  if (!unido) {
+    pregunta =
+      "¿Seguro? Se borrarán todos tus datos de este dispositivo. No se puede deshacer. Como no has entrado en tu cuenta, lo que haya en la nube no se toca.";
+  }
+  if (!(await preguntar(pregunta, "Sí, borrar todo", "Cancelar"))) {
+    return;
+  }
+
+  if (unido && !(await borrarDeLaNube())) {
+    return;
+  }
+
+  claves.forEach(function (clave) {
+    localStorage.removeItem(clave);
+  });
+  localStorage.removeItem("ergon-antes-de-la-nube");
+  localStorage.removeItem("ergon-sustituir-nube");
+  localStorage.removeItem("ergon-entreno-no");
+  location.reload();
+}
+
+// Vacía en la nube todas mis filas menos las de los ajustes. No se borran:
+// se ponen a null (valor: null), como al borrar una conversación, y así
+// mis otros dispositivos, al sincronizar, borran también lo suyo. Mientras
+// tanto no se sincroniza (borrandoTodo, bloque 22): así no se sube nada de
+// lo de antes encima. Devuelve true si ha ido bien; si no, lo explica y
+// todo se queda como estaba.
+async function borrarDeLaNube() {
+  borrandoTodo = true;
+  clearTimeout(temporizadorSubida);
+  // Si justo se estaba sincronizando, se espera a que acabe
+  while (sincronizando) {
+    await new Promise(function (resolver) {
+      setTimeout(resolver, 100);
+    });
+  }
+
+  // Lo que estaba pendiente de subir ya no hace falta, salvo los ajustes
+  const pendientesDeAntes = pendientes;
+  pendientes = {};
+  ajustesQueSeQuedan.forEach(function (clave) {
+    if (pendientesDeAntes[clave]) {
+      pendientes[clave] = pendientesDeAntes[clave];
+    }
+  });
+  guardarPendientes();
+
+  try {
+    // PATCH cambia todas las filas que cumplen el filtro de una vez;
+    // not.in.(…): todas menos esas
+    await peticion(
+      "PATCH",
+      "/rest/v1/datos?usuario=eq." +
+        encodeURIComponent(sesion.usuario) +
+        "&clave=not.in.(" +
+        ajustesQueSeQuedan.join(",") +
+        ")",
+      { valor: null, actualizado: new Date().toISOString() },
+      { Prefer: "return=minimal" },
+    );
+    return true;
+  } catch (error) {
+    // No se ha borrado nada: vuelve lo pendiente (con lo que se haya
+    // cambiado mientras tanto) y se puede sincronizar otra vez
+    pendientes = Object.assign(pendientesDeAntes, pendientes);
+    guardarPendientes();
+    borrandoTodo = false;
+    mostrarCuenta();
+
+    if (error.message === "sesion") {
+      avisar(
+        "Tu sesión ha caducado: vuelve a entrar en tu cuenta (Archivo → Cuenta) y repítelo. No se ha borrado nada.",
+      );
+    } else if (error instanceof TypeError) {
+      // fetch da TypeError cuando no hay conexión
+      avisar(
+        "Sin conexión no se puede borrar lo de la nube. No se ha borrado nada: vuelve a intentarlo cuando tengas internet.",
+      );
+    } else {
+      avisar(
+        "No se ha podido borrar lo de la nube (" +
+          error.message +
+          "). No se ha borrado nada.",
+      );
+    }
+    return false;
+  }
+}
+
+// El botón «Borrar todos mis datos».
+document
+  .getElementById("boton-borrar-todo")
+  .addEventListener("click", borrarTodo);
 
 // ==========================================================================
 // 21. NUBE · CUENTA
@@ -4793,6 +4928,9 @@ let pendientes = JSON.parse(localStorage.getItem("ergon-pendientes")) || {};
 // ¿Se está sincronizando ahora? ¿Hay que repetir al terminar?
 let sincronizando = false;
 let repetirSincronizacion = false;
+
+// ¿Se están borrando todos los datos (bloque 20)? Entonces no se sincroniza.
+let borrandoTodo = false;
 
 // El último fallo, para mostrarlo en Cuenta ("" si todo fue bien).
 let ultimoError = "";
@@ -5218,7 +5356,7 @@ async function sustituirNube() {
 // Sincroniza: primero baja, luego sube. Si ya se está sincronizando, lo
 // repite al acabar. Si falla (sin conexión), lo pendiente sigue esperando.
 async function sincronizar() {
-  if (!hayNube() || !sesion) {
+  if (!hayNube() || !sesion || borrandoTodo) {
     return;
   }
   if (sincronizando) {
