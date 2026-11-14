@@ -19,6 +19,7 @@
 - **Rituales**: por la mañana, la intención del día y cómo dormí; por la noche, el recordatorio de escribir en el diario.
 - **Revisión semanal** el domingo con Méntor: los datos de la semana, tres preguntas y un propósito que se recuerda toda la semana siguiente.
 - **Perfil** opcional (nombre, edad, altura y peso con su historial).
+- **Corregir los 7 días anteriores**: con las flechas de encima de la lista (o tocando un día de la semana) se marca lo que se olvidó o se corrige lo que se marcó mal, y la racha, la semana y el mosaico se recalculan.
 - **Editar hábitos** sin perder la racha: las reglas antiguas se guardan con fecha y los días pasados se siguen juzgando con ellas.
 - **Constancia** de los últimos 30 días de cada hábito y **comodín** opcional: un día libre por semana que no rompe la racha.
 - **Templanza**: hábitos para dejar algo. Cuentan los días sin hacerlo, con la mejor racha y el total, para que una recaída no borre lo conseguido.
@@ -80,6 +81,7 @@ Sin cuenta, los datos se guardan solo en el navegador de cada dispositivo. Con c
 - [x] Los especialistas: Heracles, Apolo y Deméter
 - [x] Atenea y Pluto, con la búsqueda en internet
 - [x] Empezar de cero (borrar todos los datos)
+- [x] Corregir los 7 días anteriores
 
 ## Sobre el proyecto
 

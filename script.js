@@ -117,12 +117,18 @@ function guardarHabitos() {
   apuntarCambio("ergon-habitos");
 }
 
-// Guarda lo apuntado hoy dentro del registro. id: el hábito que ha cambiado
-// (en la nube, cada hábito de cada día va en su propia fila).
-function guardarRegistro(id) {
-  registro[hoy] = habitosHoy;
+// Guarda lo apuntado un día dentro del registro. id: el hábito que ha
+// cambiado (en la nube, cada hábito de cada día va en su propia fila). dia:
+// el día que ha cambiado ("2026-11-12"); sin él, hoy.
+function guardarRegistro(id, dia) {
+  if (!dia) {
+    dia = hoy;
+  }
+  if (dia === hoy) {
+    registro[hoy] = habitosHoy;
+  }
   localStorage.setItem("ergon-registro", JSON.stringify(registro));
-  apuntarCambio("registro:" + hoy + ":" + id);
+  apuntarCambio("registro:" + dia + ":" + id);
 }
 
 // Guarda la lista de metas.
@@ -797,11 +803,115 @@ function crearSelectorIconos(caja, grupo, marcado, alElegir) {
 // ==========================================================================
 // 5. HÁBITOS · LISTA DE HOY
 // Las fichas de la pantalla Hoy. La del deporte, al marcarla, pregunta si
-// apuntar el entreno.
+// apuntar el entreno. Con las flechas de encima (o tocando un día de la
+// semana) se va a uno de los 7 días anteriores para marcar lo que se olvidó
+// o corregir lo que se marcó mal.
 // ==========================================================================
 
 // Id del hábito que Méntor acaba de crear: su ficha brilla un momento.
 let habitoRecienCreado = null;
+
+// El día que enseña la lista: hoy o, para corregirlo, uno de los 7 días
+// anteriores (diasParaCorregir). Al salir de la pantalla Hoy vuelve a ser
+// hoy (mostrarPantalla, bloque 32).
+let diaVisible = hoy;
+const diasParaCorregir = 7;
+
+// El primer día que se puede corregir (hace 7 días), como texto.
+function primerDiaCorregible() {
+  return fechaMas(new Date(), -diasParaCorregir).toLocaleDateString("en-CA");
+}
+
+// Lo apuntado el día que se ve. El de hoy es habitosHoy; el de otro día, su
+// trozo del registro (o uno vacío si ese día aún no tiene nada).
+function apuntadoVisible() {
+  if (diaVisible === hoy) {
+    return habitosHoy;
+  }
+  return registro[diaVisible] || {};
+}
+
+// Apunta el valor de un hábito el día que se ve (undefined: lo borra), lo
+// guarda y vuelve a dibujarlo todo: al corregir un día pasado cambian la
+// racha, la semana, la constancia y el mosaico.
+function apuntarHabito(id, valor) {
+  let apuntado = habitosHoy;
+  if (diaVisible !== hoy) {
+    if (!registro[diaVisible]) {
+      registro[diaVisible] = {};
+    }
+    apuntado = registro[diaVisible];
+  }
+
+  if (valor === undefined) {
+    delete apuntado[id];
+  } else {
+    apuntado[id] = valor;
+  }
+  guardarRegistro(id, diaVisible);
+  actualizarTodo();
+}
+
+// Enseña otro día en la lista (nunca después de hoy ni antes de hace 7
+// días) y lo marca en la semana.
+function verDia(clave) {
+  if (clave > hoy) {
+    clave = hoy;
+  }
+  if (clave < primerDiaCorregible()) {
+    clave = primerDiaCorregible();
+  }
+  diaVisible = clave;
+  mostrarHabitos();
+  mostrarHistorial();
+}
+
+// El día que se ve, para leer: «Hoy», «Ayer, viernes 13 de noviembre» o
+// «Miércoles, 11 de noviembre».
+function textoDiaVisible() {
+  if (diaVisible === hoy) {
+    return "Hoy";
+  }
+  // toLocaleDateString da «viernes, 13 de noviembre»
+  const fecha = new Date(diaVisible + "T00:00").toLocaleDateString("es-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  if (diaVisible === fechaMas(new Date(), -1).toLocaleDateString("en-CA")) {
+    return "Ayer, " + fecha.replace(",", "");
+  }
+  // La primera letra, en mayúscula
+  return fecha.charAt(0).toUpperCase() + fecha.slice(1);
+}
+
+// La barra del día, encima de la lista: «‹ Hoy ›». La flecha de atrás se
+// apaga en el último día que se puede corregir, y la de adelante, en hoy.
+// En un día pasado sale además el aviso con «Volver a hoy», y la lista
+// cambia de color (clase «pasado») para que no se confunda con hoy.
+function mostrarDiaVisible() {
+  const esHoy = diaVisible === hoy;
+  document.getElementById("dia-habitos-texto").textContent = textoDiaVisible();
+  document.getElementById("dia-anterior").disabled =
+    diaVisible <= primerDiaCorregible();
+  document.getElementById("dia-siguiente").disabled = esHoy;
+  document.getElementById("dia-pasado").hidden = esHoy;
+  document.getElementById("lista-habitos").classList.toggle("pasado", !esHoy);
+}
+
+// ¿Ese día (pasado) ya salió mal? En templanza, si hubo recaída; en los de
+// «como mucho», si el número apuntado pasa del máximo. (Hoy lo decide
+// hoyYaFallado, bloque 3, que mira también si aún da tiempo.)
+function diaFallado(reglas, apuntado) {
+  const valor = apuntado[reglas.id];
+  if (reglas.medida === "abstencion") {
+    return valor === "recaida";
+  }
+  if (reglas.medida === "cantidad" && reglas.limite === "maximo") {
+    return valor > reglas.objetivo;
+  }
+  return false;
+}
 
 // ¿Pregunta la ficha por el entreno? Sí si es el hábito del deporte (de
 // casilla y con la corona), está marcado hoy, aún no hay un entreno de hoy
@@ -844,11 +954,18 @@ function avisoEntreno(habito) {
   return aviso;
 }
 
-// Dibuja una ficha por hábito: casilla o campo de cantidad, icono, nombre,
-// detalles, racha y botón de editar.
+// Dibuja una ficha por hábito, para el día que se ve (diaVisible): casilla
+// o campo de cantidad, icono, nombre, detalles, racha y botón de editar.
+// En un día pasado, cada hábito con las reglas que tenía ese día, y sin los
+// que aún no existían. La racha es siempre la de ahora.
 function mostrarHabitos() {
   const lista = document.getElementById("lista-habitos");
   lista.innerHTML = "";
+  mostrarDiaVisible();
+
+  const esHoy = diaVisible === hoy;
+  const fechaVisible = new Date(diaVisible + "T00:00");
+  const apuntado = apuntadoVisible();
 
   // Mensaje si aún no hay hábitos
   if (habitos.length === 0) {
@@ -857,6 +974,14 @@ function mostrarHabitos() {
   }
 
   habitos.forEach(function (habito) {
+    // En un día pasado, los hábitos que aún no habían empezado no salen
+    if (!esHoy && diaVisible < inicioDe(habito)) {
+      return;
+    }
+
+    // Las reglas que tenía el hábito ese día (hoy, las de ahora)
+    const reglas = reglasEn(habito, diaVisible);
+
     const item = document.createElement("li");
     const etiqueta = document.createElement("label");
 
@@ -869,61 +994,56 @@ function mostrarHabitos() {
       control.type = "number";
       control.min = "0";
       control.inputMode = "numeric";
-      control.placeholder = habito.objetivo.toLocaleString("es-ES");
+      control.placeholder = reglas.objetivo.toLocaleString("es-ES");
       control.classList.add("habito-campo");
-      if (habitosHoy[habito.id] !== undefined) {
-        control.value = habitosHoy[habito.id];
+      if (apuntado[habito.id] !== undefined) {
+        control.value = apuntado[habito.id];
       }
 
       control.addEventListener("change", function () {
         // Campo vacío: no se apunta nada (0 es un número de verdad)
         if (control.value === "") {
-          delete habitosHoy[habito.id];
+          apuntarHabito(habito.id, undefined);
         } else {
-          habitosHoy[habito.id] = Number(control.value);
+          apuntarHabito(habito.id, Number(control.value));
         }
-        guardarRegistro(habito.id);
-        actualizarTodo();
       });
     } else if (habito.medida === "abstencion") {
       control = document.createElement("button");
       control.type = "button";
       control.classList.add("habito-recaida");
 
-      if (habitosHoy[habito.id] === "recaida") {
+      if (apuntado[habito.id] === "recaida") {
         control.textContent = "Deshacer";
       } else {
         control.textContent = "Recaída";
       }
 
       control.addEventListener("click", function () {
-        if (habitosHoy[habito.id] === "recaida") {
-          delete habitosHoy[habito.id];
+        if (apuntadoVisible()[habito.id] === "recaida") {
+          apuntarHabito(habito.id, undefined);
         } else {
-          habitosHoy[habito.id] = "recaida";
+          apuntarHabito(habito.id, "recaida");
         }
-        guardarRegistro(habito.id);
-        actualizarTodo();
       });
     } else {
       control = document.createElement("input");
       control.type = "checkbox";
-      control.checked = habitosHoy[habito.id] === true;
+      control.checked = apuntado[habito.id] === true;
 
       control.addEventListener("change", function () {
-        habitosHoy[habito.id] = control.checked;
-        guardarRegistro(habito.id);
-        actualizarTodo();
+        apuntarHabito(habito.id, control.checked);
       });
     }
 
-    // Ficha en verde si hoy está cumplido
-    if (estaCumplido(habito, habitosHoy)) {
+    // Ficha en verde si ese día está cumplido
+    if (estaCumplido(reglas, apuntado)) {
       item.classList.add("hecho");
     }
 
-    // Ficha en terracota si hoy ya no tiene remedio
-    if (hoyYaFallado(habito)) {
+    // Ficha en terracota si ya no tiene remedio (hoy) o salió mal (un día
+    // pasado)
+    if (esHoy ? hoyYaFallado(habito) : diaFallado(reglas, apuntado)) {
       item.classList.add("fallado");
     }
 
@@ -934,20 +1054,26 @@ function mostrarHabitos() {
     const nombre = document.createElement("span");
     nombre.textContent = habito.nombre;
 
-    const tocaHoy = tocaEn(habito, new Date());
+    const tocaHoy = tocaEn(reglas, fechaVisible);
     const detalles = [];
 
-    if (habito.frecuencia === "dias") {
-      const letras = habito.dias.map(function (numero) {
+    if (reglas.frecuencia === "dias") {
+      const letras = reglas.dias.map(function (numero) {
         return letrasDias[numero];
       });
       detalles.push(letras.join(" · "));
     }
 
-    if (habito.frecuencia === "semanal") {
-      const hechas = vecesEnSemana(habito, new Date());
-      let texto = "Esta semana: " + hechas + " de " + habito.vecesSemana;
-      if (hechas >= habito.vecesSemana) {
+    if (reglas.frecuencia === "semanal") {
+      // La semana del día que se ve: «Esta semana» o, si es la pasada,
+      // «Esa semana»
+      const hechas = vecesEnSemana(habito, fechaVisible);
+      let texto = "Esta semana: ";
+      if (lunesDe(fechaVisible) < lunesDe(new Date())) {
+        texto = "Esa semana: ";
+      }
+      texto = texto + hechas + " de " + reglas.vecesSemana;
+      if (hechas >= reglas.vecesSemana) {
         texto = texto + ", cumplida";
       }
       detalles.push(texto);
@@ -955,11 +1081,11 @@ function mostrarHabitos() {
 
     if (habito.medida === "cantidad") {
       let texto = "Objetivo: ";
-      if (habito.limite === "maximo") {
+      if (reglas.limite === "maximo") {
         texto = "Máximo: ";
       }
       detalles.push(
-        texto + habito.objetivo.toLocaleString("es-ES") + " " + habito.unidad,
+        texto + reglas.objetivo.toLocaleString("es-ES") + " " + habito.unidad,
       );
     }
 
@@ -973,12 +1099,14 @@ function mostrarHabitos() {
       );
     }
 
-    if (habito.comodin && comodinGastado(habito)) {
+    if (esHoy && habito.comodin && comodinGastado(habito)) {
       detalles.push("comodín gastado esta semana");
     }
 
-    if (!tocaHoy) {
+    if (!tocaHoy && esHoy) {
       detalles.push("hoy toca descanso");
+    } else if (!tocaHoy) {
+      detalles.push("ese día tocaba descanso");
     }
 
     if (detalles.length > 0) {
@@ -988,7 +1116,7 @@ function mostrarHabitos() {
       nombre.append(textoDetalles);
     }
 
-    // Si hoy descansa: ficha apagada y sin poder marcarla
+    // Si ese día descansa: ficha apagada y sin poder marcarla
     if (!tocaHoy) {
       item.classList.add("descanso");
       control.disabled = true;
@@ -1055,12 +1183,18 @@ function mostrarHabitos() {
       item.append(etiqueta, botonEditar);
     }
 
-    // Recién marcado el hábito del deporte: ¿apuntar el entreno?
-    if (pideEntreno(habito)) {
+    // Recién marcado hoy el hábito del deporte: ¿apuntar el entreno?
+    if (esHoy && pideEntreno(habito)) {
       item.append(avisoEntreno(habito));
     }
     lista.append(item);
   });
+
+  // Un día pasado en el que aún no había ningún hábito
+  if (habitos.length > 0 && lista.children.length === 0) {
+    lista.innerHTML =
+      "<li class='sin-habitos'>Ese día aún no tenías ningún hábito.</li>";
+  }
 
   // Llevar la vista hasta el hábito recién creado (una sola vez)
   const nuevo = lista.querySelector(".recien-creado");
@@ -1069,6 +1203,26 @@ function mostrarHabitos() {
     habitoRecienCreado = null;
   }
 }
+
+// Las flechas de la barra del día: un día antes o después.
+document.getElementById("dia-anterior").addEventListener("click", function () {
+  verDia(
+    fechaMas(new Date(diaVisible + "T00:00"), -1).toLocaleDateString("en-CA"),
+  );
+});
+
+document.getElementById("dia-siguiente").addEventListener("click", function () {
+  verDia(
+    fechaMas(new Date(diaVisible + "T00:00"), 1).toLocaleDateString("en-CA"),
+  );
+});
+
+// «Volver a hoy», en el aviso de un día pasado.
+document
+  .getElementById("dia-volver-hoy")
+  .addEventListener("click", function () {
+    verDia(hoy);
+  });
 
 // ==========================================================================
 // 6. HÁBITOS · VENTANA DE EDITAR HÁBITO
@@ -3391,7 +3545,9 @@ const diosesSemana = [
   { simbolo: "☉", dios: "el Sol", color: "#C9A23A" },
 ];
 
-// Dibuja la semana actual con cuántos hábitos se cumplieron cada día.
+// Dibuja la semana actual con cuántos hábitos se cumplieron cada día. Los
+// días que aún se pueden corregir (hasta 7 atrás) se pueden tocar: la lista
+// de Hoy pasa a ese día (bloque 5), que queda marcado con la clase «viendo».
 function mostrarHistorial() {
   const contenedor = document.getElementById("semana");
   contenedor.innerHTML = "";
@@ -3418,6 +3574,36 @@ function mostrarHistorial() {
     }
     if (clave > hoy) {
       dia.classList.add("futuro");
+    }
+    if (clave === diaVisible && clave !== hoy) {
+      dia.classList.add("viendo");
+    }
+
+    // Un día que aún se puede corregir: se toca (o, con el teclado, Intro o
+    // espacio) para verlo en la lista
+    if (clave <= hoy && clave >= primerDiaCorregible()) {
+      dia.classList.add("corregible");
+      dia.setAttribute("role", "button");
+      dia.tabIndex = 0;
+      dia.setAttribute(
+        "aria-label",
+        "Ver " +
+          fecha.toLocaleDateString("es-ES", {
+            weekday: "long",
+            day: "numeric",
+          }) +
+          " en la lista",
+      );
+      dia.addEventListener("click", function () {
+        verDia(clave);
+        document.querySelector(".dia-habitos").scrollIntoView();
+      });
+      dia.addEventListener("keydown", function (evento) {
+        if (evento.key === "Enter" || evento.key === " ") {
+          evento.preventDefault();
+          dia.click();
+        }
+      });
     }
 
     const nombreDia = document.createElement("span");
@@ -11299,6 +11485,14 @@ function mostrarPantalla(nombre) {
   pantallas.forEach(function (pantalla) {
     pantalla.hidden = pantalla.dataset.pantalla !== nombre;
   });
+
+  // Al salir de Hoy, su lista vuelve a hoy (si se estaba corrigiendo otro
+  // día, bloque 5)
+  if (nombre !== "hoy" && diaVisible !== hoy) {
+    diaVisible = hoy;
+    mostrarHabitos();
+    mostrarHistorial();
+  }
 
   // La conversación con Méntor no tiene botón abajo: su título es este (si
   // la pantalla tiene botón, el bucle de abajo lo cambia)

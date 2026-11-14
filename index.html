@@ -735,8 +735,9 @@
     <main class="contenedor">
       <!-- ============================================================
            PANTALLA HOY
-           Cita del día; rituales, revisión, aviso de copia, hábitos y
-           botón de hábito nuevo (columna principal); semana y constancia
+           Cita del día; rituales, revisión, aviso de copia, el día de la
+           lista (hoy o uno de los 7 anteriores), hábitos y botón de
+           hábito nuevo (columna principal); semana y constancia
            (columna lateral). En el móvil las dos columnas van una debajo
            de otra; en el PC, una al lado de otra.
            ============================================================ -->
@@ -761,6 +762,40 @@
               <button id="aviso-copia-boton" type="button">
                 Hacer copia ahora
               </button>
+            </div>
+
+            <!-- El día de la lista: hoy o, para corregir lo que se olvidó,
+                 uno de los 7 anteriores (script.js, bloque 5) -->
+            <div class="dia-habitos">
+              <button
+                id="dia-anterior"
+                type="button"
+                class="dia-flecha"
+                aria-label="Día anterior"
+              >
+                ‹
+              </button>
+              <h2
+                id="dia-habitos-texto"
+                class="dia-habitos-texto"
+                aria-live="polite"
+              >
+                Hoy
+              </h2>
+              <button
+                id="dia-siguiente"
+                type="button"
+                class="dia-flecha"
+                aria-label="Día siguiente"
+              >
+                ›
+              </button>
+            </div>
+
+            <!-- Si se ve un día pasado: aviso y «Volver a hoy» -->
+            <div id="dia-pasado" class="dia-pasado" hidden>
+              <p>Estás corrigiendo un día pasado.</p>
+              <button id="dia-volver-hoy" type="button">Volver a hoy</button>
             </div>
 
             <!-- Lista de hábitos: script.js crea una ficha por hábito -->
